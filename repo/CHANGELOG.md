@@ -5,6 +5,27 @@ Format mengacu pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.0] — 2026-06-20
+
+### Changed — Refactor Arsitektur Containerized (PRD v4.2)
+
+- **Pemisahan Frontend & Backend:** Arsitektur monolith (Next.js + API Routes dalam 1 container) direfactor menjadi 3 container terpisah:
+  - `sipi_frontend` — Next.js, port **3000** (sebelumnya 3080)
+  - `sipi_backend` — Express + Prisma, port **4000** (baru)
+  - `sipi_database` — PostgreSQL 16, port **5432** (sebelumnya 5433, upgrade dari PG15)
+- **Pemindahan API Routes:** Seluruh `src/app/api/v1/` (Next.js API Routes) dipindah ke service Express mandiri di `backend/src/`
+- **Prisma dipindah ke backend:** `prisma/` kini ada di `backend/prisma/` — frontend tidak lagi akses database secara langsung
+- **apiFetch() helper:** Ditambahkan `frontend/src/lib/api.ts` — helper fetch dengan JWT Bearer auto-attach untuk semua request dari frontend ke backend
+- **docker-compose.yml ditulis ulang:** 3 service dengan named volume `sipi_postgres_data` untuk persistensi data, healthcheck pada database sebelum backend start
+- **Dockerfile terpisah:** `frontend/Dockerfile` dan `backend/Dockerfile` masing-masing menggunakan `node:20-alpine`
+
+### Changed — Navigasi (OQ-7 PRD v4.1)
+
+- **Bottom navigation: 4 tab → 3 tab** — Tab "Restock" dihapus dari bottom nav
+- **Restock masuk sub-tab Inventaris:** Halaman `/restock` dihapus, kontennya dipindah sebagai sub-tab "Restock" di dalam `/inventory`, sejajar dengan sub-tab "Stok" dan "Menu & Resep"
+
+---
+
 ## [1.3.0] — 2026-06-16
 
 ### Fixed

@@ -22,10 +22,10 @@ MVP (v1.3.0) dibangun sebagai monolith Next.js dengan arsitektur 2 container (we
 | S4-01 | Refactor 3 container (frontend:3000, backend:4000, database:5432) | Favian | 🟢 Done | docker-compose.yml ditulis ulang, API Routes dipindah ke Express backend |
 | S4-02 | Fix error Docker build (`npm ci` → `npm install`) | Favian | 🟢 Done | Error: package-lock.json tidak ada di build context |
 | S4-03 | Verifikasi FR-14 — cek auto text summary pakai template string atau LLM | Favian | 🟢 Done | Tidak ada network request ke LLM — murni template string ✅ |
-| S4-04 | Fix navigasi: 4 tab → 3 tab (Restock masuk sub-tab Inventaris) | Raihan | ⬜ To Do | OQ-7 PRD v4.1; halaman /restock digabung ke /inventory |
+| S4-04 | Fix navigasi: 4 tab → 3 tab (Restock masuk sub-tab Inventaris) | Favian | 🟢 Done | OQ-7 PRD v4.1; halaman /restock digabung ke /inventory |
 | S4-05 | Verifikasi docker-compose up --build berjalan bersih | Favian | 🟢 Done | Ketiga container naik, login berhasil |
-| S4-06 | Update README.md di repo/ sesuai port dan cara run terbaru | Favian | ⬜ To Do | Port berubah: 3080 → 3000 |
-| S4-07 | Update CHANGELOG.md dengan entri v2.0.0 untuk refactor arsitektur | Favian | ⬜ To Do | Dokumentasikan perubahan containerization |
+| S4-06 | Update README.md di repo/ sesuai port dan cara run terbaru | Claude Cowork | 🟢 Done | Port 3080 → 3000, struktur 3 container didokumentasikan |
+| S4-07 | Update CHANGELOG.md dengan entri v2.0.0 untuk refactor arsitektur | Claude Cowork | 🟢 Done | Entri v2.0.0 ditambahkan |
 
 ---
 
@@ -73,3 +73,5 @@ Perubahan teknis yang dilakukan:
 | 20 Jun 2026 | S4-01 selesai — refactor 3 container oleh Claude Code | Favian |
 | 20 Jun 2026 | S4-02 selesai — Docker build error fixed via Gemini Antigravity | Favian |
 | 20 Jun 2026 | S4-05 selesai — ketiga container naik, login berhasil | Favian |
+| 20 Jun 2026 | S4-04 selesai — navigasi 3 tab, Restock masuk sub-tab Inventaris | Favian |
+| 20 Jun 2026 | S4-06 & S4-07 selesai — README.md dan CHANGELOG.md v2.0.0 diupdate | Claude Cowork |
