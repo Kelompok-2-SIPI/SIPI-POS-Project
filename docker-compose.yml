@@ -1,0 +1,63 @@
+version: '3.9'
+
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: sipi_database
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sipi_user
+      POSTGRES_PASSWORD: sipi_password
+      POSTGRES_DB: sipi_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sipi_user -d sipi_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sipi_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://sipi_user:sipi_password@database:5432/sipi_db
+      JWT_SECRET: dev_jwt_secret_ganti_di_production
+      PORT: 4000
+      NODE_ENV: development
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sipi_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+    name: sipi_postgres_data
