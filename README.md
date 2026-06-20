@@ -33,25 +33,18 @@ git clone https://github.com/Kelompok-2-SIPI/SIPI-POS-Project.git
 cd SIPI-POS-Project/repo
 ```
 
-**2. Buat file `.env`:**
-```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-```
-*(Buka file `.env` di kedua folder tersebut dan isi nilai variabelnya sesuai panduan dari Lead Tim).*
-
-**3. Jalankan semua container:**
+**2. Jalankan semua container:**
 ```bash
 docker compose up -d --build
 ```
 *(Proses ini akan mengunduh image dan mem-build Next.js & Express. Mungkin memakan waktu agak lama pada percobaan pertama).*
 
-**4. Seed data awal (WAJIB saat pertama kali):**
+**3. Seed data awal (WAJIB saat pertama kali):**
 ```bash
 docker compose exec backend npx prisma db seed
 ```
 
-**5. Akses Aplikasi:**
+**4. Akses Aplikasi:**
 
 | Layanan | URL |
 |---------|-----|
@@ -59,7 +52,7 @@ docker compose exec backend npx prisma db seed
 | Backend API | http://localhost:4000 |
 | Database | localhost:5432 |
 
-**6. Kredensial Login Default:**
+**5. Kredensial Login Default:**
 - **Username:** `admin`
 - **Password:** `sipi123`
 
