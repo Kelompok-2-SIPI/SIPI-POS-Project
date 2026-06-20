@@ -1,5 +1,5 @@
 # /tasks/prd-sipi-pos-inventory.md
-**Versi:** 4.2 — Revisi Arsitektur Containerized (Docker)
+**Versi:** 4.4 — Peningkatan UX & Polling Docker
 **Tanggal Revisi:** 20 Juni 2026
 
 ---
@@ -187,6 +187,10 @@ SIPI POS dijalankan sebagai **3 container terpisah** yang saling terhubung melal
 - Variabel environment (kredensial database, `JWT_SECRET`, `NEXT_PUBLIC_API_URL`) disimpan di file `.env` per service dan **tidak di-commit ke repository**.
 - Backend harus mengaktifkan **CORS** untuk origin Frontend, karena keduanya kini berjalan sebagai service terpisah meski masih dalam satu jaringan Docker.
 - Untuk pengembangan lokal, gunakan `docker-compose up` dengan *volume mount* kode sumber agar mendukung *hot-reload*; untuk produksi, gunakan multi-stage build agar image final lebih kecil.
+- **Penting untuk Docker Build:**
+  - File `package-lock.json` **wajib** di-commit untuk frontend dan backend karena Docker menggunakan perintah `npm ci` yang lebih cepat dan deterministik.
+  - Jika file `package-lock.json` hilang atau tidak sinkron, lakukan *generate* secara lokal dengan perintah `npm install --package-lock-only --ignore-scripts` untuk menghindari gagal jaringan pada skrip *postinstall* (seperti Prisma engines).
+  - Image backend (`node:alpine`) **wajib** di-install `openssl` via `RUN apk add --no-cache openssl` di dalam Dockerfile agar Prisma berjalan normal dan tidak *crash* dengan *PrismaClientInitializationError*.
 
 ---
 
@@ -570,3 +574,10 @@ Berdasarkan OQ-9, tambahkan kolom berikut ke tabel `menus`:
 - **Menambahkan bagian baru "Arsitektur Containerized (Docker)" (§7):** spesifikasi 3 container (frontend, backend, database), pembagian tanggung jawab, port, named volume untuk database, dan ketentuan environment variable & CORS.
 - **Memperbarui Base URL API (§9):** dari `/api/v1` relatif menjadi `http://backend:4000/api/v1` yang mencerminkan komunikasi antar-container via Docker network, diakses Frontend lewat `NEXT_PUBLIC_API_URL`.
 - Catatan: perubahan ini murni arsitektural (cara deploy & pemisahan service), tidak mengubah Functional Requirements, skema database, atau kontrak endpoint API yang sudah ada di §9.
+
+### v4.3 (20 Juni 2026) — Panduan Troubleshooting Docker Build
+- Menambahkan **Ketentuan Implementasi Build Docker (§7)** terkait penggunaan `npm ci`, kewajiban menyertakan `package-lock.json`, serta dependensi Alpine Linux (`openssl`) untuk Prisma Engine guna mencegah proses build yang *stuck* karena isu resolusi dependensi dan error inisialisasi di sistem berbasis *musl*.
+
+### v4.4 (20 Juni 2026) — Peningkatan UX Kalkulator Harga Grosir & HMR Polling
+- **Peningkatan UX Form Atur Harga:** Menambahkan antarmuka *Kalkulator Kemasan Grosir* menggunakan pola desain *segmented toggle* ("Per satuan" vs "Per Kemasan Beli"). Fitur ini mempermudah pengguna untuk otomatis menghitung harga per gram/ml dari pembelanjaan kemasan besar tanpa bantuan kalkulator eksternal.
+- **Memperbaiki Isu Sinkronisasi File Docker (HMR):** Menambahkan `CHOKIDAR_USEPOLLING=true` dan `WATCHPACK_POLLING=true` pada file `docker-compose.yml` (service frontend) agar mekanisme Hot Module Replacement (HMR) milik Next.js tetap aktif mendeteksi perubahan file lokal, khususnya di arsitektur Docker Desktop for Windows / WSL2.
