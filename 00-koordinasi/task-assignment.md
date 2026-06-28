@@ -1,6 +1,6 @@
 # Task Assignment — SIPI POS
 
-**Terakhir diperbarui:** 20 Juni 2026 (rev. 3 — rekapitulasi kontribusi Sprint 1–4)
+**Terakhir diperbarui:** 28 Juni 2026 (rev. 4 — tambah Sprint 5 & 6)
 
 ---
 
@@ -95,12 +95,49 @@
 
 ---
 
+### Sprint 5 — AI Chatbot Bidirectional (🔵 Berjalan)
+
+| Task | Deskripsi | PIC | Status |
+|------|-----------|-----|--------|
+| S5-01 | Setup Gemini SDK di backend + env var `GEMINI_API_KEY`, `ENABLE_AI_CHAT` | Janu | ⬜ To Do |
+| S5-02 | Buat `backend/src/lib/gemini.ts` — helper `generateResponse()` | Janu | ⬜ To Do |
+| S5-03 | Controller `handleChat()` — deteksi intent Q&A/Action, susun system prompt dengan data DB | Janu | ⬜ To Do |
+| S5-04 | Controller `confirmAction()` — eksekusi restock + catat harga, validasi nama bahan baku | Janu | ⬜ To Do |
+| S5-05 | Route `/api/v1/ai/chat` dan `/api/v1/ai/confirm-action`, daftarkan di `index.ts` | Janu | ⬜ To Do |
+| S5-06 | Testing manual endpoint (Q&A + Action flow) | Janu | ⬜ To Do |
+| S5-07 | Floating 💬 button di halaman Dashboard + Inventaris | Raihan | ⬜ To Do |
+| S5-08 | Komponen bottom sheet chatbot UI (bubble chat Owner vs AI) | Raihan | ⬜ To Do |
+| S5-09 | Tampilkan konfirmasi parsing + tombol "Ya, Lanjutkan" / "Batal" | Raihan | ⬜ To Do |
+| S5-10 | Tampilkan ringkasan hasil setelah eksekusi konfirmasi | Raihan | ⬜ To Do |
+| S5-11 | Uji manual Sprint 5 terhadap Acceptance Criteria FR-12/13/17/18 | Rinda, Ibnu | ⬜ To Do |
+
+---
+
+### Sprint 6 — Mobile Testing & PWA Polish (🔵 Berjalan, paralel)
+
+| Task | Deskripsi | PIC | Status |
+|------|-----------|-----|--------|
+| S6-01 | Setup environment testing mobile (akses via IP lokal di HP) | Favian | ⬜ To Do |
+| S6-02 | Uji modul POS/Kasir di mobile — FR-01–FR-05 | Rinda, Ibnu | ⬜ To Do |
+| S6-03 | Uji modul Inventaris di mobile — FR-06–FR-10a | Rinda, Ibnu | ⬜ To Do |
+| S6-04 | Uji modul Dashboard di mobile — FR-11, FR-14–FR-16 | Rinda, Ibnu | ⬜ To Do |
+| S6-05 | Verifikasi PWA installable (manifest.json + Service Worker) | Favian | ⬜ To Do |
+| S6-06 | Uji offline mode POS — transaksi saat offline, sync saat pulih | Rinda, Ibnu | ⬜ To Do |
+| S6-07 | Cek tap target semua tombol utama ≥ 44×44px | Raihan | ⬜ To Do |
+| S6-08 | Cek kontras warna & ukuran font (min 14px body, 16px angka harga) | Raihan | ⬜ To Do |
+| S6-09 | Cek empty state semua halaman (POS, Inventaris, Dashboard) | Raihan | ⬜ To Do |
+| S6-10 | Buat bug report di `03-output-review/bug-report-sprint6.md` | Rinda, Ibnu | ⬜ To Do |
+| S6-11 | Fix bug prioritas tinggi hasil testing | Raihan / Janu | ⬜ To Do |
+| S6-12 | Retest setelah fix — sign-off final | Rinda, Ibnu | ⬜ To Do |
+
+---
+
 ## Ringkasan Kontribusi Tim
 
-| Nama | Total Task | Jenis Kontribusi |
-|------|:----------:|------------------|
-| Favian | 11 task | Infra, Docker, arsitektur, refactor, koordinasi |
-| Janu | 14 task | Semua API endpoints dan business logic backend |
-| Raihan | 16 task | Semua halaman frontend, komponen UI, desain |
-| Rinda | 4 task | QA & pengujian manual tiap sprint |
-| Ibnu | 4 task | QA & pengujian manual tiap sprint |
+| Nama | Sprint 1–4 | Sprint 5–6 | Total | Jenis Kontribusi |
+|------|:----------:|:----------:|:-----:|------------------|
+| Favian | 11 task | 2 task | 13 task | Infra, Docker, arsitektur, koordinasi |
+| Janu | 14 task | 6 task | 20 task | Backend API, business logic, LLM integration |
+| Raihan | 16 task | 7 task | 23 task | Frontend, UI, desain, PWA polish |
+| Rinda | 4 task | 6 task | 10 task | QA & pengujian manual tiap sprint |
+| Ibnu | 4 task | 6 task | 10 task | QA & pengujian manual tiap sprint |

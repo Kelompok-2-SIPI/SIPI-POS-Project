@@ -1,7 +1,7 @@
 # Sprint Board — SIPI POS
 
-**Terakhir diperbarui:** 20 Juni 2026  
-**Versi PRD:** 4.2
+**Terakhir diperbarui:** 28 Juni 2026  
+**Versi PRD:** 4.4
 
 ---
 
@@ -12,9 +12,9 @@
 | Sprint 1 | POS / Kasir | FR-01, FR-02, FR-03, FR-04, FR-05 | 🟢 Done (dari MVP) |
 | Sprint 2 | Inventaris & HPP | FR-06, FR-07, FR-08, FR-08a, FR-08b, FR-09, FR-10, FR-10a | 🟢 Done (dari MVP) |
 | Sprint 3 | Dashboard Owner | FR-11, FR-14, FR-15, FR-16 | 🟢 Done (dari MVP) |
-| Sprint 4 | Arsitektur & Polish | Refactor 3 container, navigasi OQ-7, gap PRD v4.2 | 🔵 Berjalan |
-
-> FR-12 dan FR-13 (AI Assistant) — **tidak masuk MVP** (keputusan OQ-5)
+| Sprint 4 | Arsitektur & Polish | Refactor 3 container, navigasi OQ-7, gap PRD v4.2 | 🟢 Done |
+| Sprint 5 | AI Chatbot Bidirectional | FR-12, FR-13, FR-17, FR-18 | 🔵 Berjalan |
+| Sprint 6 | Mobile Testing & PWA Polish | Semua FR (uji mobile) + PWA installable | 🔵 Berjalan (paralel) |
 
 ---
 
@@ -39,22 +39,60 @@
 | FR-14 | Ringkasan teks otomatis di atas dashboard (template string, bukan LLM) | Dashboard | 3 | 🟢 Done |
 | FR-15 | Rekomendasi restock: stok/avg_7d < 2 hari | Dashboard | 3 | 🟢 Done |
 | FR-16 | Notifikasi kenaikan harga bahan baku > 20% dalam 7 hari | Dashboard | 3 | 🟢 Done |
-| FR-12 | AI Business Q&A (natural language) | AI | — | 🚫 Out of MVP |
-| FR-13 | AI jawab pertanyaan performa bisnis | AI | — | 🚫 Out of MVP |
+| FR-12 | AI Business Q&A (natural language) | AI | 5 | 🔵 Berjalan |
+| FR-13 | AI jawab pertanyaan performa bisnis | AI | 5 | 🔵 Berjalan |
+| FR-17 | AI parse laporan belanja → restock + catat harga | AI | 5 | 🔵 Berjalan |
+| FR-18 | Konfirmasi parsing sebelum eksekusi aksi | AI | 5 | 🔵 Berjalan |
 
 ---
 
-## Sprint 4 — Arsitektur & Polish (Berjalan)
+## Sprint 4 — Arsitektur & Polish (✅ Selesai)
 
-Gap yang perlu diselesaikan berdasarkan audit MVP vs PRD v4.2:
+| # | Task | Status | PIC |
+|---|------|--------|-----|
+| S4-01 | Refactor 3 container (frontend:3000, backend:4000, database:5432) | 🟢 Done | Favian |
+| S4-02 | Fix Docker build error (`npm ci` → `npm install`) | 🟢 Done | Favian |
+| S4-03 | Verifikasi FR-14 — konfirmasi template string, bukan LLM | 🟢 Done | Favian |
+| S4-04 | Fix navigasi 4 tab → 3 tab (Restock masuk sub-tab Inventaris) | 🟢 Done | Favian |
+| S4-05 | Verifikasi docker-compose up berjalan bersih, login berhasil | 🟢 Done | Favian |
+| S4-06 | Update README.md sesuai arsitektur dan port terbaru | 🟢 Done | Claude Cowork |
+| S4-07 | Update CHANGELOG.md entri v2.0.0 | 🟢 Done | Claude Cowork |
+| S4-08 | Uji manual Sprint 4 (navigasi, container, integrasi) | 🟢 Done | Rinda, Ibnu |
 
-| # | Task | Status | PIC | Catatan |
-|---|------|--------|-----|---------|
-| S4-01 | Refactor 3 container (frontend:3000, backend:4000, database:5432) | 🟢 Done | Favian | docker-compose.yml sudah ditulis ulang |
-| S4-02 | Cek FR-14 — apakah auto text summary sudah pakai template string atau belum | ⬜ To Do | Favian | Bukan LLM — harus template string murni |
-| S4-03 | Fix navigasi: dari 4 tab → 3 tab (Restock masuk sub-tab Inventaris) | ⬜ To Do | Raihan | OQ-7 PRD v4.1 |
-| S4-04 | Verifikasi docker-compose up berjalan bersih + seed data jalan | ⬜ To Do | Favian | Pastikan port 3000/4000/5432 aktif |
-| S4-05 | Update README.md di repo/ sesuai port dan cara run terbaru | ⬜ To Do | Favian | Port berubah: 3080 → 3000 |
+## Sprint 5 — AI Chatbot Bidirectional (🔵 Berjalan)
+
+Branch: `feat/llm-chatbot`
+
+| # | Task | Status | PIC |
+|---|------|--------|-----|
+| S5-01 | Setup Gemini SDK + env var di backend | ⬜ To Do | Janu |
+| S5-02 | Buat `backend/src/lib/gemini.ts` | ⬜ To Do | Janu |
+| S5-03 | Controller `handleChat()` — deteksi intent, susun system prompt | ⬜ To Do | Janu |
+| S5-04 | Controller `confirmAction()` — eksekusi restock + catat harga | ⬜ To Do | Janu |
+| S5-05 | Route `/api/v1/ai/chat` dan `/api/v1/ai/confirm-action` | ⬜ To Do | Janu |
+| S5-06 | Testing manual endpoint | ⬜ To Do | Janu |
+| S5-07 | Floating 💬 button di Dashboard + Inventaris | ⬜ To Do | Raihan |
+| S5-08 | Komponen bottom sheet chatbot UI | ⬜ To Do | Raihan |
+| S5-09 | Konfirmasi parsing + tombol Ya/Batal | ⬜ To Do | Raihan |
+| S5-10 | Ringkasan hasil setelah eksekusi | ⬜ To Do | Raihan |
+| S5-11 | Uji manual Sprint 5 | ⬜ To Do | Rinda, Ibnu |
+
+## Sprint 6 — Mobile Testing & PWA Polish (🔵 Berjalan, paralel)
+
+| # | Task | Status | PIC |
+|---|------|--------|-----|
+| S6-01 | Setup environment testing mobile (IP lokal) | ⬜ To Do | Favian |
+| S6-02 | Uji modul POS/Kasir di mobile | ⬜ To Do | Rinda, Ibnu |
+| S6-03 | Uji modul Inventaris di mobile | ⬜ To Do | Rinda, Ibnu |
+| S6-04 | Uji modul Dashboard di mobile | ⬜ To Do | Rinda, Ibnu |
+| S6-05 | Verifikasi PWA installable | ⬜ To Do | Favian |
+| S6-06 | Uji offline mode POS | ⬜ To Do | Rinda, Ibnu |
+| S6-07 | Cek tap target ≥ 44×44px | ⬜ To Do | Raihan |
+| S6-08 | Cek kontras warna & ukuran font | ⬜ To Do | Raihan |
+| S6-09 | Cek empty state semua halaman | ⬜ To Do | Raihan |
+| S6-10 | Bug report di `03-output-review/bug-report-sprint6.md` | ⬜ To Do | Rinda, Ibnu |
+| S6-11 | Fix bug prioritas tinggi | ⬜ To Do | Raihan / Janu |
+| S6-12 | Retest setelah fix | ⬜ To Do | Rinda, Ibnu |
 
 ---
 

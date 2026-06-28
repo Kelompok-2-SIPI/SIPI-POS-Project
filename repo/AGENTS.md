@@ -8,7 +8,7 @@ Baca seluruh file ini sebelum menulis atau mengubah kode apa pun.
 ## Tentang Proyek
 
 **SIPI POS** adalah Progressive Web App (PWA) untuk manajemen kasir dan inventaris UMKM F&B.
-- **PRD (source of truth):** `../01-dokumentasi/prd-sipi-pos-inventory-v4.2.md`
+- **PRD (source of truth):** `../01-dokumentasi/prd-sipi-pos-inventory-v4.4.md`
 - **Sprint aktif:** `../00-koordinasi/sprint-board.md`
 - Semua keputusan desain & arsitektur ada di PRD §14. Jangan ubah perilaku sistem tanpa merujuk ke sana.
 
