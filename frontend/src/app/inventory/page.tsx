@@ -21,6 +21,16 @@ interface MenuItem {
   isAvailable: boolean;
 }
 
+interface RestockItem {
+  id: string;
+  name: string;
+  unit: string;
+  stockQty: number;
+  minStockQty: number;
+  avgConsumption7d: number;
+  sisaHari: number;
+}
+
 interface RecipeLine {
   ingredientId: string;
   ingredientName?: string;
@@ -36,9 +46,10 @@ interface PriceHistoryEntry {
 }
 
 export default function InventoryPage() {
-  const [activeTab, setActiveTab] = useState<'ingredients' | 'menus'>('ingredients');
+  const [activeTab, setActiveTab] = useState<'ingredients' | 'restock' | 'menus'>('ingredients');
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [menus, setMenus] = useState<MenuItem[]>([]);
+  const [recommendations, setRecommendations] = useState<RestockItem[]>([]);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -57,6 +68,9 @@ export default function InventoryPage() {
   const [restockQty, setRestockQty] = useState('');
   const [restockNote, setRestockNote] = useState('');
   const [priceInput, setPriceInput] = useState('');
+  const [priceMode, setPriceMode] = useState<'per_unit' | 'bulk'>('per_unit');
+  const [bulkPrice, setBulkPrice] = useState('');
+  const [bulkQty, setBulkQty] = useState('');
   const [editMinStock, setEditMinStock] = useState('');
   const [editName, setEditName] = useState('');
   const [editUnit, setEditUnit] = useState('');
@@ -102,6 +116,7 @@ export default function InventoryPage() {
 
     fetchIngredients();
     fetchMenus();
+    fetchRecommendations();
   }, []);
 
   const fetchIngredients = async () => {
@@ -113,6 +128,18 @@ export default function InventoryPage() {
       }
     } catch (err) {
       console.error('Error fetching ingredients', err);
+    }
+  };
+
+  const fetchRecommendations = async () => {
+    try {
+      const res = await apiFetch('/dashboard/restock-recommendations');
+      if (res.ok) {
+        const data = await res.json();
+        setRecommendations(data);
+      }
+    } catch (err) {
+      console.error('Error fetching recommendations', err);
     }
   };
 
@@ -168,8 +195,20 @@ export default function InventoryPage() {
     } else {
       setRestockQty('');
       setRestockNote('');
+      setBulkPrice('');
+      setBulkQty('');
+      setPriceMode('per_unit');
       setPriceInput(ing.latestPrice.toString());
     }
+  };
+
+  const handleOpenRestock = (item: RestockItem) => {
+    setActiveIngredient(item as unknown as Ingredient);
+    setModalType('restock');
+    setRestockQty('');
+    setRestockNote('Restok cerdas via rekomendasi');
+    setError('');
+    setSuccess('');
   };
 
   const handleOpenMenuModal = (menu: MenuItem | null, type: 'edit-menu' | 'create-menu') => {
@@ -225,6 +264,7 @@ export default function InventoryPage() {
       if (res.ok && data.success) {
         setSuccess('Berhasil menambah stok.');
         fetchIngredients();
+        fetchRecommendations();
         setTimeout(() => handleCloseModal(), 1500);
       } else {
         setError(data.error || 'Gagal melakukan restok.');
@@ -504,7 +544,13 @@ export default function InventoryPage() {
           onClick={() => setActiveTab('ingredients')}
           className={`sub-tab-btn ${activeTab === 'ingredients' ? 'active' : ''}`}
         >
-          Bahan Baku
+          Stok
+        </button>
+        <button
+          onClick={() => setActiveTab('restock')}
+          className={`sub-tab-btn ${activeTab === 'restock' ? 'active' : ''}`}
+        >
+          Restock
         </button>
         <button
           onClick={() => setActiveTab('menus')}
@@ -584,7 +630,55 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* 2. Menus Tab View (Recipe Customizer) */}
+      {/* 2. Restock Tab View */}
+      {activeTab === 'restock' && (
+        <div className="recommendations-list">
+          {recommendations.length === 0 ? (
+            <div className="empty-state card">
+              <div className="empty-icon">✓</div>
+              <h3>Stok Anda Aman!</h3>
+              <p>Semua bahan baku memiliki persediaan yang cukup untuk minimal 2 hari ke depan berdasarkan rata-rata penjualan.</p>
+            </div>
+          ) : (
+            recommendations.map((item) => {
+              const roundedDays = item.sisaHari.toFixed(1);
+              const urgentClass = item.sisaHari < 0.5 ? 'critical' : item.sisaHari < 1 ? 'warning' : 'info';
+
+              return (
+                <div key={item.id} className="recommendation-card card">
+                  <div className="rec-badge-row">
+                    <span className={`status-pill ${urgentClass}`}>
+                      {item.sisaHari <= 0 ? 'Stok Habis' : `Sisa Proyeksi: ${roundedDays} Hari`}
+                    </span>
+                    <button
+                      onClick={() => handleOpenRestock(item)}
+                      className="btn btn-primary btn-sm"
+                    >
+                      Restok Cepat
+                    </button>
+                  </div>
+
+                  <div className="rec-details">
+                    <h3>{item.name}</h3>
+                    <div className="rec-stats">
+                      <div className="rec-stat">
+                        <span className="label">Stok Saat Ini</span>
+                        <span className="val">{item.stockQty} {item.unit}</span>
+                      </div>
+                      <div className="rec-stat">
+                        <span className="label">Rata-rata Harian</span>
+                        <span className="val">{item.avgConsumption7d.toFixed(2)} {item.unit}/hari</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* 3. Menus Tab View (Recipe Customizer) */}
       {activeTab === 'menus' && (
         <div className="menus-list">
           {menus.length === 0 ? (
@@ -708,19 +802,76 @@ export default function InventoryPage() {
             {/* Price Form */}
             {modalType === 'price' && (
               <form onSubmit={submitPriceUpdate}>
-                <div className="form-group">
-                  <label className="form-label">Harga Beli Baru Per {activeIngredient?.unit}</label>
-                  <input
-                    type="number"
-                    step="any"
-                    className="input-field"
-                    placeholder="Contoh: 18"
-                    value={priceInput}
-                    onChange={(e) => setPriceInput(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
+                <div className="price-mode-toggle">
+                  <button 
+                    type="button"
+                    className={`toggle-btn ${priceMode === 'per_unit' ? 'active' : ''}`}
+                    onClick={() => setPriceMode('per_unit')}
+                  >
+                    Per {activeIngredient?.unit}
+                  </button>
+                  <button 
+                    type="button"
+                    className={`toggle-btn ${priceMode === 'bulk' ? 'active' : ''}`}
+                    onClick={() => setPriceMode('bulk')}
+                  >
+                    Per Kemasan Beli
+                  </button>
                 </div>
+
+                {priceMode === 'per_unit' ? (
+                  <div className="form-group">
+                    <label className="form-label">Harga Beli Baru Per {activeIngredient?.unit}</label>
+                    <input
+                      type="number"
+                      step="any"
+                      className="input-field"
+                      placeholder="Contoh: 18"
+                      value={priceInput}
+                      onChange={(e) => setPriceInput(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Harga Beli Kemasan (Rp)</label>
+                      <input
+                        type="number"
+                        className="input-field"
+                        placeholder="Contoh: 120000"
+                        value={bulkPrice}
+                        onChange={(e) => {
+                          setBulkPrice(e.target.value);
+                          if (e.target.value && bulkQty) {
+                            setPriceInput((Number(e.target.value) / Number(bulkQty)).toString());
+                          }
+                        }}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Isi Kemasan ({activeIngredient?.unit})</label>
+                      <input
+                        type="number"
+                        className="input-field"
+                        placeholder={`Contoh: 1000 (jika beli 1kg = 1000 ${activeIngredient?.unit})`}
+                        value={bulkQty}
+                        onChange={(e) => {
+                          setBulkQty(e.target.value);
+                          if (bulkPrice && e.target.value) {
+                            setPriceInput((Number(bulkPrice) / Number(e.target.value)).toString());
+                          }
+                        }}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                  </>
+                )}
+
                 <button type="submit" className="btn btn-primary w-full mt-4" disabled={loading}>
                   {loading ? 'Menyimpan...' : 'Perbarui Harga'}
                 </button>
@@ -1115,6 +1266,86 @@ export default function InventoryPage() {
           padding: 0;
           font-size: 16px;
         }
+
+        /* Restock Tab Specifics */
+        .recommendations-list {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding-bottom: 60px;
+        }
+        .recommendation-card {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .rec-badge-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .status-pill {
+          font-size: 12px;
+          font-weight: 700;
+          padding: 4px 10px;
+          border-radius: 30px;
+        }
+        .status-pill.critical {
+          background-color: var(--danger-light);
+          color: var(--danger-color);
+        }
+        .status-pill.warning {
+          background-color: var(--warning-light);
+          color: var(--warning-color);
+        }
+        .status-pill.info {
+          background-color: hsl(200, 100%, 96%);
+          color: hsl(200, 100%, 40%);
+        }
+        .rec-details h3 {
+          font-size: 16px;
+          font-weight: 600;
+          margin-bottom: 8px;
+        }
+        .rec-stats {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+          border-top: 1px solid var(--border-color);
+          padding-top: 10px;
+        }
+        .rec-stat {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .rec-stat .label {
+          font-size: 10px;
+          text-transform: uppercase;
+          font-weight: 700;
+          color: var(--text-tertiary);
+        }
+        .rec-stat .val {
+          font-size: 13px;
+          font-weight: 600;
+        }
+        .empty-icon {
+          width: 60px;
+          height: 60px;
+          background-color: var(--success-light);
+          color: var(--success-color);
+          border-radius: 50%;
+          font-size: 30px;
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px auto;
+        }
+        .btn-sm {
+          padding: 6px 12px;
+          font-size: 12px;
+        }
         
         /* Menu Cards specifics */
         .menu-card-header {
@@ -1183,13 +1414,39 @@ export default function InventoryPage() {
         .success-alert {
           background-color: var(--success-light);
           color: var(--success-color);
-          padding: 8px 12px;
+          padding: 10px;
           border-radius: var(--radius-sm);
           font-size: 13px;
           font-weight: 500;
-          margin-bottom: 16px;
           text-align: center;
+          margin-bottom: 16px;
         }
+        
+        .price-mode-toggle {
+          display: flex;
+          background-color: #f2ede4;
+          border-radius: var(--radius-sm);
+          padding: 4px;
+          margin-bottom: 16px;
+        }
+        .toggle-btn {
+          flex: 1;
+          background: transparent;
+          border: none;
+          padding: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--text-secondary);
+          border-radius: var(--radius-sm);
+          cursor: pointer;
+          transition: var(--transition-fast);
+        }
+        .toggle-btn.active {
+          background-color: white;
+          color: var(--primary-color);
+          box-shadow: var(--shadow-sm);
+        }
+
         .w-full { width: 100%; }
         .mt-4 { margin-top: 16px; }
         .mt-6 { margin-top: 24px; }
