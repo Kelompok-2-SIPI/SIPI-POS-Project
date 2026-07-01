@@ -3,6 +3,16 @@
 Semua perubahan signifikan pada project ini didokumentasikan di file ini.  
 Format mengacu pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.1.0] — 2026-06-30
+
+### Added — AI Chatbot Backend (Sprint 5)
+
+- **Gemini SDK Integration:** Integrated `@google/generative-ai` to power natural language business queries and automated restock/shopping reports.
+- **Chat Endpoint (`POST /api/v1/ai/chat`):** Secured endpoint that generates context-aware system prompts using today's sales summary, real-time ingredient stock, critical stock alerts, and critical menu margins. Detects whether the user's intent is Q&A (`qa`) or transactional (`action`).
+- **Confirm Action Endpoint (`POST /api/v1/ai/confirm-action`):** Processes approved shopping report items in a database transaction, creating stock movement records (`restock`), updating ingredient prices, and automatically recalculating HPP for all affected menus.
+- **Auth Middleware (`backend/src/middleware/auth.ts`):** Secured endpoints using JSON Web Token (JWT) verification.
+- **In-Memory Cache:** Handled multi-step confirmations using a transient in-memory map keyed by User ID with a 5-minute TTL.
+
 ---
 
 ## [2.0.0] — 2026-06-20

@@ -6,6 +6,7 @@ import menusRouter from './routes/menus';
 import ingredientsRouter from './routes/ingredients';
 import transactionsRouter from './routes/transactions';
 import dashboardRouter from './routes/dashboard';
+import aiRouter from './routes/ai';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -23,6 +24,7 @@ app.use('/api/v1/menus', menusRouter);
 app.use('/api/v1/ingredients', ingredientsRouter);
 app.use('/api/v1/transactions', transactionsRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
+app.use('/api/v1/ai', aiRouter);
 
 app.use((_req, res) => res.status(404).json({ error: 'Endpoint tidak ditemukan' }));
 
