@@ -65,12 +65,12 @@ Branch: `feat/llm-chatbot`
 
 | # | Task | Status | PIC |
 |---|------|--------|-----|
-| S5-01 | Setup Gemini SDK + env var di backend | ⬜ To Do | Janu |
-| S5-02 | Buat `backend/src/lib/gemini.ts` | ⬜ To Do | Janu |
-| S5-03 | Controller `handleChat()` — deteksi intent, susun system prompt | ⬜ To Do | Janu |
-| S5-04 | Controller `confirmAction()` — eksekusi restock + catat harga | ⬜ To Do | Janu |
-| S5-05 | Route `/api/v1/ai/chat` dan `/api/v1/ai/confirm-action` | ⬜ To Do | Janu |
-| S5-06 | Testing manual endpoint | ⬜ To Do | Janu |
+| S5-01 | Setup Gemini SDK + env var di backend | 🟢 Done | Janu |
+| S5-02 | Buat `backend/src/lib/gemini.ts` | 🟢 Done | Janu |
+| S5-03 | Controller `handleChat()` — deteksi intent, susun system prompt | 🟢 Done | Janu |
+| S5-04 | Controller `confirmAction()` — eksekusi restock + catat harga | 🟢 Done | Janu |
+| S5-05 | Route `/api/v1/ai/chat` dan `/api/v1/ai/confirm-action` | 🟢 Done | Janu |
+| S5-06 | Testing manual endpoint | 🟢 Done | Janu |
 | S5-07 | Floating 💬 button di Dashboard + Inventaris | ⬜ To Do | Raihan |
 | S5-08 | Komponen bottom sheet chatbot UI | ⬜ To Do | Raihan |
 | S5-09 | Konfirmasi parsing + tombol Ya/Batal | ⬜ To Do | Raihan |
