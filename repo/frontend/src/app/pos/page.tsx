@@ -390,20 +390,20 @@ export default function PosPage() {
 
         <div className={styles.sidebarGroup}>
           <div className={styles.sidebarGroupTitle}>Data</div>
-          <div className={`${styles.sidebarItem} ${styles.disabled}`} title="Segera">
+          <Link href="/dashboard" className={styles.sidebarItem}>
             {Icons.Laporan}
             <span className={styles.sidebarLabel}>Laporan</span>
             <div className={styles.tooltip}>Laporan</div>
-          </div>
+          </Link>
         </div>
 
         <div className={styles.sidebarGroup}>
           <div className={styles.sidebarGroupTitle}>Kelola</div>
-          <div className={`${styles.sidebarItem} ${styles.disabled}`} title="Segera">
+          <Link href="/inventory" className={styles.sidebarItem}>
             {Icons.Menu}
             <span className={styles.sidebarLabel}>Menu</span>
             <div className={styles.tooltip}>Menu</div>
-          </div>
+          </Link>
         </div>
       </aside>
 
