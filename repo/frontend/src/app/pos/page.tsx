@@ -381,11 +381,11 @@ export default function PosPage() {
             {Icons.Kasir}
             <span className={styles.sidebarLabel}>Kasir</span>
           </div>
-          <div className={`${styles.sidebarItem} ${styles.disabled}`} title="Segera">
+          <Link href="/orders" className={styles.sidebarItem}>
             {Icons.Pesanan}
             <span className={styles.sidebarLabel}>Pesanan</span>
             <div className={styles.tooltip}>Pesanan</div>
-          </div>
+          </Link>
         </div>
 
         <div className={styles.sidebarGroup}>
