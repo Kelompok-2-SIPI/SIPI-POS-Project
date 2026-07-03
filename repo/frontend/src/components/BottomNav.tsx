@@ -11,31 +11,62 @@ export default function BottomNav() {
 
   const navItems = [
     {
-      label: 'POS',
+      label: 'Kasir',
       href: '/pos',
       icon: (
-        <svg className="bottom-nav-icon" viewBox="0 0 24 24">
-          <path d="M19 6H17V5C17 3.34 15.66 2 14 2H10C8.34 2 7 3.34 7 5V6H5C3.34 6 2 7.34 2 9V19C2 20.66 3.34 22 5 22H19C20.66 22 22 20.66 22 19V9C22 7.34 20.66 6 19 6ZM9 5C9 4.45 9.45 4 10 4H14C14.55 4 15 4.45 15 5V6H9V5ZM20 19C20 19.55 19.55 20 19 20H5C4.45 20 4 19.55 4 19V9C4 8.45 4.45 8 5 8H19C19.55 8 20 8.45 20 9V19Z"/>
-          <path d="M12 11C10.34 11 9 12.34 9 14C9 15.66 10.34 17 12 17C13.66 17 15 15.66 15 14C15 12.34 13.66 11 12 11ZM12 15.5C11.17 15.5 10.5 14.83 10.5 14C10.5 13.17 11.17 12.5 12 12.5C12.83 12.5 13.5 13.17 13.5 14C13.5 14.83 12.83 15.5 12 15.5Z"/>
+        <svg className="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+          <path d="M3 6h18"/>
+          <path d="M16 10a4 4 0 0 1-8 0"/>
         </svg>
       )
     },
     {
-      label: 'Inventaris',
-      href: '/inventory',
+      label: 'Pesanan',
+      href: '#',
       icon: (
-        <svg className="bottom-nav-icon" viewBox="0 0 24 24">
-          <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z"/>
+        <svg className="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
         </svg>
       )
     },
-
     {
-      label: 'Dashboard',
+      label: 'Laporan',
       href: '/dashboard',
       icon: (
-        <svg className="bottom-nav-icon" viewBox="0 0 24 24">
-          <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM9 17H7V10H9V17ZM13 17H11V7H13V17ZM17 17H15V12H17V17Z"/>
+        <svg className="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      )
+    },
+    {
+      label: 'Menu',
+      href: '/inventory',
+      icon: (
+        <svg className="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+      )
+    },
+    {
+      label: 'Lainnya',
+      href: '#',
+      icon: (
+        <svg className="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="1"/>
+          <circle cx="19" cy="12" r="1"/>
+          <circle cx="5" cy="12" r="1"/>
         </svg>
       )
     }
@@ -44,12 +75,14 @@ export default function BottomNav() {
   return (
     <nav className="bottom-nav">
       {navItems.map((item) => {
-        const isActive = pathname.startsWith(item.href);
+        const isActive = item.href !== '#' && pathname.startsWith(item.href);
+        const disabled = item.href === '#';
         return (
           <Link
-            key={item.href}
+            key={item.label}
             href={item.href}
             className={`bottom-nav-item ${isActive ? 'active' : ''}`}
+            style={{ opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? 'none' : 'auto', paddingTop: '10px', gap: '6px' }}
           >
             {item.icon}
             <span>{item.label}</span>

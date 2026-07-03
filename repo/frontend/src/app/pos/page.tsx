@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import Link from 'next/link';
+import styles from './pos.module.css';
 
 interface MenuItem {
   id: string;
@@ -11,6 +13,7 @@ interface MenuItem {
   sellingPrice: number;
   hpp: number;
   isAvailable: boolean;
+  imageUrl?: string;
 }
 
 interface CartItem {
@@ -18,6 +21,7 @@ interface CartItem {
   name: string;
   price: number;
   qty: number;
+  imageUrl?: string;
 }
 
 interface ReceiptData {
@@ -38,137 +42,76 @@ export default function PosPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   
-  // Modals & Sheets visibility
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+  const [cartPanelMode, setCartPanelMode] = useState<'cart' | 'payment' | 'receipt'>('cart');
+  
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'non_cash'>('cash');
+  const [cashAmount, setCashAmount] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 1. Initial Load & Auth Sync
   useEffect(() => {
     fetchMenus();
-
-    // Load cart from localStorage
     const storedCart = localStorage.getItem('sipi_cart');
     if (storedCart) {
-      try {
-        setCart(JSON.parse(storedCart));
-      } catch (e) {
-        localStorage.removeItem('sipi_cart');
-      }
+      try { setCart(JSON.parse(storedCart)); } catch (e) { localStorage.removeItem('sipi_cart'); }
     }
-
-    // Listen to sync completion event to update menus
-    const handleSyncComplete = () => {
-      fetchMenus();
-    };
-    window.addEventListener('sipi_sync_completed', handleSyncComplete);
-    return () => window.removeEventListener('sipi_sync_completed', handleSyncComplete);
+    const handleSync = () => fetchMenus();
+    window.addEventListener('sipi_sync_completed', handleSync);
+    return () => window.removeEventListener('sipi_sync_completed', handleSync);
   }, []);
 
-  // 2. Fetch Menus from API
   const fetchMenus = async () => {
     try {
       const res = await apiFetch('/menus');
       if (res.ok) {
         const data = await res.json();
         setMenus(data);
-        // Extract unique categories
         const cats = ['Semua', ...Array.from(new Set(data.map((m: MenuItem) => m.category))) as string[]];
         setCategories(cats);
       }
     } catch (err) {
       console.error('Offline - loading menus from cache if any');
-      // If offline, try to get cached menus (Next.js/Browser handles SW caching,
-      // but let's check if we had any cached or fallback to hardcoded mock)
     }
   };
 
-  // 3. Filter menus whenever activeCategory, searchQuery or menus changes
   useEffect(() => {
     let result = menus;
-
-    if (activeCategory !== 'Semua') {
-      result = result.filter((m) => m.category === activeCategory);
-    }
-
+    if (activeCategory !== 'Semua') result = result.filter((m) => m.category === activeCategory);
     if (searchQuery.trim() !== '') {
-      result = result.filter((m) =>
-        m.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      result = result.filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
     }
-
     setFilteredMenus(result);
   }, [menus, activeCategory, searchQuery]);
 
-  // 4. Save cart helper
   const saveCart = (newCart: CartItem[]) => {
     setCart(newCart);
     localStorage.setItem('sipi_cart', JSON.stringify(newCart));
   };
 
-  // 5. Add item to cart
   const addToCart = (menu: MenuItem) => {
     if (!menu.isAvailable) return;
-
     const existingIndex = cart.findIndex((item) => item.menuId === menu.id);
     const newCart = [...cart];
-
-    if (existingIndex > -1) {
-      newCart[existingIndex].qty += 1;
-    } else {
-      newCart.push({
-        menuId: menu.id,
-        name: menu.name,
-        price: menu.sellingPrice,
-        qty: 1,
-      });
-    }
+    if (existingIndex > -1) newCart[existingIndex].qty += 1;
+    else newCart.push({ menuId: menu.id, name: menu.name, price: menu.sellingPrice, qty: 1, imageUrl: menu.imageUrl });
     saveCart(newCart);
   };
 
-  // 6. Qty buttons
-  const incrementQty = (menuId: string) => {
-    const newCart = cart.map((item) => {
-      if (item.menuId === menuId) {
-        return { ...item, qty: item.qty + 1 };
-      }
-      return item;
-    });
-    saveCart(newCart);
-  };
+  const incrementQty = (menuId: string) => saveCart(cart.map((item) => item.menuId === menuId ? { ...item, qty: item.qty + 1 } : item));
+  const decrementQty = (menuId: string) => saveCart(cart.map((item) => item.menuId === menuId ? { ...item, qty: item.qty - 1 } : item).filter((item) => item.qty > 0));
 
-  const decrementQty = (menuId: string) => {
-    const newCart = cart
-      .map((item) => {
-        if (item.menuId === menuId) {
-          return { ...item, qty: item.qty - 1 };
-        }
-        return item;
-      })
-      .filter((item) => item.qty > 0);
-    saveCart(newCart);
-  };
-
-  // 7. Clear Cart / Batal Transaksi (FR-05)
   const clearCart = () => {
     saveCart([]);
-    setIsCartOpen(false);
+    setCartPanelMode('cart');
+    setIsMobileCartOpen(false);
   };
 
-  // 8. Logout helper
-  const handleLogout = async () => {
-    if (confirm('Apakah Anda yakin ingin keluar?')) {
-      await apiFetch('/auth/logout', { method: 'POST' });
-      localStorage.removeItem('sipi_token');
-      localStorage.removeItem('sipi_logged_in');
-      localStorage.removeItem('sipi_user');
-      router.replace('/login');
-    }
-  };
+  const totalCartItems = cart.reduce((sum, item) => sum + item.qty, 0);
+  const totalCartPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const changeAmount = paymentMethod === 'cash' && cashAmount ? parseInt(cashAmount.replace(/\D/g, '')) - totalCartPrice : 0;
 
-  // 9. Checkout / Bayar (FR-02, FR-03, FR-04)
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setLoading(true);
@@ -187,644 +130,366 @@ export default function PosPage() {
       });
 
       const data = await res.json();
-
       if (res.ok && data.success) {
-        // Show receipt from API
         setReceipt({
           id: data.transaction.id,
           paymentMethod: data.transaction.paymentMethod === 'cash' ? 'Tunai' : 'Non-tunai',
           totalPrice: data.transaction.totalPrice,
           createdAt: data.transaction.createdAt,
           items: data.transaction.items.map((i: any) => ({
-            menuName: i.menuName,
-            qty: i.qty,
-            unitPrice: i.unitPrice,
+            menuName: i.menuName, qty: i.qty, unitPrice: i.unitPrice,
           })),
         });
-        saveCart([]); // Clear cart
-        setIsCartOpen(false);
-        fetchMenus(); // Refresh menu availability
+        setCartPanelMode('receipt');
+        saveCart([]);
+        fetchMenus();
       } else {
         setError(data.error || 'Terjadi kesalahan saat memproses transaksi.');
       }
     } catch (err) {
-      // Offline fallback: save offline transaction (PWA Requirement)
       console.log('Offline: saving transaction locally');
-      
       const offlineId = 'offline_' + Math.random().toString(36).substr(2, 9);
-      const offlineTx = {
-        id: offlineId,
-        items: cart,
-        paymentMethod,
-        createdAt: new Date().toISOString(),
-      };
-
-      // Push to offline queue
+      const offlineTx = { id: offlineId, items: cart, paymentMethod, createdAt: new Date().toISOString() };
+      
       const existingOffline = localStorage.getItem('sipi_offline_transactions');
       const queue = existingOffline ? JSON.parse(existingOffline) : [];
       queue.push(offlineTx);
       localStorage.setItem('sipi_offline_transactions', JSON.stringify(queue));
 
-      // Show receipt locally
       setReceipt({
         id: offlineId,
         paymentMethod: paymentMethod === 'cash' ? 'Tunai' : 'Non-tunai',
         totalPrice: totalCartPrice,
         createdAt: new Date().toISOString(),
-        items: cart.map((i) => ({
-          menuName: i.name,
-          qty: i.qty,
-          unitPrice: i.price,
-        })),
+        items: cart.map((i) => ({ menuName: i.name, qty: i.qty, unitPrice: i.price })),
         isOffline: true,
       });
-
-      saveCart([]); // Clear cart
-      setIsCartOpen(false);
+      setCartPanelMode('receipt');
+      saveCart([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const totalCartItems = cart.reduce((sum, item) => sum + item.qty, 0);
-  const totalCartPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const getMenuInitials = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+  // Shared Icons
+  const Icons = {
+    Kasir: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+    Pesanan: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+    Laporan: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    Menu: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+    Lainnya: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>,
+    Cart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>,
+    Back: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><path d="m15 18-6-6 6-6"/></svg>,
+    Check: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" width="32" height="32"><path d="M20 6 9 17l-5-5"/></svg>,
+    Search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.searchIcon}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+  };
+
+  const renderCartPanel = () => {
+    if (cartPanelMode === 'cart') {
+      return (
+        <>
+          <div className={styles.panelHeader}>
+            <h2>Keranjang</h2>
+            {isMobileCartOpen && (
+              <button className={styles.iconBtn} onClick={() => setIsMobileCartOpen(false)}>{Icons.Back}</button>
+            )}
+          </div>
+          <div className={styles.panelBody}>
+            {cart.length === 0 ? (
+              <div className={styles.emptyState}>
+                {Icons.Cart}
+                <p>Belum ada item, pilih menu di sebelah kiri</p>
+              </div>
+            ) : (
+              cart.map((item) => (
+                <div key={item.menuId} className={styles.cartItem}>
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.name} className={styles.cartItemAvatar} />
+                  ) : (
+                    <div className={`${styles.avatarFallback} ${styles.cartItemAvatar}`} style={{fontSize: '16px'}}>
+                      {getMenuInitials(item.name)}
+                    </div>
+                  )}
+                  <div className={styles.cartItemInfo}>
+                    <p className={styles.cartItemName}>{item.name}</p>
+                    <div className={styles.cartItemPrice}>Rp {item.price.toLocaleString('id-ID')}</div>
+                  </div>
+                  <div className={styles.qtyControls}>
+                    <button className={styles.qtyBtnWrapper} onClick={() => decrementQty(item.menuId)}>
+                      <div className={`${styles.qtyBtnRound} ${styles.decrease}`}>−</div>
+                    </button>
+                    <span className={styles.qtyValue}>{item.qty}</span>
+                    <button className={styles.qtyBtnWrapper} onClick={() => incrementQty(item.menuId)}>
+                      <div className={`${styles.qtyBtnRound} ${styles.increase}`}>+</div>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className={styles.panelFooter}>
+            {cart.length > 0 && <div className={styles.dividerTicket}></div>}
+            <div className={styles.summaryRow}>
+              <span>Subtotal</span>
+              <span>Rp {totalCartPrice.toLocaleString('id-ID')}</span>
+            </div>
+            <div className={`${styles.summaryRow} ${styles.total}`}>
+              <span>Total</span>
+              <span>Rp {totalCartPrice.toLocaleString('id-ID')}</span>
+            </div>
+            <button 
+              className={styles.primaryBtn} 
+              disabled={cart.length === 0}
+              onClick={() => setCartPanelMode('payment')}
+            >
+              Lanjut ke Pembayaran
+            </button>
+          </div>
+        </>
+      );
+    }
+
+    if (cartPanelMode === 'payment') {
+      return (
+        <>
+          <div className={styles.panelHeader}>
+            <button className={styles.iconBtn} onClick={() => setCartPanelMode('cart')}>{Icons.Back}</button>
+            <h2>Pembayaran</h2>
+            <div style={{width: 44}}></div>
+          </div>
+          <div className={styles.panelBody}>
+            <div className={styles.paymentOptions}>
+              <div 
+                className={`${styles.payMethodCard} ${paymentMethod === 'cash' ? styles.active : ''}`}
+                onClick={() => setPaymentMethod('cash')}
+              >
+                <div style={{width: 24, height: 24, borderRadius: '50%', border: '2px solid', borderColor: paymentMethod==='cash' ? 'currentColor' : 'var(--ink-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                  {paymentMethod === 'cash' && <div style={{width: 12, height: 12, borderRadius: '50%', background: 'currentColor'}}></div>}
+                </div>
+                <span>Tunai</span>
+              </div>
+              <div 
+                className={`${styles.payMethodCard} ${paymentMethod === 'non_cash' ? styles.active : ''}`}
+                onClick={() => setPaymentMethod('non_cash')}
+              >
+                <div style={{width: 24, height: 24, borderRadius: '50%', border: '2px solid', borderColor: paymentMethod==='non_cash' ? 'currentColor' : 'var(--ink-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                  {paymentMethod === 'non_cash' && <div style={{width: 12, height: 12, borderRadius: '50%', background: 'currentColor'}}></div>}
+                </div>
+                <span>QRIS / Transfer</span>
+              </div>
+            </div>
+
+            {paymentMethod === 'cash' && (
+              <div style={{marginTop: 16}}>
+                <label style={{fontSize: 'var(--text-sm)', color: 'var(--ink-soft)', marginBottom: 8, display: 'block'}}>Uang Diterima</label>
+                <input 
+                  type="text"
+                  inputMode="numeric"
+                  className={styles.inputAmount}
+                  placeholder="0"
+                  value={cashAmount}
+                  onChange={(e) => setCashAmount(e.target.value)}
+                />
+                {changeAmount > 0 && (
+                  <div style={{marginTop: 8, fontSize: 'var(--text-sm)', color: 'var(--brand)'}}>
+                    Kembalian: <strong>Rp {changeAmount.toLocaleString('id-ID')}</strong>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className={styles.panelFooter}>
+            {error && <div style={{color: 'var(--danger)', fontSize: 'var(--text-sm)', marginBottom: 8}}>{error}</div>}
+            <div className={`${styles.summaryRow} ${styles.total}`}>
+              <span>Total Tagihan</span>
+              <span>Rp {totalCartPrice.toLocaleString('id-ID')}</span>
+            </div>
+            <button 
+              className={styles.primaryBtn} 
+              disabled={loading}
+              onClick={handleCheckout}
+            >
+              {loading ? 'Memproses...' : 'Selesaikan Transaksi'}
+            </button>
+          </div>
+        </>
+      );
+    }
+
+    if (cartPanelMode === 'receipt' && receipt) {
+      return (
+        <>
+          <div className={styles.panelHeader} style={{justifyContent: 'center'}}>
+            <h2>Struk Transaksi</h2>
+          </div>
+          <div className={styles.panelBody} style={{alignItems: 'center', justifyContent: 'center'}}>
+            <div className={styles.receiptArea}>
+              <div className={styles.successIcon}>{Icons.Check}</div>
+              <h2>Pembayaran Berhasil</h2>
+              <div className={styles.receiptId}>TRX-{receipt.id.slice(0,8).toUpperCase()}</div>
+              
+              <div className={styles.dividerTicket} style={{width: '100%', margin: '24px 0'}}></div>
+              
+              <div className={styles.receiptList}>
+                {receipt.items.map((item, idx) => (
+                  <div key={idx} className={styles.summaryRow}>
+                    <span>{item.qty}x {item.menuName}</span>
+                    <span>Rp {(item.unitPrice * item.qty).toLocaleString('id-ID')}</span>
+                  </div>
+                ))}
+              </div>
+              
+              <div className={styles.dividerTicket} style={{width: '100%', margin: '24px 0'}}></div>
+              
+              <div className={styles.receiptList}>
+                <div className={styles.summaryRow}>
+                  <span>Metode Pembayaran</span>
+                  <span>{receipt.paymentMethod}</span>
+                </div>
+                <div className={`${styles.summaryRow} ${styles.total}`}>
+                  <span>Total Bayar</span>
+                  <span>Rp {Number(receipt.totalPrice).toLocaleString('id-ID')}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.panelFooter}>
+            <button className={styles.primaryBtn} onClick={() => {
+              setReceipt(null);
+              setCartPanelMode('cart');
+              setIsMobileCartOpen(false);
+            }}>
+              Transaksi Baru
+            </button>
+          </div>
+        </>
+      );
+    }
+  };
 
   return (
-    <div className="pos-layout">
-      {/* Header */}
-      <header className="pos-header">
-        <div className="header-info">
-          <h1>Kasir POS</h1>
-          <p>Kelola pesanan pelanggan dengan cepat</p>
-        </div>
-        <button onClick={handleLogout} className="btn-logout" title="Keluar">
-          <svg viewBox="0 0 24 24" width="16" height="16" style={{flexShrink: 0}}>
-            <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-          </svg>
-          Keluar
-        </button>
-      </header>
-
-      {/* Search & Categories */}
-      <div className="pos-controls">
-        <div className="search-box">
-          <svg className="search-icon" viewBox="0 0 24 24">
-            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-          </svg>
-          <input
-            type="text"
-            className="input-field"
-            placeholder="Cari menu..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+    <div className={styles.posWrapper}>
+      {/* Sidebar (Tablet & Desktop) */}
+      <aside className={styles.sidebar}>
+        <div className={styles.sidebarLogo}>S</div>
+        
+        <div className={styles.sidebarGroup}>
+          <div className={styles.sidebarGroupTitle}>Operasional</div>
+          <div className={`${styles.sidebarItem} ${styles.active}`}>
+            {Icons.Kasir}
+            <span className={styles.sidebarLabel}>Kasir</span>
+          </div>
+          <div className={`${styles.sidebarItem} ${styles.disabled}`} title="Segera">
+            {Icons.Pesanan}
+            <span className={styles.sidebarLabel}>Pesanan</span>
+            <div className={styles.tooltip}>Pesanan</div>
+          </div>
         </div>
 
-        <div className="category-scroll">
+        <div className={styles.sidebarGroup}>
+          <div className={styles.sidebarGroupTitle}>Data</div>
+          <div className={`${styles.sidebarItem} ${styles.disabled}`} title="Segera">
+            {Icons.Laporan}
+            <span className={styles.sidebarLabel}>Laporan</span>
+            <div className={styles.tooltip}>Laporan</div>
+          </div>
+        </div>
+
+        <div className={styles.sidebarGroup}>
+          <div className={styles.sidebarGroupTitle}>Kelola</div>
+          <div className={`${styles.sidebarItem} ${styles.disabled}`} title="Segera">
+            {Icons.Menu}
+            <span className={styles.sidebarLabel}>Menu</span>
+            <div className={styles.tooltip}>Menu</div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Area */}
+      <main className={styles.mainArea}>
+        <header className={styles.header}>
+          <h1>Kasir</h1>
+          <div className={styles.searchBox}>
+            {Icons.Search}
+            <input 
+              type="text" 
+              className={styles.searchInput} 
+              placeholder="Cari menu..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </header>
+
+        <div className={styles.categories}>
           {categories.map((cat) => (
             <button
               key={cat}
+              className={`${styles.chip} ${activeCategory === cat ? styles.active : ''}`}
               onClick={() => setActiveCategory(cat)}
-              className={`cat-btn ${activeCategory === cat ? 'active' : ''}`}
             >
               {cat}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Menu Grid */}
-      <div className="menu-grid">
-        {filteredMenus.length === 0 ? (
-          <div className="empty-state">
-            <p>Tidak ada menu dalam kategori ini.</p>
-          </div>
-        ) : (
-          filteredMenus.map((menu) => (
-            <button
-              key={menu.id}
-              onClick={() => addToCart(menu)}
-              disabled={!menu.isAvailable}
-              className={`menu-card ${!menu.isAvailable ? 'disabled' : ''}`}
-            >
-              <div className="menu-avatar">{menu.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}</div>
-              <div className="menu-details">
-                <h3>{menu.name}</h3>
-                <span className="menu-cat">{menu.category}</span>
-                <span className="menu-price">Rp {menu.sellingPrice.toLocaleString('id-ID')}</span>
-              </div>
-              {!menu.isAvailable && <span className="sold-out-badge">Habis</span>}
-            </button>
-          ))
-        )}
-      </div>
-
-      {/* Floating Cart Bar (FR-01) */}
-      {totalCartItems > 0 && (
-        <div className="floating-cart-bar" onClick={() => setIsCartOpen(true)}>
-          <div className="cart-bar-info">
-            <span className="cart-qty">{totalCartItems} Item</span>
-            <span className="cart-total">Total: Rp {totalCartPrice.toLocaleString('id-ID')}</span>
-          </div>
-          <button className="btn btn-primary">Lihat Keranjang</button>
-        </div>
-      )}
-
-      {/* Cart Bottom Sheet */}
-      {isCartOpen && (
-        <div className="bottom-sheet-backdrop" onClick={() => setIsCartOpen(false)}>
-          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="bottom-sheet-handle"></div>
-            <div className="sheet-header">
-              <h2>Keranjang Belanja</h2>
-              <button onClick={() => setIsCartOpen(false)} className="btn-close">Tutup</button>
-            </div>
-
-            {error && <div className="error-alert">{error}</div>}
-
-            <div className="cart-items-list">
-              {cart.map((item) => (
-                <div key={item.menuId} className="cart-item-row">
-                  <div className="item-info">
-                    <h4>{item.name}</h4>
-                    <span>Rp {item.price.toLocaleString('id-ID')}</span>
-                  </div>
-                  <div className="item-qty-controls">
-                    <button onClick={() => decrementQty(item.menuId)} className="qty-btn">−</button>
-                    <span className="qty-val">{item.qty}</span>
-                    <button onClick={() => incrementQty(item.menuId)} className="qty-btn">+</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="sheet-footer">
-              <div className="payment-selector">
-                <span className="form-label">Metode Pembayaran</span>
-                <div className="payment-options">
-                  <button
-                    onClick={() => setPaymentMethod('cash')}
-                    className={`pay-opt-btn ${paymentMethod === 'cash' ? 'active' : ''}`}
+        <div className={styles.menuGridWrapper}>
+          <div className={styles.menuGridContainer}>
+            {filteredMenus.length === 0 ? (
+              <div style={{textAlign: 'center', color: 'var(--ink-faint)', marginTop: '2rem'}}>Tidak ada menu ditemukan.</div>
+            ) : (
+              <div className={styles.menuGrid}>
+                {filteredMenus.map((menu) => (
+                  <div 
+                    key={menu.id} 
+                    className={`${styles.menuCard} ${!menu.isAvailable ? styles.disabled : ''}`}
+                    onClick={() => menu.isAvailable && addToCart(menu)}
                   >
-                    Tunai
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('non_cash')}
-                    className={`pay-opt-btn ${paymentMethod === 'non_cash' ? 'active' : ''}`}
-                  >
-                    Non-tunai
-                  </button>
-                </div>
-              </div>
-
-              <div className="checkout-summary">
-                <div className="summary-row font-bold">
-                  <span>Total Bayar</span>
-                  <span>Rp {totalCartPrice.toLocaleString('id-ID')}</span>
-                </div>
-              </div>
-
-              <div className="cart-action-buttons">
-                <button onClick={clearCart} className="btn btn-secondary flex-1">
-                  Batal Transaksi
-                </button>
-                <button
-                  onClick={handleCheckout}
-                  disabled={loading || cart.length === 0}
-                  className="btn btn-primary flex-2"
-                >
-                  {loading ? 'Memproses...' : 'Konfirmasi Bayar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Digital Receipt Modal (Bottom Sheet - OQ-1, FR-02) */}
-      {receipt && (
-        <div className="bottom-sheet-backdrop">
-          <div className="bottom-sheet receipt-sheet">
-            <div className="bottom-sheet-handle"></div>
-            <div className="receipt-container">
-              <div className="receipt-header">
-                <div className="success-icon">✓</div>
-                <h2>Transaksi Sukses!</h2>
-                <p className="receipt-id">ID: #{receipt.id.slice(0, 12).toUpperCase()}</p>
-                <p className="receipt-date">{new Date(receipt.createdAt).toLocaleString('id-ID')}</p>
-                {receipt.isOffline && (
-                  <span className="badge badge-warning">Tersimpan Offline</span>
-                )}
-              </div>
-
-              <div className="receipt-divider"></div>
-
-              <div className="receipt-items">
-                {receipt.items.map((item, idx) => (
-                  <div key={idx} className="receipt-item-row">
-                    <span>{item.menuName} x {item.qty}</span>
-                    <span>Rp {(item.unitPrice * item.qty).toLocaleString('id-ID')}</span>
+                    {menu.imageUrl ? (
+                      <img src={menu.imageUrl} alt={menu.name} className={styles.menuPhoto} />
+                    ) : (
+                      <div className={styles.avatarFallback}>
+                        {getMenuInitials(menu.name)}
+                      </div>
+                    )}
+                    <div className={styles.menuInfo}>
+                      <h3 className={styles.menuName} title={menu.name}>{menu.name}</h3>
+                      <span className={styles.menuPrice}>Rp {menu.sellingPrice.toLocaleString('id-ID')}</span>
+                    </div>
+                    {!menu.isAvailable && <div className={styles.badgeDanger}>Habis</div>}
                   </div>
                 ))}
               </div>
-
-              <div className="receipt-divider"></div>
-
-              <div className="receipt-summary">
-                <div className="receipt-summary-row">
-                  <span>Metode Pembayaran</span>
-                  <span>{receipt.paymentMethod}</span>
-                </div>
-                <div className="receipt-summary-row font-bold">
-                  <span>Total</span>
-                  <span>Rp {Number(receipt.totalPrice).toLocaleString('id-ID')}</span>
-                </div>
-              </div>
-
-              <button onClick={() => setReceipt(null)} className="btn btn-primary w-full mt-6">
-                Transaksi Baru
-              </button>
-            </div>
+            )}
           </div>
+        </div>
+      </main>
+
+      {/* Right Cart Panel (Desktop / Tablet) */}
+      <aside className={styles.cartPanel}>
+        {renderCartPanel()}
+      </aside>
+
+      {/* Mobile Right Cart Panel Overlay */}
+      {isMobileCartOpen && (
+        <div className={styles.mobileCartOverlay}>
+          {renderCartPanel()}
         </div>
       )}
 
-      {/* Styles moved to globals.css */}
-      {false && <style>{`
-        .pos-layout {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .pos-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid var(--border-color);
-          padding-bottom: 12px;
-        }
-        .pos-header h1 {
-          font-size: 24px;
-        }
-        .pos-header p {
-          font-size: 13px;
-          color: var(--text-secondary);
-        }
-        .btn-logout {
-          background: transparent;
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm);
-          color: var(--text-secondary);
-          width: 38px;
-          height: 38px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: var(--transition-fast);
-        }
-        .btn-logout:hover {
-          color: var(--danger-color);
-          border-color: rgba(239, 68, 68, 0.2);
-          background-color: var(--danger-light);
-        }
-        .pos-controls {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .search-box {
-          position: relative;
-          display: flex;
-          align-items: center;
-        }
-        .search-icon {
-          position: absolute;
-          left: 14px;
-          width: 18px;
-          height: 18px;
-          fill: var(--text-tertiary);
-        }
-        .search-box input {
-          width: 100%;
-          padding-left: 42px;
-        }
-        .category-scroll {
-          display: flex;
-          gap: 8px;
-          overflow-x: auto;
-          padding-bottom: 4px;
-          -scrollbar-width: none;
-        }
-        .category-scroll::-webkit-scrollbar {
-          display: none;
-        }
-        .cat-btn {
-          font-family: var(--font-jakarta);
-          font-weight: 600;
-          font-size: 13px;
-          padding: 8px 16px;
-          background: white;
-          color: var(--text-secondary);
-          border: 1px solid var(--border-color);
-          border-radius: 30px;
-          cursor: pointer;
-          white-space: nowrap;
-          transition: var(--transition-fast);
-        }
-        .cat-btn.active {
-          background-color: var(--primary-color);
-          color: white;
-          border-color: var(--primary-color);
-        }
-        .menu-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-          padding-bottom: 60px;
-        }
-        .menu-card {
-          background: white;
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-md);
-          padding: 14px;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          text-align: left;
-          gap: 10px;
-          cursor: pointer;
-          transition: var(--transition-fast);
-          position: relative;
-          overflow: hidden;
-        }
-        .menu-card:active:not(.disabled) {
-          transform: scale(0.97);
-        }
-        .menu-card.disabled {
-          background-color: #f2ede4;
-          border-color: #dfd7cc;
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        .menu-avatar {
-          width: 44px;
-          height: 44px;
-          background-color: var(--primary-light);
-          color: var(--primary-color);
-          border-radius: var(--radius-sm);
-          font-family: var(--font-outfit);
-          font-weight: 700;
-          font-size: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .menu-card.disabled .menu-avatar {
-          background-color: var(--text-tertiary);
-          color: white;
-        }
-        .menu-details {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-        .menu-details h3 {
-          font-size: 14px;
-          font-weight: 600;
-        }
-        .menu-cat {
-          font-size: 11px;
-          color: var(--text-secondary);
-        }
-        .menu-price {
-          font-size: 13px;
-          font-weight: 700;
-          color: var(--primary-color);
-          margin-top: 2px;
-        }
-        .menu-card.disabled .menu-price {
-          color: var(--text-secondary);
-        }
-        .sold-out-badge {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          font-size: 10px;
-          font-weight: 700;
-          background-color: var(--danger-color);
-          color: white;
-          padding: 2px 6px;
-          border-radius: 4px;
-          text-transform: uppercase;
-        }
-        .floating-cart-bar {
-          position: fixed;
-          bottom: 84px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: calc(100% - 24px);
-          max-width: 456px;
-          background-color: var(--text-primary);
-          color: white;
-          padding: 12px 16px;
-          border-radius: var(--radius-md);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          cursor: pointer;
-          box-shadow: var(--shadow-lg);
-          z-index: 800;
-        }
-        .cart-bar-info {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-        .cart-qty {
-          font-size: 12px;
-          color: var(--text-tertiary);
-        }
-        .cart-total {
-          font-size: 15px;
-          font-weight: 700;
-        }
-        .sheet-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-        }
-        .btn-close {
-          background: transparent;
-          border: none;
-          color: var(--text-secondary);
-          font-weight: 600;
-          font-size: 14px;
-          cursor: pointer;
-        }
-        .cart-items-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          max-height: 40vh;
-          overflow-y: auto;
-          margin-bottom: 20px;
-        }
-        .cart-item-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid var(--border-color);
-          padding-bottom: 12px;
-        }
-        .item-info h4 {
-          font-size: 14px;
-          margin-bottom: 2px;
-        }
-        .item-info span {
-          font-size: 12px;
-          color: var(--text-secondary);
-        }
-        .item-qty-controls {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        .qty-btn {
-          width: 32px;
-          height: 32px;
-          border-radius: var(--radius-sm);
-          border: 1px solid var(--border-color);
-          background: #fafaf9;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .qty-val {
-          font-weight: 600;
-          min-width: 20px;
-          text-align: center;
-        }
-        .payment-selector {
-          margin-bottom: 20px;
-        }
-        .payment-options {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 10px;
-          margin-top: 6px;
-        }
-        .pay-opt-btn {
-          font-family: var(--font-jakarta);
-          font-weight: 600;
-          font-size: 13px;
-          padding: 10px;
-          background: #fafaf9;
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm);
-          cursor: pointer;
-          transition: var(--transition-fast);
-        }
-        .pay-opt-btn.active {
-          background-color: var(--primary-light);
-          color: var(--primary-color);
-          border-color: var(--primary-color);
-        }
-        .checkout-summary {
-          border-top: 1px solid var(--border-color);
-          padding-top: 16px;
-          margin-bottom: 24px;
-        }
-        .summary-row {
-          display: flex;
-          justify-content: space-between;
-          font-size: 14px;
-        }
-        .font-bold {
-          font-weight: 700;
-          font-size: 16px;
-        }
-        .cart-action-buttons {
-          display: flex;
-          gap: 12px;
-        }
-        .flex-1 { flex: 1; }
-        .flex-2 { flex: 2; }
-        
-        /* Receipt Modal Specifics */
-        .receipt-sheet {
-          border-radius: var(--radius-lg);
-          padding: 32px 24px;
-        }
-        .receipt-container {
-          text-align: center;
-        }
-        .success-icon {
-          width: 56px;
-          height: 56px;
-          background-color: var(--success-light);
-          color: var(--success-color);
-          border-radius: 50%;
-          font-size: 28px;
-          font-weight: bold;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 16px auto;
-        }
-        .receipt-id {
-          font-size: 12px;
-          color: var(--text-tertiary);
-          margin-top: 4px;
-        }
-        .receipt-date {
-          font-size: 11px;
-          color: var(--text-secondary);
-        }
-        .receipt-divider {
-          border-top: 2px dashed var(--border-color);
-          margin: 20px 0;
-        }
-        .receipt-items {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          text-align: left;
-        }
-        .receipt-item-row {
-          display: flex;
-          justify-content: space-between;
-          font-size: 14px;
-          color: var(--text-secondary);
-        }
-        .receipt-summary {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          text-align: left;
-        }
-        .receipt-summary-row {
-          display: flex;
-          justify-content: space-between;
-          font-size: 14px;
-        }
-        .error-alert {
-          background-color: var(--danger-light);
-          color: var(--danger-color);
-          padding: 8px 12px;
-          border-radius: var(--radius-sm);
-          font-size: 13px;
-          font-weight: 500;
-          margin-bottom: 16px;
-          text-align: center;
-        }
-        .w-full { width: 100%; }
-        .mt-6 { margin-top: 24px; }
-      `}</style>}
+      {/* Mobile Floating Cart Bar */}
+      {totalCartItems > 0 && !isMobileCartOpen && (
+        <div className={styles.mobileFloatingCart} onClick={() => setIsMobileCartOpen(true)}>
+          <div className={styles.fcInfo}>
+            <span className={styles.fcTitle}>{totalCartItems} Item</span>
+            <span className={styles.fcPrice}>Rp {totalCartPrice.toLocaleString('id-ID')}</span>
+          </div>
+          <button className={styles.fcBtn}>Bayar</button>
+        </div>
+      )}
+
     </div>
   );
 }
