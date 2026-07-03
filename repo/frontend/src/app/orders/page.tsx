@@ -55,12 +55,26 @@ export default function OrdersPage() {
       const res = await apiFetch('/transactions');
       if (res.ok) {
         const data = await res.json();
+        
+        // Fetch full details (which includes items) for all pending orders for Kitchen Mode
+        // because the main endpoint might only return itemsCount
+        const pendingOrders = data.filter((o: Order) => o.status === 'pending' && (!o.items || o.items.length === 0));
+        if (pendingOrders.length > 0) {
+          const details = await Promise.all(
+            pendingOrders.map((o: Order) => apiFetch(`/transactions/${o.id}`).then(r => r.json()))
+          );
+          details.forEach(d => {
+            const idx = data.findIndex((o: Order) => o.id === d.id);
+            if (idx > -1) data[idx] = d;
+          });
+        }
+
         setOrders(data);
         if (selectedOrder) {
           const updatedSelected = data.find((o: Order) => o.id === selectedOrder.id);
           if (updatedSelected && updatedSelected.status !== selectedOrder.status) {
             setSelectedOrder(updatedSelected);
-            setEditCart(updatedSelected.items);
+            setEditCart(updatedSelected.items ? updatedSelected.items : []);
           }
         }
       }
@@ -76,9 +90,24 @@ export default function OrdersPage() {
     setFilteredOrders(result);
   }, [orders, activeFilter]);
 
-  const handleSelectOrder = (order: Order) => {
-    setSelectedOrder(order);
-    setEditCart(order.items ? order.items.map(i => ({...i})) : []);
+  const handleSelectOrder = async (order: Order) => {
+    let fullOrder = order;
+    // If items are missing (e.g. for completed orders which we didn't pre-fetch), fetch them now
+    if (!fullOrder.items || fullOrder.items.length === 0) {
+      try {
+        const res = await apiFetch(`/transactions/${order.id}`);
+        if (res.ok) {
+          fullOrder = await res.json();
+          // Update the list so we don't have to fetch again
+          setOrders(prev => prev.map(o => o.id === fullOrder.id ? fullOrder : o));
+        }
+      } catch (e) {
+        console.error('Failed to fetch order detail');
+      }
+    }
+    
+    setSelectedOrder(fullOrder);
+    setEditCart(fullOrder.items ? fullOrder.items.map(i => ({...i})) : []);
     setPanelMode('detail');
     setIsMobileDetailOpen(true);
   };
@@ -194,7 +223,13 @@ export default function OrdersPage() {
               <span>Waktu Pesan</span>
               <span>{new Date(selectedOrder.createdAt).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}</span>
             </div>
-            <div className={`${styles.summaryRow} ${styles.total}`}>
+            {selectedOrder.status !== 'pending' && (
+              <div className={styles.summaryRow}>
+                <span>Metode Pembayaran</span>
+                <span style={{textTransform: 'capitalize'}}>{selectedOrder.paymentMethod === 'cash' ? 'Tunai' : 'Non-Tunai (QRIS)'}</span>
+              </div>
+            )}
+            <div className={`${styles.summaryRow} ${styles.total}`} style={{marginTop: 8}}>
               <span>Total</span>
               <span>Rp {currentTotal.toLocaleString('id-ID')}</span>
             </div>
