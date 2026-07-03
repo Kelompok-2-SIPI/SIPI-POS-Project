@@ -113,7 +113,7 @@
   flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 100px;
 }
 @media (min-width: 768px) { .ordersGridWrapper { padding: 24px; padding-bottom: 24px; } }
-.ordersGridContainer { max-width: 1280px; margin: 0 auto; }
+.ordersGridContainer { width: 100%; }
 .ordersGrid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 768px) { .ordersGrid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); } }
 

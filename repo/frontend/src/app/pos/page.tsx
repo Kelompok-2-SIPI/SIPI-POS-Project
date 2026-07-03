@@ -120,6 +120,7 @@ export default function PosPage() {
     const transactionData = {
       items: cart.map((i) => ({ menuId: i.menuId, qty: i.qty })),
       paymentMethod,
+      status: 'pending'
     };
 
     try {
