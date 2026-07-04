@@ -15,7 +15,7 @@
 | Sprint 4 | Arsitektur & Polish | Refactor 3 container, navigasi OQ-7, gap PRD v4.2 | 🟢 Done |
 | Sprint 5 | AI Chatbot Bidirectional | FR-12, FR-13, FR-17, FR-18 | 🔵 Berjalan |
 | Sprint 6 | Mobile Testing & PWA Polish | Semua FR (uji mobile) + PWA installable | 🔵 Berjalan (paralel) |
-| Sprint 7 | Laporan Rentang Tanggal & Export PDF | FR-19, FR-20, FR-21, FR-22 | ⬜ Belum Mulai |
+| Sprint 7 | Laporan Rentang Tanggal & Export PDF | FR-19, FR-20, FR-21, FR-22 | 🟡 In Progress |
 
 ---
 
@@ -45,10 +45,10 @@
 | FR-17 | AI parse laporan belanja → restock + catat harga | AI | 5 | 🔵 Berjalan |
 | FR-18 | Konfirmasi parsing sebelum eksekusi aksi | AI | 5 | 🔵 Berjalan |
 | FR-16a | Mini-card per bahan baku di kartu alert → grafik garis tren harga 7 hari | Dashboard | 5 (tambahan) | ⬜ To Do |
-| FR-19 | Bagian Laporan terpisah + custom date range picker | Dashboard | 7 | ⬜ To Do |
-| FR-20 | Laporan agregat rentang tanggal (pendapatan, laba, top menu, alert harga, margin kritis) | Dashboard | 7 | ⬜ To Do |
-| FR-21 | Snapshot HPP + harga jual ke `menu_hpp_history` | HPP | 7 | ⬜ To Do |
-| FR-22 | Export laporan rentang tanggal sebagai PDF | Dashboard | 7 | ⬜ To Do |
+| FR-19 | Bagian Laporan terpisah + custom date range picker | Dashboard | 7 | 🟢 Done |
+| FR-20 | Laporan agregat rentang tanggal (pendapatan, laba, top menu, alert harga, margin kritis) | Dashboard | 7 | 🟢 Done |
+| FR-21 | Snapshot HPP + harga jual ke `menu_hpp_history` | HPP | 7 | 🟢 Done |
+| FR-22 | Export laporan rentang tanggal sebagai PDF | Dashboard | 7 | 🟢 Done |
 
 ---
 
@@ -77,10 +77,10 @@ Branch: `feat/llm-chatbot`
 | S5-04 | Controller `confirmAction()` — eksekusi restock + catat harga | 🟢 Done | Janu |
 | S5-05 | Route `/api/v1/ai/chat` dan `/api/v1/ai/confirm-action` | 🟢 Done | Janu |
 | S5-06 | Testing manual endpoint | 🟢 Done | Janu |
-| S5-07 | Core: Floating 💬 button di Dashboard + Inventaris | ⬜ To Do | Favian |
-| S5-08 | Core: Komponen bottom sheet chatbot UI (bubble chat) | ⬜ To Do | Favian |
-| S5-09 | Core: Konfirmasi parsing + tombol Ya/Batal | ⬜ To Do | Favian |
-| S5-10 | Core: Ringkasan hasil setelah eksekusi | ⬜ To Do | Favian |
+| S5-07 | Core: Floating 💬 button di Dashboard + Inventaris | 🟢 Done | Favian |
+| S5-08 | Core: Komponen bottom sheet chatbot UI (bubble chat) | 🟢 Done | Favian |
+| S5-09 | Core: Konfirmasi parsing + tombol Ya/Batal | 🟢 Done | Favian |
+| S5-10 | Core: Ringkasan hasil setelah eksekusi | 🟢 Done | Favian |
 | S5-16 | Polish: styling bubble/bottom sheet, animasi, aksesibilitas, cek feature-flag `ENABLE_AI_CHAT` untuk sembunyikan tombol | ⬜ To Do | Raihan |
 | S5-11 | Uji manual Sprint 5 | ⬜ To Do | Rinda, Ibnu |
 
@@ -90,8 +90,8 @@ Favian implementasi versi core (logika inti) dulu, Raihan menyempurnakan styling
 
 | # | Task | Status | PIC |
 |---|------|--------|-----|
-| S5-12 | Core: mini-card per bahan baku (expand/collapse) + fetch & cache price-history di kartu alert FR-16 (Dashboard) | ⬜ To Do | Favian |
-| S5-13 | Core: render grafik garis (SVG polyline sederhana) 7 hari terakhir + edge case data kurang/error | ⬜ To Do | Favian |
+| S5-12 | Core: mini-card per bahan baku (expand/collapse) + fetch & cache price-history di kartu alert FR-16 (Dashboard) | 🟢 Done | Favian |
+| S5-13 | Core: render grafik garis (SVG polyline sederhana) 7 hari terakhir + edge case data kurang/error | 🟢 Done | Favian |
 | S5-14 | Polish: styling, kontras/font sesuai §6, aksesibilitas warna, animasi expand/collapse | ⬜ To Do | Raihan |
 | S5-15 | Uji manual FR-16a | ⬜ To Do | Rinda, Ibnu |
 
@@ -120,17 +120,17 @@ Detail lengkap: `00-koordinasi/sprint-7-laporan-export.md`. Urutan penting: S7-0
 
 | # | Task | Status | PIC |
 |---|------|--------|-----|
-| S7-01 | Migrasi Prisma: tabel `menu_hpp_history` | ⬜ To Do | Janu |
-| S7-02 | Hook snapshot HPP+harga jual ke `menu_hpp_history` (FR-09 & OQ-4) | ⬜ To Do | Janu |
-| S7-03 | `GET /dashboard/summary-range` | ⬜ To Do | Janu |
-| S7-04 | `GET /dashboard/top-menus-range` | ⬜ To Do | Janu |
-| S7-05 | `GET /dashboard/price-alerts-range` | ⬜ To Do | Janu |
-| S7-06 | `GET /dashboard/critical-margins-range` | ⬜ To Do | Janu |
+| S7-01 | Migrasi Prisma: tabel `menu_hpp_history` | 🟢 Done | Janu |
+| S7-02 | Hook snapshot HPP+harga jual ke `menu_hpp_history` (FR-09 & OQ-4) | 🟢 Done | Janu |
+| S7-03 | `GET /dashboard/summary-range` | 🟢 Done | Janu |
+| S7-04 | `GET /dashboard/top-menus-range` | 🟢 Done | Janu |
+| S7-05 | `GET /dashboard/price-alerts-range` | 🟢 Done | Janu |
+| S7-06 | `GET /dashboard/critical-margins-range` | 🟢 Done | Janu |
 | S7-07 | Testing manual endpoint rentang tanggal | ⬜ To Do | Janu |
-| S7-08 | Date range picker custom di bagian "Laporan" Dashboard | ⬜ To Do | Raihan |
-| S7-09 | Render ringkasan agregat rentang (pendapatan, transaksi, laba, top menu) | ⬜ To Do | Raihan |
-| S7-10 | Render kenaikan harga & margin kritis rentang | ⬜ To Do | Raihan |
-| S7-11 | Tombol Export PDF (client-side) | ⬜ To Do | Raihan |
+| S7-08 | Date range picker custom di bagian "Laporan" Dashboard | 🟢 Done | Raihan |
+| S7-09 | Render ringkasan agregat rentang (pendapatan, transaksi, laba, top menu) | 🟢 Done | Raihan |
+| S7-10 | Render kenaikan harga & margin kritis rentang | 🟢 Done | Raihan |
+| S7-11 | Tombol Export PDF (client-side) | 🟢 Done | Raihan |
 | S7-12 | Uji manual Sprint 7 | ⬜ To Do | Rinda, Ibnu |
 
 ## Legenda Status
