@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
+import AiChatWidget from '@/components/AiChatWidget';
+import LaporanRangeSection from '@/components/LaporanRangeSection';
 
 interface SummaryData {
   transactionsCount: number;
@@ -34,6 +36,132 @@ interface PriceAlert {
   currentPrice: number;
   increasePercent: number;
   affectedMenus: { menuId: string; menuName: string; currentHpp: number }[];
+}
+
+interface PriceHistory {
+  id: string;
+  price: number;
+  recordedAt: string;
+  recordedBy: string;
+}
+
+function SimpleLineChart({ data }: { data: PriceHistory[] }) {
+  const width = 400;
+  const height = 150;
+  const padding = 20; 
+  
+  const minPrice = Math.min(...data.map(d => Number(d.price)));
+  const maxPrice = Math.max(...data.map(d => Number(d.price)));
+  
+  const priceRange = maxPrice - minPrice || 1; 
+  const timeStart = new Date(data[0].recordedAt).getTime();
+  const timeEnd = new Date(data[data.length - 1].recordedAt).getTime();
+  const timeRange = timeEnd - timeStart || 1;
+  
+  const points = data.map(d => {
+    const x = ((new Date(d.recordedAt).getTime() - timeStart) / timeRange) * width;
+    const y = height - padding - (((Number(d.price) - minPrice) / priceRange) * (height - padding * 2));
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} style={{ overflow: 'visible' }}>
+      <polyline
+        fill="none"
+        stroke="#dc2626"
+        strokeWidth="2"
+        points={points}
+      />
+      {data.map((d, i) => {
+        const x = ((new Date(d.recordedAt).getTime() - timeStart) / timeRange) * width;
+        const y = height - padding - (((Number(d.price) - minPrice) / priceRange) * (height - padding * 2));
+        return <circle key={i} cx={x} cy={y} r="4" fill="#dc2626" />;
+      })}
+    </svg>
+  );
+}
+
+function PriceAlertItem({ alert }: { alert: PriceAlert }) {
+  const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [chartData, setChartData] = useState<PriceHistory[] | null>(null);
+
+  const toggleExpand = async () => {
+    if (!expanded) {
+      if (!chartData && !loading) {
+        setLoading(true);
+        setError('');
+        try {
+          const res = await apiFetch(`/ingredients/${alert.ingredientId}/price-history`);
+          if (res.ok) {
+            const data: PriceHistory[] = await res.json();
+            
+            // Filter 7 hari terakhir, sort ascending
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            const filtered = data
+              .filter((d: PriceHistory) => new Date(d.recordedAt) >= sevenDaysAgo)
+              .sort((a: PriceHistory, b: PriceHistory) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+              
+            setChartData(filtered);
+          } else {
+            setError('Gagal memuat riwayat harga.');
+          }
+        } catch (err) {
+          setError('Terjadi kesalahan saat memuat grafik.');
+        } finally {
+          setLoading(false);
+        }
+      }
+      setExpanded(true);
+    } else {
+      setExpanded(false);
+    }
+  };
+
+  return (
+    <div className="alert-item card border-danger" onClick={toggleExpand} style={{ cursor: 'pointer' }}>
+      <div className="alert-item-header">
+        <h3>{alert.ingredientName}</h3>
+        <span className="badge badge-danger">
+          Naik {alert.increasePercent.toFixed(0)}%
+        </span>
+      </div>
+      <p className="alert-meta">
+        Harga baseline: Rp {alert.baselinePrice.toLocaleString('id-ID')} ➜ Sekarang: Rp {alert.currentPrice.toLocaleString('id-ID')} (7 hari terakhir)
+      </p>
+      {alert.affectedMenus.length > 0 && (
+        <div className="affected-menus">
+          <span className="sub-label">Menu Terdampak:</span>
+          <ul className="affected-list">
+            {alert.affectedMenus.map((menu, mIdx) => (
+              <li key={mIdx}>
+                {menu.menuName} (HPP baru: Rp {menu.currentHpp.toLocaleString('id-ID')})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      {expanded && (
+        // TODO(Raihan): polish styling/animasi/aksesibilitas warna
+        <div className="alert-history-chart" style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }} onClick={(e) => e.stopPropagation()}>
+          <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>Tren Harga (7 Hari Terakhir)</h4>
+          {loading && <p className="text-secondary text-sm">Memuat grafik...</p>}
+          {error && <p className="text-danger text-sm">{error}</p>}
+          {!loading && !error && chartData && (
+            chartData.length < 2 ? (
+              <p className="text-secondary text-sm">Data harga belum cukup untuk grafik</p>
+            ) : (
+              <SimpleLineChart data={chartData} />
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function DashboardPage() {
@@ -188,6 +316,7 @@ export default function DashboardPage() {
 
       {error && <div className="error-alert">{error}</div>}
 
+      <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Summary Text Alert Banner (FR-14) */}
       {summary && (
         <div className="summary-banner card">
@@ -226,29 +355,7 @@ export default function DashboardPage() {
           <h2>⚠️ Kenaikan Harga Bahan Baku ({priceAlerts.length})</h2>
           <div className="alerts-list">
             {priceAlerts.map((alert, idx) => (
-              <div key={idx} className="alert-item card border-danger">
-                <div className="alert-item-header">
-                  <h3>{alert.ingredientName}</h3>
-                  <span className="badge badge-danger">
-                    Naik {alert.increasePercent.toFixed(0)}%
-                  </span>
-                </div>
-                <p className="alert-meta">
-                  Harga baseline: Rp {alert.baselinePrice.toLocaleString('id-ID')} ➜ Sekarang: Rp {alert.currentPrice.toLocaleString('id-ID')} (7 hari terakhir)
-                </p>
-                {alert.affectedMenus.length > 0 && (
-                  <div className="affected-menus">
-                    <span className="sub-label">Menu Terdampak:</span>
-                    <ul className="affected-list">
-                      {alert.affectedMenus.map((menu, mIdx) => (
-                        <li key={mIdx}>
-                          {menu.menuName} (HPP baru: Rp {menu.currentHpp.toLocaleString('id-ID')})
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              <PriceAlertItem key={idx} alert={alert} />
             ))}
           </div>
         </div>
@@ -317,7 +424,11 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      </div>
 
+      <LaporanRangeSection />
+      
+      <AiChatWidget />
     </div>
   );
 }

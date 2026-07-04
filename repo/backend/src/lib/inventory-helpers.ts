@@ -19,9 +19,13 @@ export async function recalculateMenuHpp(menuId: string): Promise<number> {
     totalHpp += qty * price;
   }
 
-  await prisma.menu.update({
+  const updated = await prisma.menu.update({
     where: { id: menuId },
     data: { hpp: totalHpp },
+  });
+
+  await prisma.menuHppHistory.create({
+    data: { menuId, hpp: totalHpp, sellingPrice: updated.sellingPrice },
   });
 
   return totalHpp;

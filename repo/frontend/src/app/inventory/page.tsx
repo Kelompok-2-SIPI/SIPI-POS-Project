@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
+import AiChatWidget from '@/components/AiChatWidget';
 
 interface Ingredient {
   id: string;
@@ -1596,6 +1597,8 @@ export default function InventoryPage() {
           display: block;
         }
       `}</style>
+
+      <AiChatWidget />
     </div>
   );
 }

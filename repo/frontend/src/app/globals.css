@@ -659,3 +659,52 @@ button, .btn {
 .receipt-summary { display: flex; flex-direction: column; gap: 8px; text-align: left; }
 .receipt-summary-row { display: flex; justify-content: space-between; font-size: 14px; }
 .mt-6 { margin-top: 24px; }
+
+/* ===== Print Styles (Laporan) ===== */
+@media print {
+  /* Hide UI elements not meant for print */
+  .bottom-nav, 
+  .no-print, 
+  .dashboard-header {
+    display: none !important;
+  }
+
+  /* Hide the dashboard components that are outside of LaporanRangeSection */
+  body > div > div > .summary-banner:not(.print-container .summary-banner),
+  body > div > div > .stats-grid:not(.print-container .stats-grid),
+  body > div > div > .top-menus-section:not(.print-container .top-menus-section),
+  body > div > div > .price-alerts-section:not(.print-container .price-alerts-section),
+  body > div > div > .critical-margins-section:not(.print-container .critical-margins-section) {
+    display: none !important;
+  }
+
+  /* Hide the floating AI Chat widget */
+  button[style*="position: fixed"] {
+    display: none !important;
+  }
+
+  /* Adjust layout for print */
+  body {
+    background-color: white !important;
+    padding-bottom: 0 !important;
+    color: black !important;
+  }
+  
+  .main-wrapper {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    break-inside: avoid;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
