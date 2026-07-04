@@ -31,12 +31,39 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { name, unit, minStockQty } = req.body;
+    const { name, unit, minStockQty, stockQty } = req.body;
     if (!name || !unit || minStockQty === undefined)
       return res.status(400).json({ error: 'Nama, satuan, dan stok minimal wajib diisi.' });
-    const updated = await prisma.ingredient.update({ where: { id: req.params.id }, data: { name, unit, minStockQty: Number(minStockQty) } });
+
+    const defaultUser = await prisma.user.findFirst();
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const ing = await tx.ingredient.findUnique({ where: { id: req.params.id } });
+      if (!ing) throw new Error('Bahan baku tidak ditemukan.');
+
+      let dataToUpdate: any = { name, unit, minStockQty: Number(minStockQty) };
+
+      if (stockQty !== undefined && Number(stockQty) !== Number(ing.stockQty)) {
+        dataToUpdate.stockQty = Number(stockQty);
+        
+        if (defaultUser) {
+          await tx.stockMovement.create({
+            data: {
+              ingredientId: ing.id,
+              type: TypeMovement.adjustment,
+              qtyChange: Number(stockQty) - Number(ing.stockQty),
+              note: `Penyesuaian stok manual (Konversi Satuan: ${ing.unit} -> ${unit})`,
+              createdBy: defaultUser.id,
+            },
+          });
+        }
+      }
+
+      return await tx.ingredient.update({ where: { id: req.params.id }, data: dataToUpdate });
+    });
+
     return res.json({ success: true, ingredient: { ...updated, stockQty: Number(updated.stockQty), minStockQty: Number(updated.minStockQty), latestPrice: Number(updated.latestPrice) } });
-  } catch (e: any) { return res.status(500).json({ error: 'Gagal memperbarui data bahan baku.' }); }
+  } catch (e: any) { return res.status(500).json({ error: e.message || 'Gagal memperbarui data bahan baku.' }); }
 });
 
 router.post('/:id/restock', async (req: Request, res: Response) => {

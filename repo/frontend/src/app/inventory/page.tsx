@@ -73,6 +73,7 @@ export default function InventoryPage() {
   const [bulkPrice, setBulkPrice] = useState('');
   const [bulkQty, setBulkQty] = useState('');
   const [editMinStock, setEditMinStock] = useState('');
+  const [editStock, setEditStock] = useState('');
   const [editName, setEditName] = useState('');
   const [editUnit, setEditUnit] = useState('');
 
@@ -190,6 +191,7 @@ export default function InventoryPage() {
       setEditName(ing.name);
       setEditUnit(ing.unit);
       setEditMinStock(ing.minStockQty.toString());
+      setEditStock(ing.stockQty.toString());
     } else if (type === 'price-history') {
       setPriceHistory([]);
       fetchPriceHistory(ing.id);
@@ -324,6 +326,7 @@ export default function InventoryPage() {
           name: editName,
           unit: editUnit,
           minStockQty: Number(editMinStock),
+          stockQty: Number(editStock),
         }),
       });
 
@@ -900,6 +903,18 @@ export default function InventoryPage() {
                     className="input-field"
                     value={editUnit}
                     onChange={(e) => setEditUnit(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Stok Saat Ini (Sisa Stok)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    className="input-field"
+                    value={editStock}
+                    onChange={(e) => setEditStock(e.target.value)}
                     required
                     disabled={loading}
                   />

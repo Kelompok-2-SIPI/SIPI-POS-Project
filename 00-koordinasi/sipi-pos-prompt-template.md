@@ -38,7 +38,7 @@ Referensi PRD: [nomor FR, misal: FR-03, FR-04]
 [Tindakan spesifik, misal: "Implementasikan logic pengurangan stok bahan baku otomatis saat transaksi completed, sesuai FR-03"]
 
 ### Constraint
-- Rujuk @prd-sipi-pos-inventory-v4.2.md sebagai source of truth
+- Rujuk @prd-sipi-pos-inventory-v4.7.md sebagai source of truth
 - Jangan ubah skema tabel `transactions` tanpa konfirmasi
 - Ikuti arsitektur containerized (Frontend/Backend/DB terpisah) di §7
 
@@ -100,7 +100,7 @@ File terkait: belum ada, fitur baru
 Buat komponen bottom sheet modal untuk menampilkan struk digital setelah transaksi selesai, sesuai FR-02 dan keputusan OQ-1 (struk tetap tampil sampai tombol "Transaksi Baru" ditekan manual)
 
 ### Constraint
-- Rujuk @prd-sipi-pos-inventory-v4.2.md bagian Struk Digital (§7)
+- Rujuk @prd-sipi-pos-inventory-v4.7.md bagian Struk Digital (§7)
 - Tidak ada auto-dismiss/countdown
 - Tombol "Transaksi Baru" harus jelas terlihat di bawah struk
 

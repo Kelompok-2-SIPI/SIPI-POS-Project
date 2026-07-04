@@ -1,5 +1,5 @@
 # /tasks/prd-sipi-pos-inventory.md
-**Versi:** 4.6 — Laporan Rentang Tanggal & Export PDF
+**Versi:** 4.7 — Kebebasan Desain untuk Raihan (WAJIB vs REKOMENDASI)
 **Tanggal Revisi:** 4 Juli 2026
 
 ---
@@ -125,23 +125,31 @@ Fitur-fitur berikut **tidak termasuk** dalam cakupan MVP ini dan tidak akan dike
 
 ## 6. Design Considerations
 
-- **PWA — Mobile-First:** Aplikasi dibangun sebagai PWA dan dirancang **mobile-first**. Layout, ukuran teks, dan komponen diprioritaskan untuk layar 360–430px lebar terlebih dahulu sebelum menyesuaikan ke tampilan desktop.
-- **Installable:** PWA harus memenuhi syarat `manifest.json` dan Service Worker agar dapat di-*install* ke layar utama (Home Screen) smartphone Android seperti aplikasi native.
-- **Offline Capability:** Halaman POS/Kasir harus tetap dapat diakses dan berfungsi secara terbatas saat koneksi terputus, menggunakan strategi *cache-first* via Service Worker. Data transaksi offline disimpan sementara di IndexedDB dan disinkronkan ke server saat koneksi pulih.
-- **Area Sentuh:** Seluruh tombol utama pada modul Kasir/POS harus menggunakan area sentuh (*tap target*) minimal **44×44px** untuk meminimalisir salah tekan di lingkungan dapur yang sibuk.
-- **Performa di HP Kelas Menengah:** Target *Lighthouse Performance Score* ≥ 80 pada perangkat Android kelas menengah. Hindari animasi berat dan aset gambar tidak terkompresi.
-- **Bahasa:** Menggunakan Bahasa Indonesia yang lugas dan menghindari jargon teknis basis data.
-- **Aksesibilitas:** Mematuhi panduan **WCAG 2.1 Level AA**.
-- **Kontras & Visibilitas di Lingkungan Dapur:** Gunakan tema dengan kontras warna tinggi dan ukuran font minimum 14px untuk teks body (16px untuk angka harga/total) agar tetap terbaca di kondisi pantulan cahaya dapur atau saat layar terkena uap/tangan basah.
-- **Sistem Warna Semantik untuk Alert:** Seluruh label peringatan di sistem (stok menipis, margin kritis, kenaikan harga pasar) harus menggunakan palet warna yang konsisten dan berbeda agar tidak rancu satu sama lain, dan tidak boleh mengandalkan warna saja (harus disertai ikon dan/atau teks) demi aksesibilitas pengguna buta warna:
-  | Jenis Alert | Warna | Ikon | Pemicu |
+> **Catatan Kebijakan (v4.7):** Atas keputusan Favian, tiap poin di bawah ini sekarang ditandai eksplisit:
+> - **[WAJIB]** — floor minimum, tidak boleh dilanggar tanpa konfirmasi Favian terlebih dahulu.
+> - **[REKOMENDASI]** — arahan yang disarankan, tapi Raihan (dan AI yang ia pakai) bebas menyimpang sesuai penilaian kreatifnya sendiri. Ini bukan lagi requirement yang harus diikuti literal.
+>
+> **Catatan teknis penting:** mempertahankan **WCAG 2.1 Level AA** sebagai [WAJIB] otomatis tetap mensyaratkan (a) rasio kontras teks minimum sesuai kriteria AA, dan (b) tidak mengandalkan warna saja untuk makna alert (kriteria *Use of Color*). Jadi meski baris "Kontras & Visibilitas" dan "palet warna alert" di bawah ditandai [REKOMENDASI] soal *nilai px/warna spesifiknya*, prinsip "harus tetap kontras cukup" dan "jangan cuma warna, sertakan ikon/teks" tetap perlu dipenuhi di praktik — itu bagian dari [WAJIB] WCAG AA, bukan pengecualian darinya. Yang benar-benar bebas total adalah pilihan warna/ukuran px persisnya, bukan prinsip aksesibilitasnya.
+>
+> Raihan/AI yang ia pakai bisa langsung diberi tahu: *"Ikuti PRD ini, tapi anggap tag [REKOMENDASI] sebagai saran yang boleh diubah bebas — cuma yang bertanda [WAJIB] yang harus dipatuhi."*
+
+- **[REKOMENDASI] PWA — Mobile-First:** Aplikasi dibangun sebagai PWA dan dirancang **mobile-first**. Layout, ukuran teks, dan komponen diprioritaskan untuk layar 360–430px lebar terlebih dahulu sebelum menyesuaikan ke tampilan desktop.
+- **[WAJIB] Installable:** PWA harus memenuhi syarat `manifest.json` dan Service Worker agar dapat di-*install* ke layar utama (Home Screen) smartphone Android seperti aplikasi native. *(Ini kebutuhan teknis PWA/SM-7, bukan soal gaya visual, jadi tidak termasuk pelonggaran v4.7.)*
+- **[WAJIB] Offline Capability:** Halaman POS/Kasir harus tetap dapat diakses dan berfungsi secara terbatas saat koneksi terputus, menggunakan strategi *cache-first* via Service Worker. Data transaksi offline disimpan sementara di IndexedDB dan disinkronkan ke server saat koneksi pulih. *(Kebutuhan fungsional/teknis, bukan gaya visual.)*
+- **[REKOMENDASI] Area Sentuh:** Seluruh tombol utama pada modul Kasir/POS disarankan menggunakan area sentuh (*tap target*) minimal **44×44px** untuk meminimalisir salah tekan di lingkungan dapur yang sibuk. Raihan boleh menyimpang dari angka ini sesuai penilaiannya sendiri.
+- **[WAJIB] Performa di HP Kelas Menengah:** Target *Lighthouse Performance Score* ≥ 80 pada perangkat Android kelas menengah (SM-6). Hindari animasi berat dan aset gambar tidak terkompresi. *(Target teknis terukur, bukan preferensi gaya.)*
+- **[REKOMENDASI] Bahasa:** Menggunakan Bahasa Indonesia yang lugas dan menghindari jargon teknis basis data.
+- **[WAJIB] Aksesibilitas:** Mematuhi panduan **WCAG 2.1 Level AA**. Lihat catatan kebijakan di atas — ini beririsan dengan beberapa poin REKOMENDASI di bawah.
+- **[REKOMENDASI] Kontras & Visibilitas di Lingkungan Dapur:** Gunakan tema dengan kontras warna tinggi dan ukuran font minimum 14px untuk teks body (16px untuk angka harga/total) agar tetap terbaca di kondisi pantulan cahaya dapur atau saat layar terkena uap/tangan basah. Nilai px persis dan pilihan tema bebas — asal rasio kontras tetap penuhi WCAG AA (lihat catatan kebijakan).
+- **[REKOMENDASI] Sistem Warna Semantik untuk Alert:** Seluruh label peringatan di sistem (stok menipis, margin kritis, kenaikan harga pasar) disarankan menggunakan palet warna yang konsisten dan berbeda agar tidak rancu satu sama lain. Contoh pemetaan warna di bawah bebas diganti — **tapi** prinsip "tidak boleh mengandalkan warna saja" (harus disertai ikon dan/atau teks) tetap [WAJIB] karena bagian dari WCAG AA (demi pengguna buta warna):
+  | Jenis Alert | Warna (contoh, bebas diganti) | Ikon | Pemicu |
   |---|---|---|---|
   | Stok Kritis | Merah | ⚠️ | `stock_qty ≤ min_stock_qty` (FR-07) |
   | Margin Kritis | Oranye/Kuning | 🟠 | HPP > 80% harga jual (FR-10) |
   | Info Kenaikan Harga Pasar | Biru | 📈 | Kenaikan harga > 20% dalam 7 hari (FR-16) |
-- **Indikator Status Offline/Sinkronisasi:** Karena transaksi dapat dibuat saat koneksi terputus (lihat §7 Offline Capability), antarmuka POS/Kasir harus menampilkan indikator status koneksi yang jelas (misal badge "Offline" di header) serta status sinkronisasi pada transaksi yang belum terkirim ke server (misal ikon "Menunggu Sinkron" pada struk/riwayat transaksi). Tanpa indikator ini, Kasir tidak punya cara mengetahui apakah transaksi sudah benar-benar tersimpan di server.
-- **Empty State & First-Run:** Setiap halaman yang menampilkan data (grid menu POS, daftar bahan baku, dashboard) harus memiliki tampilan *empty state* yang jelas untuk kondisi belum ada data — misalnya saat UMKM baru pertama kali memakai SIPI dan belum menambahkan menu/bahan baku sama sekali. Empty state minimal berisi ilustrasi/ikon sederhana, teks penjelasan singkat, dan tombol aksi langsung (misal "+ Tambah Menu Pertama").
-- **Komponen Visual Dashboard Owner:** Dashboard tidak ditampilkan sebagai tabel angka mentah, melainkan sebagai kartu ringkasan (*summary cards*) untuk pendapatan, jumlah transaksi, dan estimasi laba, ditambah daftar ranking sederhana (bukan tabel) untuk 5 menu terlaris. Ini selaras dengan kebutuhan Owner yang ingin memahami performa bisnis tanpa membaca tabel angka satu per satu (lihat User Stories — Pemilik).
+- **[REKOMENDASI] Indikator Status Offline/Sinkronisasi:** Karena transaksi dapat dibuat saat koneksi terputus (lihat §7 Offline Capability, yang tetap WAJIB), antarmuka POS/Kasir disarankan menampilkan indikator status koneksi yang jelas (misal badge "Offline" di header) serta status sinkronisasi pada transaksi yang belum terkirim ke server. Bentuk visualnya bebas — prinsip fungsionalnya (Kasir perlu tahu status simpan transaksi) tetap penting untuk dipenuhi dengan cara apa pun yang Raihan pilih.
+- **[REKOMENDASI] Empty State & First-Run:** Setiap halaman yang menampilkan data (grid menu POS, daftar bahan baku, dashboard) disarankan memiliki tampilan *empty state* yang jelas untuk kondisi belum ada data. Bentuk (ilustrasi, teks, tombol aksi) bebas ditentukan Raihan.
+- **[REKOMENDASI] Komponen Visual Dashboard Owner:** Dashboard disarankan tidak ditampilkan sebagai tabel angka mentah, melainkan sebagai kartu ringkasan (*summary cards*) dan daftar ranking sederhana untuk 5 menu terlaris — tapi ini cuma saran awal (OQ-17), bukan bentuk final yang mengikat. Raihan bebas redesign selama Owner tetap bisa memahami performa bisnis tanpa membaca tabel angka satu per satu.
 
 ---
 
@@ -595,13 +603,13 @@ Semua pertanyaan terbuka telah dijawab dan dicatat sebagai keputusan final berik
 
 | # | Keputusan | Detail |
 |---|-----------|--------|
-| OQ-1 ✅ | Struk digital tetap tampil hingga Kasir menekan tombol **"Transaksi Baru"** secara manual | Tidak ada auto-dismiss atau countdown. Tombol "Transaksi Baru" tampil jelas di bawah struk. |
+| OQ-1 ✅ **[REKOMENDASI, v4.7]** | Struk digital tetap tampil hingga Kasir menekan tombol **"Transaksi Baru"** secara manual | Tidak ada auto-dismiss atau countdown. Tombol "Transaksi Baru" tampil jelas di bawah struk. Bentuk & perilaku detail bebas diubah Raihan. |
 | OQ-2 ✅ | Batas stok minimal dapat diatur oleh **Admin Gudang maupun Owner** | Formulir pengaturan `min_stock_qty` tersedia di halaman detail bahan baku, dapat diakses oleh keduanya. |
 | OQ-3 ✅ **(Direvisi v4.6)** | Dashboard MVP hanya menampilkan data **hari ini** untuk ringkasan real-time utama | Ringkasan cards utama (FR-11, FR-14, OQ-17) tetap tanpa filter tanggal — selalu data hari ini. **Perubahan v4.6:** ditambahkan bagian **Laporan** terpisah (FR-19–FR-22) dengan custom date range + export PDF, tidak menggantikan ringkasan utama. |
 | OQ-4 ✅ | Harga jual menu **dapat diubah langsung dari sistem** oleh Owner/Admin | Dibutuhkan halaman manajemen menu dengan form edit nama, harga jual, kategori, dan komposisi resep. |
 | OQ-5 ✅ **(Direvisi v4.4)** | Fitur AI Assistant **diaktifkan dan menjadi Wajib** | FR-12, FR-13, FR-17, FR-18 diimplementasikan. LLM API key (Gemini Flash) wajib disiapkan. Chatbot bersifat bidirectional: Q&A performa bisnis + input belanja via natural language. |
-| OQ-19 ✅ **(Baru v4.4)** | Penempatan chatbot AI | Chatbot diakses via ikon 💬 floating button di halaman Dashboard (untuk Q&A bisnis) dan halaman Inventaris (untuk laporan belanja). Terbuka sebagai bottom sheet. |
-| OQ-20 ✅ **(Baru v4.4)** | Alur konfirmasi sebelum eksekusi aksi | Chatbot **wajib menampilkan konfirmasi parsing** sebelum mengeksekusi restock atau pencatatan harga ke database. Owner menekan tombol [Ya, Lanjutkan] untuk konfirmasi atau [Batal] untuk membatalkan. Tidak ada eksekusi otomatis tanpa konfirmasi. |
+| OQ-19 ✅ **(Baru v4.4) [REKOMENDASI, v4.7]** | Penempatan chatbot AI | Chatbot diakses via ikon 💬 floating button di halaman Dashboard (untuk Q&A bisnis) dan halaman Inventaris (untuk laporan belanja). Terbuka sebagai bottom sheet. Bentuk tombol/panel ini contoh awal, bebas diubah Raihan — yang penting chatbot tetap bisa diakses dari kedua halaman itu (FR-12). |
+| OQ-20 ✅ **(Baru v4.4) [WAJIB — tidak berubah di v4.7]** | Alur konfirmasi sebelum eksekusi aksi | Chatbot **wajib menampilkan konfirmasi parsing** sebelum mengeksekusi restock atau pencatatan harga ke database. Owner menekan tombol [Ya, Lanjutkan] untuk konfirmasi atau [Batal] untuk membatalkan. Tidak ada eksekusi otomatis tanpa konfirmasi. Ini pagar integritas data, bukan gaya UI — visual tombolnya bebas, tapi keberadaan & alur konfirmasinya tidak boleh dihilangkan. |
 | OQ-6 ✅ | MVP menggunakan **1 akun hardcoded** yang dapat mengakses semua modul | Tidak ada pemisahan peran di level autentikasi untuk MVP. Semua halaman (POS, Inventaris, Dashboard) dapat diakses dari 1 login. |
 | OQ-7 ✅ **(Direvisi v4.1)** | Navigasi antar modul menggunakan **bottom navigation bar** | **3 tab utama:** POS, Inventaris, Dashboard. Tab **Inventaris** memiliki 3 sub-tab toggle di bagian atas: **"Stok"** (default — daftar bahan baku + harga), **"Restock"** (rekomendasi restock dari FR-15), dan **"Menu & Resep"** (lihat OQ-12). Revisi dari versi sebelumnya yang menjadikan Restock sebagai tab ke-4 terpisah — digabung ke Inventaris agar bottom nav tidak terlalu padat di layar 360px dan mental model "semua hal soal stok ada di satu tempat" lebih konsisten. |
 | OQ-8 ✅ | Kasir **dapat mengubah qty** item yang sudah ada di keranjang | Tombol `+` dan `−` tersedia di setiap baris item keranjang. Qty tidak bisa di bawah 1 (gunakan tombol hapus untuk menghapus item). |
@@ -610,11 +618,11 @@ Semua pertanyaan terbuka telah dijawab dan dicatat sebagai keputusan final berik
 | OQ-11 ✅ | Fitur Market Price Tracker diakses secara visual | Ditampilkan lewat ikon grafik 📈 pada harga bahan baku di halaman Inventaris yang membuka modal linimasa (timeline) riwayat harga harian. |
 | OQ-12 ✅ | Antarmuka menyetel komposisi resep menu | Diintegrasikan di halaman **Inventaris** sebagai sub-tab **"Menu & Resep"**, sejajar dengan sub-tab "Stok" dan "Restock" (lihat OQ-7 v4.1). |
 | OQ-13 ✅ | Rekomendasi penyesuaian harga jual baru | Ditampilkan otomatis di kartu Margin Kritis Dashboard Owner dan di bawah input harga jual modal editor resep (terhitung dinamis/interaktif). Menggunakan target HPP 50% dibulatkan ke kelipatan Rp1.000 terdekat. |
-| OQ-14 ✅ **(Baru v4.1)** | Sistem warna untuk berbagai jenis alert | Merah = Stok Kritis, Oranye/Kuning = Margin Kritis, Biru = Info Kenaikan Harga Pasar. Setiap warna disertai ikon agar tidak mengandalkan warna saja (lihat §6 Design Considerations). |
-| OQ-15 ✅ **(Baru v4.1)** | Indikator status offline & sinkronisasi transaksi | Header POS menampilkan badge "Offline" saat koneksi terputus. Transaksi yang dibuat offline diberi ikon "Menunggu Sinkron" hingga berhasil terkirim ke server. |
-| OQ-16 ✅ **(Baru v4.1)** | Tampilan saat data masih kosong (*empty state*) | Setiap halaman dengan daftar data (grid menu POS, daftar bahan baku, dashboard) menampilkan ilustrasi/ikon, teks penjelasan, dan tombol aksi langsung (misal "+ Tambah Menu Pertama") saat belum ada data. |
-| OQ-17 ✅ **(Baru v4.1, direvisi v4.5)** | Bentuk visual Dashboard Owner | Kartu ringkasan (*summary cards*) untuk pendapatan, transaksi, dan laba — bukan tabel angka. Menu terlaris ditampilkan sebagai daftar ranking sederhana. **Pengecualian (v4.5):** kartu alert kenaikan harga (FR-16) berisi mini-card per bahan baku yang dapat ditekan untuk membuka grafik garis tren harga 7 hari (FR-16a) — satu grafik per bahan baku, bukan grafik gabungan. |
-| OQ-18 ✅ **(Baru v4.1)** | Kontras & ukuran teks untuk lingkungan dapur | Minimum font 14px (body) / 16px (harga & total), tema kontras tinggi agar tetap terbaca dengan pantulan cahaya dapur. |
+| OQ-14 ✅ **(Baru v4.1) [REKOMENDASI palet, WAJIB prinsip — v4.7]** | Sistem warna untuk berbagai jenis alert | Merah = Stok Kritis, Oranye/Kuning = Margin Kritis, Biru = Info Kenaikan Harga Pasar (contoh, warna spesifik bebas diganti). Setiap alert **tetap wajib** disertai ikon agar tidak mengandalkan warna saja — ini bagian dari WCAG AA yang tetap WAJIB, bukan pengecualian (lihat §6 catatan kebijakan). |
+| OQ-15 ✅ **(Baru v4.1) [REKOMENDASI, v4.7]** | Indikator status offline & sinkronisasi transaksi | Header POS menampilkan badge "Offline" saat koneksi terputus. Transaksi yang dibuat offline diberi ikon "Menunggu Sinkron" hingga berhasil terkirim ke server. Bentuk visual contoh ini bebas diganti Raihan. |
+| OQ-16 ✅ **(Baru v4.1) [REKOMENDASI, v4.7]** | Tampilan saat data masih kosong (*empty state*) | Setiap halaman dengan daftar data (grid menu POS, daftar bahan baku, dashboard) menampilkan ilustrasi/ikon, teks penjelasan, dan tombol aksi langsung (misal "+ Tambah Menu Pertama") saat belum ada data. Bentuk detail bebas. |
+| OQ-17 ✅ **(Baru v4.1, direvisi v4.5) [REKOMENDASI, v4.7]** | Bentuk visual Dashboard Owner | Kartu ringkasan (*summary cards*) untuk pendapatan, transaksi, dan laba — bukan tabel angka. Menu terlaris ditampilkan sebagai daftar ranking sederhana. Ini contoh awal, bukan bentuk final — Raihan bebas redesign. **Pengecualian (v4.5, tetap berlaku):** kartu alert kenaikan harga (FR-16) berisi mini-card per bahan baku yang dapat ditekan untuk membuka grafik garis tren harga 7 hari (FR-16a) — satu grafik per bahan baku, bukan grafik gabungan. |
+| OQ-18 ✅ **(Baru v4.1) [REKOMENDASI nilai, WAJIB prinsip kontras — v4.7]** | Kontras & ukuran teks untuk lingkungan dapur | Minimum font 14px (body) / 16px (harga & total), tema kontras tinggi agar tetap terbaca dengan pantulan cahaya dapur. Angka px persis & tema warna bebas — tapi rasio kontras tetap harus penuhi WCAG AA (WAJIB, lihat §6). |
 
 ### Implikasi ke Skema Database
 
@@ -633,6 +641,13 @@ Berdasarkan OQ-9, tambahkan kolom berikut ke tabel `menus`:
 ---
 
 ## 15. Changelog
+
+### v4.7 (4 Juli 2026) — Kebebasan Desain untuk Raihan (WAJIB vs REKOMENDASI)
+- **Konteks:** Raihan kesulitan redesign UI/UX dengan gaya sendiri karena AI yang ia pakai (Gemini Antigravity IDE) memperlakukan seluruh PRD sebagai aturan keras yang literal, termasuk hal yang sebenarnya cuma contoh/saran.
+- **Keputusan Favian:** hanya **WCAG 2.1 Level AA** dan **OQ-20 (konfirmasi Ya/Batal sebelum AI eksekusi aksi ke database)** yang tetap WAJIB tanpa kompromi. Semua poin Design Considerations (§6) dan OQ terkait gaya visual lainnya (OQ-1, OQ-14, OQ-15, OQ-16, OQ-17, OQ-18, OQ-19) diturunkan jadi REKOMENDASI — Raihan bebas menyimpang sesuai penilaian kreatifnya sendiri.
+- **Catatan teknis yang tetap berlaku meski turun jadi REKOMENDASI:** mempertahankan WCAG 2.1 AA otomatis tetap mensyaratkan rasio kontras minimum dan larangan mengandalkan warna saja untuk makna alert (kriteria *Use of Color*) — jadi prinsip di balik "kontras tinggi" (OQ-18) dan "sertakan ikon, jangan cuma warna" (OQ-14) tetap perlu dipenuhi di praktik, hanya nilai px/warna spesifiknya yang benar-benar bebas.
+- Setiap poin di §6 dan OQ terkait sekarang ditandai eksplisit `[WAJIB]` atau `[REKOMENDASI]` supaya Raihan (dan AI yang ia pakai) bisa langsung diberi tahu: *"anggap tag REKOMENDASI sebagai saran yang boleh diubah bebas, cuma WAJIB yang harus dipatuhi"* — tanpa perlu dokumen terpisah.
+- Tidak ada perubahan pada Functional Requirements (§4) — pelonggaran ini murni di Design Considerations (§6) dan OQ gaya visual (§14), bukan di scope fungsional.
 
 ### v4.6 (4 Juli 2026) — Laporan Rentang Tanggal & Export PDF
 - **Menambahkan FR-19** — bagian "Laporan" terpisah di Dashboard dengan custom date range picker (tanggal mulai & akhir bebas), tidak menggantikan ringkasan real-time utama (yang tetap data hari ini, OQ-3).

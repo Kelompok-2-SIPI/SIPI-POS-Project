@@ -24,7 +24,7 @@ SIPI-POS-Project/
 │   ├── governance-notes.md
 │   └── prompt-queue/     ← permintaan dari anggota tim tanpa akses Claude
 ├── 01-dokumentasi/
-│   └── prd-sipi-pos-inventory-v4.2.md   ← source of truth, JANGAN diubah tanpa konfirmasi saya
+│   └── prd-sipi-pos-inventory-v4.7.md   ← source of truth, JANGAN diubah tanpa konfirmasi saya
 ├── 02-design/
 ├── 03-output-review/     ← semua output (termasuk punyamu) masuk sini dulu sebelum final
 └── repo/                 ← kode aktual, ini wilayah Claude Code, jangan disentuh
@@ -32,7 +32,7 @@ SIPI-POS-Project/
 
 ## Tugas Pertama (lakukan sekarang)
 
-1. Baca seluruh `01-dokumentasi/prd-sipi-pos-inventory-v4.2.md` untuk memahami scope, functional requirements, dan keputusan desain (§14).
+1. Baca seluruh `01-dokumentasi/prd-sipi-pos-inventory-v4.7.md` untuk memahami scope, functional requirements, dan keputusan desain (§14).
 2. Baca `00-koordinasi/sprint-1-pos-kasir.md` — ini sprint yang sedang berjalan.
 3. Konfirmasi ke saya pemahamanmu soal: Sprint Goal saat ini, FR mana yang sedang dikerjakan, dan task mana yang masih `To Do`.
 
