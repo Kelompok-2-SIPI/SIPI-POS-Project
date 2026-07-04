@@ -99,17 +99,22 @@
 
 | Task | Deskripsi | PIC | Status |
 |------|-----------|-----|--------|
-| S5-01 | Setup Gemini SDK di backend + env var `GEMINI_API_KEY`, `ENABLE_AI_CHAT` | Janu | ⬜ To Do |
-| S5-02 | Buat `backend/src/lib/gemini.ts` — helper `generateResponse()` | Janu | ⬜ To Do |
-| S5-03 | Controller `handleChat()` — deteksi intent Q&A/Action, susun system prompt dengan data DB | Janu | ⬜ To Do |
-| S5-04 | Controller `confirmAction()` — eksekusi restock + catat harga, validasi nama bahan baku | Janu | ⬜ To Do |
-| S5-05 | Route `/api/v1/ai/chat` dan `/api/v1/ai/confirm-action`, daftarkan di `index.ts` | Janu | ⬜ To Do |
-| S5-06 | Testing manual endpoint (Q&A + Action flow) | Janu | ⬜ To Do |
-| S5-07 | Floating 💬 button di halaman Dashboard + Inventaris | Raihan | ⬜ To Do |
-| S5-08 | Komponen bottom sheet chatbot UI (bubble chat Owner vs AI) | Raihan | ⬜ To Do |
-| S5-09 | Tampilkan konfirmasi parsing + tombol "Ya, Lanjutkan" / "Batal" | Raihan | ⬜ To Do |
-| S5-10 | Tampilkan ringkasan hasil setelah eksekusi konfirmasi | Raihan | ⬜ To Do |
+| S5-01 | Setup Gemini SDK di backend + env var `GEMINI_API_KEY`, `ENABLE_AI_CHAT` | Janu | ✅ Done |
+| S5-02 | Buat `backend/src/lib/gemini.ts` — helper `generateResponse()` | Janu | ✅ Done |
+| S5-03 | Controller `handleChat()` — deteksi intent Q&A/Action, susun system prompt dengan data DB | Janu | ✅ Done |
+| S5-04 | Controller `confirmAction()` — eksekusi restock + catat harga, validasi nama bahan baku | Janu | ✅ Done |
+| S5-05 | Route `/api/v1/ai/chat` dan `/api/v1/ai/confirm-action`, daftarkan di `index.ts` | Janu | ✅ Done |
+| S5-06 | Testing manual endpoint (Q&A + Action flow) | Janu | ✅ Done |
+| S5-07 | Core: Floating 💬 button di halaman Dashboard + Inventaris | Favian | ⬜ To Do |
+| S5-08 | Core: Komponen bottom sheet chatbot UI (bubble chat Owner vs AI) | Favian | ⬜ To Do |
+| S5-09 | Core: Tampilkan konfirmasi parsing + tombol "Ya, Lanjutkan" / "Batal" | Favian | ⬜ To Do |
+| S5-10 | Core: Tampilkan ringkasan hasil setelah eksekusi konfirmasi | Favian | ⬜ To Do |
+| S5-16 | Polish: styling bubble/bottom sheet, animasi, aksesibilitas, cek `ENABLE_AI_CHAT` untuk sembunyikan tombol | Raihan | ⬜ To Do |
 | S5-11 | Uji manual Sprint 5 terhadap Acceptance Criteria FR-12/13/17/18 | Rinda, Ibnu | ⬜ To Do |
+| S5-12 | FR-16a Core: mini-card + expand/collapse + fetch price-history di kartu alert Dashboard | Favian | ⬜ To Do |
+| S5-13 | FR-16a Core: grafik garis SVG sederhana 7 hari + edge case data kurang/error | Favian | ⬜ To Do |
+| S5-14 | FR-16a Polish: styling, kontras/font §6, aksesibilitas warna, animasi | Raihan | ⬜ To Do |
+| S5-15 | Uji manual FR-16a | Rinda, Ibnu | ⬜ To Do |
 
 ---
 
@@ -129,6 +134,25 @@
 | S6-10 | Buat bug report di `03-output-review/bug-report-sprint6.md` | Rinda, Ibnu | ⬜ To Do |
 | S6-11 | Fix bug prioritas tinggi hasil testing | Raihan / Janu | ⬜ To Do |
 | S6-12 | Retest setelah fix — sign-off final | Rinda, Ibnu | ⬜ To Do |
+
+---
+
+### Sprint 7 — Laporan Rentang Tanggal & Export PDF (⬜ Belum Mulai)
+
+| Task | Deskripsi | PIC | Status |
+|------|-----------|-----|--------|
+| S7-01 | Migrasi Prisma: tabel `menu_hpp_history` | Janu | ⬜ To Do |
+| S7-02 | Hook snapshot HPP+harga jual ke `menu_hpp_history` (FR-09 & OQ-4) | Janu | ⬜ To Do |
+| S7-03 | `GET /dashboard/summary-range` | Janu | ⬜ To Do |
+| S7-04 | `GET /dashboard/top-menus-range` | Janu | ⬜ To Do |
+| S7-05 | `GET /dashboard/price-alerts-range` | Janu | ⬜ To Do |
+| S7-06 | `GET /dashboard/critical-margins-range` | Janu | ⬜ To Do |
+| S7-07 | Testing manual endpoint rentang tanggal | Janu | ⬜ To Do |
+| S7-08 | Date range picker custom di bagian "Laporan" Dashboard | Raihan | ⬜ To Do |
+| S7-09 | Render ringkasan agregat rentang (pendapatan, transaksi, laba, top menu) | Raihan | ⬜ To Do |
+| S7-10 | Render kenaikan harga & margin kritis rentang | Raihan | ⬜ To Do |
+| S7-11 | Tombol Export PDF (client-side) | Raihan | ⬜ To Do |
+| S7-12 | Uji manual Sprint 7 | Rinda, Ibnu | ⬜ To Do |
 
 ---
 

@@ -1,6 +1,6 @@
 # /tasks/prd-sipi-pos-inventory.md
-**Versi:** 4.4 — Implementasi AI Chatbot Bidirectional
-**Tanggal Revisi:** 28 Juni 2026
+**Versi:** 4.6 — Laporan Rentang Tanggal & Export PDF
+**Tanggal Revisi:** 4 Juli 2026
 
 ---
 
@@ -86,6 +86,11 @@ Dalam konteks UMKM F&B skala kecil, **satu orang (Pemilik) umumnya merangkap sem
 | FR-11 | Sistem harus menampilkan *Dashboard* Owner yang berisi: total pendapatan kotor, jumlah transaksi selesai, estimasi laba kotor, dan daftar menu terlaris—semua untuk periode hari ini. | Wajib |
 | FR-14 | Sistem harus menampilkan ringkasan teks otomatis di bagian atas *Dashboard* menggunakan template string yang diisi data dari database. Format: `"Hari ini {n} transaksi, pendapatan Rp {x}, estimasi laba Rp {y}. Menu terlaris: {menu}."` | Wajib |
 | FR-16 | Sistem harus menampilkan notifikasi peringatan kepada Owner ketika harga bahan baku naik lebih dari 20% dalam 7 hari terakhir, dihitung langsung dari tabel `ingredient_price_history`, disertai daftar menu terdampak dan nilai HPP barunya. | Wajib |
+| FR-16a **(Baru v4.5)** | Sistem harus menampilkan mini-card per bahan baku yang memicu alert FR-16 di dalam kartu notifikasi Dashboard. Saat mini-card ditekan, sistem menampilkan grafik garis (*line chart*) tren harga 7 hari terakhir bahan baku tersebut, menggunakan data `ingredient_price_history` yang sama (endpoint `GET /ingredients/:id/price-history` yang sudah ada — tidak perlu skema atau endpoint baru). | Wajib |
+| FR-19 **(Baru v4.6)** | Sistem harus menyediakan bagian "Laporan" terpisah dari ringkasan real-time Dashboard (yang tetap data hari ini per OQ-3), di mana Owner dapat memilih rentang tanggal custom (tanggal mulai & akhir bebas) untuk melihat laporan agregat periode tersebut. | Wajib |
+| FR-20 **(Baru v4.6)** | Untuk rentang tanggal terpilih (FR-19), sistem harus menampilkan: total pendapatan, jumlah transaksi, estimasi laba, top 5 menu terlaris, daftar kenaikan harga bahan baku (dihitung dari `ingredient_price_history` — akurat untuk rentang manapun), dan daftar margin kritis (dihitung dari `menu_hpp_history` — lihat FR-21, akurat untuk rentang manapun karena berbasis snapshot historis, bukan nilai HPP/harga jual terkini). | Wajib |
+| FR-21 **(Baru v4.6)** | Sistem harus mencatat snapshot `hpp` dan `selling_price` setiap menu ke tabel baru `menu_hpp_history` setiap kali: (a) HPP menu dihitung ulang otomatis (FR-09), atau (b) harga jual menu diubah manual oleh Owner/Admin (OQ-4). Snapshot ini menjadi sumber data satu-satunya yang membuat margin kritis historis (FR-20) bisa direkonstruksi akurat — tanpa ini, sistem hanya bisa menampilkan margin kritis kondisi terkini. | Wajib |
+| FR-22 **(Baru v4.6)** | Sistem harus memungkinkan Owner mengekspor hasil laporan rentang tanggal (FR-20) sebagai file PDF, diunduh langsung dari halaman Dashboard. | Wajib |
 
 ### Modul Inventaris / Admin Gudang — Restock Cerdas
 
@@ -109,7 +114,7 @@ Dalam konteks UMKM F&B skala kecil, **satu orang (Pemilik) umumnya merangkap sem
 Fitur-fitur berikut **tidak termasuk** dalam cakupan MVP ini dan tidak akan dikerjakan:
 
 - Integrasi dengan *Payment Gateway* (GoPay, OVO, QRIS otomatis).
-- Laporan keuangan akuntansi lengkap (neraca, arus kas, laporan multi-periode).
+- Laporan keuangan akuntansi lengkap (neraca, arus kas, laporan multi-periode). **Catatan (v4.6):** ini merujuk ke laporan akuntansi formal (neraca, arus kas). Fitur Laporan rentang tanggal di FR-19–FR-22 adalah ringkasan operasional (pendapatan, laba estimasi, menu terlaris, alert harga/margin) — bukan laporan akuntansi, jadi tidak melanggar batasan ini.
 - Fitur *loyalty point* dan manajemen *membership* pelanggan.
 - Aplikasi *mobile native* (Android/iOS) — digantikan oleh PWA.
 - Manajemen multi-outlet atau sistem *franchise*.
@@ -241,6 +246,9 @@ menus
 ingredients
   └── ingredient_price_history (1:N)
   └── stock_movements (1:N)
+
+menus
+  └── menu_hpp_history (1:N) — (Baru v4.6)
 ```
 
 ### Tabel Utama
@@ -293,6 +301,17 @@ ingredients
 | `price` | NUMERIC(12,2) | Harga beli pada tanggal tersebut |
 | `recorded_at` | DATE | Tanggal pencatatan harga |
 | `recorded_by` | UUID (FK → users) | |
+
+#### `menu_hpp_history` (Riwayat HPP & Harga Jual — Baru v4.6)
+| Kolom | Tipe | Keterangan |
+|-------|------|-----------|
+| `id` | UUID (PK) | |
+| `menu_id` | UUID (FK → menus) | |
+| `hpp` | NUMERIC(12,2) | Snapshot HPP menu pada saat dicatat |
+| `selling_price` | NUMERIC(12,2) | Snapshot harga jual pada saat dicatat (harga jual bisa berubah manual — OQ-4 — jadi disnapshot juga agar rasio margin historis akurat) |
+| `recorded_at` | TIMESTAMPTZ | Kapan snapshot dibuat — sama dengan waktu HPP direkalkulasi (FR-09) atau harga jual diubah (OQ-4) |
+
+> **Catatan:** Tabel ini murni untuk kebutuhan laporan historis (FR-20/FR-21). Kolom `hpp` dan `selling_price` di tabel `menus` tetap jadi sumber nilai *real-time* untuk Dashboard utama (FR-10, OQ-17) dan tidak berubah perannya.
 
 #### `stock_movements` (Riwayat Pergerakan Stok)
 | Kolom | Tipe | Keterangan |
@@ -380,6 +399,10 @@ Base URL: `http://backend:4000/api/v1` (internal Docker network) — diakses Fro
 | GET | `/dashboard/critical-margins` | Daftar menu dengan label "Margin Kritis" |
 | GET | `/dashboard/price-alerts` | Bahan baku dengan kenaikan harga > 20% dalam 7 hari + menu terdampak |
 | GET | `/dashboard/restock-recommendations` | Bahan baku dengan sisa stok < 2 hari berdasarkan konsumsi rata-rata |
+| GET | `/dashboard/summary-range?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD` | **(Baru v4.6)** Ringkasan agregat rentang tanggal: pendapatan, transaksi, estimasi laba |
+| GET | `/dashboard/top-menus-range?startDate=...&endDate=...&limit=5` | **(Baru v4.6)** Top menu terlaris dalam rentang tanggal |
+| GET | `/dashboard/price-alerts-range?startDate=...&endDate=...` | **(Baru v4.6)** Kenaikan harga bahan baku dalam rentang tanggal, dari `ingredient_price_history` |
+| GET | `/dashboard/critical-margins-range?startDate=...&endDate=...` | **(Baru v4.6)** Margin kritis dalam rentang tanggal, direkonstruksi dari snapshot `menu_hpp_history` (FR-21) |
 
 ### AI Assistant (Opsional)
 | Method | Endpoint | Deskripsi |
@@ -411,6 +434,11 @@ Base URL: `http://backend:4000/api/v1` (internal Docker network) — diakses Fro
 | FR-14 | Owner membuka dashboard, terdapat 12 transaksi dengan pendapatan Rp 850.000 dan laba Rp 320.000 | Teks ringkasan muncul otomatis di atas dashboard menggunakan template string yang terisi data akurat — tidak memanggil LLM API |
 | FR-15 | Stok gula tersisa 150g, rata-rata konsumsi 7 hari = 200g/hari (sisa 0,75 hari) | Gula muncul di daftar restock dengan urutan teratas; bahan baku dengan stok > 2 hari tidak muncul dalam daftar |
 | FR-16 | Harga tepung naik dari Rp12.000 menjadi Rp17.000/kg dalam 7 hari (naik 41%) | Notifikasi peringatan muncul untuk tepung, menampilkan persentase kenaikan dan daftar menu yang HPP-nya terdampak |
+| FR-16a | Alert FR-16 aktif untuk tepung dan gula sekaligus; Owner menekan mini-card "tepung" di kartu alert | Muncul grafik garis tren harga tepung 7 hari terakhir (bukan gabungan dengan gula); mini-card gula tetap collapsed sampai ditekan terpisah |
+| FR-19 | Owner membuka bagian Laporan di Dashboard, pilih tanggal mulai 1 Juni dan tanggal akhir 30 Juni 2026 | Sistem menampilkan laporan agregat periode 1–30 Juni tanpa mengubah ringkasan real-time Dashboard utama (yang tetap data hari ini) |
+| FR-20 | Rentang 1–30 Juni dipilih; ada kenaikan harga gula tgl 10 Juni dan menu "Es Kopi Susu" sempat margin kritis tgl 15–20 Juni (sudah tidak kritis di harga jual saat ini) | Laporan menampilkan kenaikan harga gula (dari `ingredient_price_history`) dan tetap menampilkan "Es Kopi Susu" sebagai margin kritis periode itu (direkonstruksi dari `menu_hpp_history`), walau saat ini sudah tidak kritis |
+| FR-21 | Harga bahan baku berubah sehingga HPP menu "Cappuccino" direkalkulasi (FR-09) pada 15 Juni | Entri baru muncul di `menu_hpp_history` untuk menu Cappuccino dengan `hpp` dan `selling_price` sesuai kondisi tanggal 15 Juni |
+| FR-22 | Owner menekan tombol "Export PDF" setelah laporan rentang 1–30 Juni tampil | File PDF terunduh berisi ringkasan pendapatan/transaksi/laba, top 5 menu, kenaikan harga, dan margin kritis periode tersebut |
 
 ---
 
@@ -419,7 +447,7 @@ Base URL: `http://backend:4000/api/v1` (internal Docker network) — diakses Fro
 Fitur-fitur berikut **tidak termasuk** dalam cakupan MVP ini dan tidak akan dikerjakan:
 
 - Integrasi dengan *Payment Gateway* (GoPay, OVO, QRIS otomatis).
-- Laporan keuangan akuntansi lengkap (neraca, arus kas, laporan multi-periode).
+- Laporan keuangan akuntansi lengkap (neraca, arus kas, laporan multi-periode). **Catatan (v4.6):** ini merujuk ke laporan akuntansi formal (neraca, arus kas). Fitur Laporan rentang tanggal di FR-19–FR-22 adalah ringkasan operasional (pendapatan, laba estimasi, menu terlaris, alert harga/margin) — bukan laporan akuntansi, jadi tidak melanggar batasan ini.
 - Fitur *loyalty point* dan manajemen *membership* pelanggan.
 - Aplikasi *mobile native* (Android/iOS) — digantikan oleh PWA.
 - Manajemen multi-outlet atau sistem *franchise*.
@@ -569,7 +597,7 @@ Semua pertanyaan terbuka telah dijawab dan dicatat sebagai keputusan final berik
 |---|-----------|--------|
 | OQ-1 ✅ | Struk digital tetap tampil hingga Kasir menekan tombol **"Transaksi Baru"** secara manual | Tidak ada auto-dismiss atau countdown. Tombol "Transaksi Baru" tampil jelas di bawah struk. |
 | OQ-2 ✅ | Batas stok minimal dapat diatur oleh **Admin Gudang maupun Owner** | Formulir pengaturan `min_stock_qty` tersedia di halaman detail bahan baku, dapat diakses oleh keduanya. |
-| OQ-3 ✅ | Dashboard MVP hanya menampilkan data **hari ini** | Tidak ada filter tanggal untuk MVP. Filter minggu/bulan dipertimbangkan pasca-MVP. |
+| OQ-3 ✅ **(Direvisi v4.6)** | Dashboard MVP hanya menampilkan data **hari ini** untuk ringkasan real-time utama | Ringkasan cards utama (FR-11, FR-14, OQ-17) tetap tanpa filter tanggal — selalu data hari ini. **Perubahan v4.6:** ditambahkan bagian **Laporan** terpisah (FR-19–FR-22) dengan custom date range + export PDF, tidak menggantikan ringkasan utama. |
 | OQ-4 ✅ | Harga jual menu **dapat diubah langsung dari sistem** oleh Owner/Admin | Dibutuhkan halaman manajemen menu dengan form edit nama, harga jual, kategori, dan komposisi resep. |
 | OQ-5 ✅ **(Direvisi v4.4)** | Fitur AI Assistant **diaktifkan dan menjadi Wajib** | FR-12, FR-13, FR-17, FR-18 diimplementasikan. LLM API key (Gemini Flash) wajib disiapkan. Chatbot bersifat bidirectional: Q&A performa bisnis + input belanja via natural language. |
 | OQ-19 ✅ **(Baru v4.4)** | Penempatan chatbot AI | Chatbot diakses via ikon 💬 floating button di halaman Dashboard (untuk Q&A bisnis) dan halaman Inventaris (untuk laporan belanja). Terbuka sebagai bottom sheet. |
@@ -585,7 +613,7 @@ Semua pertanyaan terbuka telah dijawab dan dicatat sebagai keputusan final berik
 | OQ-14 ✅ **(Baru v4.1)** | Sistem warna untuk berbagai jenis alert | Merah = Stok Kritis, Oranye/Kuning = Margin Kritis, Biru = Info Kenaikan Harga Pasar. Setiap warna disertai ikon agar tidak mengandalkan warna saja (lihat §6 Design Considerations). |
 | OQ-15 ✅ **(Baru v4.1)** | Indikator status offline & sinkronisasi transaksi | Header POS menampilkan badge "Offline" saat koneksi terputus. Transaksi yang dibuat offline diberi ikon "Menunggu Sinkron" hingga berhasil terkirim ke server. |
 | OQ-16 ✅ **(Baru v4.1)** | Tampilan saat data masih kosong (*empty state*) | Setiap halaman dengan daftar data (grid menu POS, daftar bahan baku, dashboard) menampilkan ilustrasi/ikon, teks penjelasan, dan tombol aksi langsung (misal "+ Tambah Menu Pertama") saat belum ada data. |
-| OQ-17 ✅ **(Baru v4.1)** | Bentuk visual Dashboard Owner | Kartu ringkasan (*summary cards*) untuk pendapatan, transaksi, dan laba — bukan tabel angka. Menu terlaris ditampilkan sebagai daftar ranking sederhana. |
+| OQ-17 ✅ **(Baru v4.1, direvisi v4.5)** | Bentuk visual Dashboard Owner | Kartu ringkasan (*summary cards*) untuk pendapatan, transaksi, dan laba — bukan tabel angka. Menu terlaris ditampilkan sebagai daftar ranking sederhana. **Pengecualian (v4.5):** kartu alert kenaikan harga (FR-16) berisi mini-card per bahan baku yang dapat ditekan untuk membuka grafik garis tren harga 7 hari (FR-16a) — satu grafik per bahan baku, bukan grafik gabungan. |
 | OQ-18 ✅ **(Baru v4.1)** | Kontras & ukuran teks untuk lingkungan dapur | Minimum font 14px (body) / 16px (harga & total), tema kontras tinggi agar tetap terbaca dengan pantulan cahaya dapur. |
 
 ### Implikasi ke Skema Database
@@ -605,6 +633,21 @@ Berdasarkan OQ-9, tambahkan kolom berikut ke tabel `menus`:
 ---
 
 ## 15. Changelog
+
+### v4.6 (4 Juli 2026) — Laporan Rentang Tanggal & Export PDF
+- **Menambahkan FR-19** — bagian "Laporan" terpisah di Dashboard dengan custom date range picker (tanggal mulai & akhir bebas), tidak menggantikan ringkasan real-time utama (yang tetap data hari ini, OQ-3).
+- **Menambahkan FR-20** — laporan agregat rentang tanggal: pendapatan, transaksi, laba, top 5 menu, kenaikan harga bahan baku (akurat historis dari `ingredient_price_history`), dan margin kritis (akurat historis dari `menu_hpp_history` baru).
+- **Menambahkan FR-21** — snapshot `hpp` + `selling_price` menu ke tabel baru `menu_hpp_history` setiap kali HPP direkalkulasi (FR-09) atau harga jual diubah (OQ-4). Tanpa ini margin kritis historis tidak bisa direkonstruksi akurat karena tabel `menus` cuma simpan nilai *real-time*.
+- **Menambahkan FR-22** — export laporan rentang tanggal sebagai PDF, diunduh dari halaman Dashboard.
+- **Merevisi OQ-3** — menegaskan ringkasan utama Dashboard tetap "hari ini saja" (tidak berubah), fitur Laporan (FR-19–22) adalah bagian terpisah yang ditambahkan, bukan pengganti.
+- **Menambahkan tabel `menu_hpp_history`** ke skema database (§8) dan 4 endpoint baru ke §9: `/dashboard/summary-range`, `/dashboard/top-menus-range`, `/dashboard/price-alerts-range`, `/dashboard/critical-margins-range`.
+- **Klarifikasi Non-Goals (§5/§11)** — menegaskan fitur Laporan ini adalah ringkasan operasional, bukan laporan akuntansi formal (neraca/arus kas) yang memang tetap di luar cakupan MVP.
+- Ditempatkan sebagai **Sprint 7** tersendiri (lihat `00-koordinasi/sprint-7-laporan-export.md`), karena scope-nya (skema baru + 4 endpoint + date picker + PDF export) cukup besar untuk berdiri sendiri di luar Sprint 5 (chatbot) dan Sprint 6 (mobile testing) yang masih berjalan.
+
+### v4.5 (4 Juli 2026) — Grafik Tren Harga di Kartu Alert Dashboard
+- **Menambahkan FR-16a** — mini-card per bahan baku pada kartu alert kenaikan harga (FR-16) di Dashboard; ditekan untuk membuka grafik garis tren harga 7 hari terakhir. Menggunakan endpoint `GET /ingredients/:id/price-history` yang sudah ada, tidak ada skema/endpoint baru.
+- **Merevisi OQ-17** — pengecualian eksplisit ditambahkan: Dashboard tetap berbasis summary cards + ranking, namun kartu alert harga kini boleh menampilkan grafik garis per bahan baku (bukan grafik gabungan/multi-line).
+- Konfirmasi ruang lingkup: fitur ini bukan pengganti Market Price Tracker di Inventaris (OQ-11/FR-08a) — keduanya tetap ada, saling terpisah, dan menggunakan sumber data yang sama (`ingredient_price_history`).
 
 ### v4.1 (20 Juni 2026) — Revisi UI/Design Considerations
 - Menambahkan spek sistem warna semantik untuk alert (stok kritis, margin kritis, info harga) — lihat §6 dan OQ-14.

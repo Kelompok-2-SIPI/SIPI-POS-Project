@@ -14,17 +14,18 @@
 
 | # | Task | PIC | Status | Catatan |
 |---|------|-----|--------|---------|
-| S5-01 | Setup Gemini SDK di backend, env var `GEMINI_API_KEY` + `ENABLE_AI_CHAT` | Janu | ⬜ To Do | Install `@google/generative-ai`, tambah ke `.env.example` |
-| S5-02 | Buat `backend/src/lib/gemini.ts` — helper `generateResponse()` | Janu | ⬜ To Do | Model: `gemini-1.5-flash` |
-| S5-03 | Buat `backend/src/controllers/aiController.ts` — fungsi `handleChat()` | Janu | ⬜ To Do | Deteksi intent Q&A vs Action, susun system prompt dengan data DB |
-| S5-04 | Buat `backend/src/controllers/aiController.ts` — fungsi `confirmAction()` | Janu | ⬜ To Do | Eksekusi restock + catat harga ke DB, validasi nama bahan baku |
-| S5-05 | Buat `backend/src/routes/ai.ts` + daftarkan di `index.ts` | Janu | ⬜ To Do | `POST /api/v1/ai/chat`, `POST /api/v1/ai/confirm-action` |
-| S5-06 | Testing manual endpoint via curl/REST client | Janu | ⬜ To Do | Uji Q&A + Action flow, pastikan parsing akurat |
-| S5-07 | Floating 💬 button di halaman Dashboard + Inventaris | Raihan | ⬜ To Do | OQ-19: floating button, buka bottom sheet |
-| S5-08 | Komponen bottom sheet chatbot UI | Raihan | ⬜ To Do | Input teks, tampilkan pesan, bubble chat Owner vs AI |
-| S5-09 | Tampilkan konfirmasi parsing + tombol "Ya, Lanjutkan" / "Batal" | Raihan | ⬜ To Do | Terhubung ke `POST /ai/confirm-action` |
-| S5-10 | Tampilkan ringkasan hasil setelah konfirmasi dieksekusi | Raihan | ⬜ To Do | "✅ Stok diperbarui: Gula +2.000g …" |
-| S5-11 | Uji manual Sprint 5 terhadap Acceptance Criteria | Rinda, Ibnu | ⬜ To Do | Setelah S5-01–S5-10 selesai |
+| S5-01 | Setup Gemini SDK di backend, env var `GEMINI_API_KEY` + `ENABLE_AI_CHAT` | Janu | ✅ Done | Install `@google/generative-ai`, tambah ke `.env.example` |
+| S5-02 | Buat `backend/src/lib/gemini.ts` — helper `generateResponse()` | Janu | ✅ Done | Model: `gemini-1.5-flash` |
+| S5-03 | Buat `backend/src/controllers/aiController.ts` — fungsi `handleChat()` | Janu | ✅ Done | Deteksi intent Q&A vs Action, susun system prompt dengan data DB |
+| S5-04 | Buat `backend/src/controllers/aiController.ts` — fungsi `confirmAction()` | Janu | ✅ Done | Eksekusi restock + catat harga ke DB, validasi nama bahan baku |
+| S5-05 | Buat `backend/src/routes/ai.ts` + daftarkan di `index.ts` | Janu | ✅ Done | `POST /api/v1/ai/chat`, `POST /api/v1/ai/confirm-action` |
+| S5-06 | Testing manual endpoint via curl/REST client | Janu | ✅ Done | Uji Q&A + Action flow, pastikan parsing akurat |
+| S5-07 | Core: Floating 💬 button di halaman Dashboard + Inventaris | Favian | ⬜ To Do | OQ-19: floating button, buka bottom sheet. Favian implementasi core dulu, Raihan polish (S5-16) |
+| S5-08 | Core: Komponen bottom sheet chatbot UI | Favian | ⬜ To Do | Input teks, tampilkan pesan, bubble chat Owner vs AI |
+| S5-09 | Core: Tampilkan konfirmasi parsing + tombol "Ya, Lanjutkan" / "Batal" | Favian | ⬜ To Do | Terhubung ke `POST /ai/confirm-action` |
+| S5-10 | Core: Tampilkan ringkasan hasil setelah konfirmasi dieksekusi | Favian | ⬜ To Do | "✅ Stok diperbarui: Gula +2.000g …" |
+| S5-16 | Polish: styling bubble/bottom sheet, animasi, aksesibilitas warna, sembunyikan tombol kalau `ENABLE_AI_CHAT=false` | Raihan | ⬜ To Do | Setelah S5-07–S5-10 selesai |
+| S5-11 | Uji manual Sprint 5 terhadap Acceptance Criteria | Rinda, Ibnu | ⬜ To Do | Setelah S5-07–S5-10 & S5-16 selesai |
 
 ---
 
