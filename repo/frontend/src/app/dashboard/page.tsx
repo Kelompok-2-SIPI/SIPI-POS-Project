@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { apiFetch } from '@/lib/api';
 import AiChatWidget from '@/components/AiChatWidget';
 import LaporanRangeSection from '@/components/LaporanRangeSection';
@@ -47,6 +47,7 @@ interface PriceHistory {
 
 function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baselinePrice: number }) {
   const [hovered, setHovered] = useState<{x: number, y: number, price: number, time: number} | null>(null);
+  const uid = useId();
 
   const width = 500;
   const height = 210;
@@ -79,38 +80,80 @@ function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baseli
 
   const getX = (t: number) => paddingLeft + ((t - timeStart) / timeRange) * innerWidth;
   const getY = (p: number) => paddingTop + innerHeight - (((p - displayMin) / displayRange) * innerHeight);
-  
-  const points = chartPoints.map(d => `${getX(d.time)},${getY(d.price)}`).join(' ');
+
+  // Titik layar (px) dari chartPoints — dipakai untuk menggambar kurva halus, bukan garis lurus.
+  const screenPoints = chartPoints.map(d => ({ x: getX(d.time), y: getY(d.price) }));
+
+  // Kurva halus lewat tiap titik data (quadratic bezier via titik tengah antar titik) — murni presentasi,
+  // tidak mengubah perhitungan getX/getY/data asli sama sekali.
+  const buildSmoothLinePath = (pts: { x: number; y: number }[]) => {
+    if (pts.length === 0) return '';
+    if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+      const prev = pts[i - 1];
+      const curr = pts[i];
+      const midX = (prev.x + curr.x) / 2;
+      const midY = (prev.y + curr.y) / 2;
+      d += ` Q ${prev.x} ${prev.y} ${midX} ${midY}`;
+    }
+    const last = pts[pts.length - 1];
+    d += ` L ${last.x} ${last.y}`;
+    return d;
+  };
+
+  const linePath = buildSmoothLinePath(screenPoints);
+  const bottomY = paddingTop + innerHeight;
+  const firstX = screenPoints[0]?.x ?? paddingLeft;
+  const lastX = screenPoints[screenPoints.length - 1]?.x ?? paddingLeft;
+  const areaPath = `${linePath} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
+
+  const gradientId = `chart-gradient-${uid}`;
+  const shadowId = `chart-tooltip-shadow-${uid}`;
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: '100%', overflowX: 'auto' }}>
       <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '400px', overflow: 'visible' }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
+          </linearGradient>
+          <filter id={shadowId} x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.3" />
+          </filter>
+        </defs>
+
         {/* Y Axis */}
-        <line x1={paddingLeft} y1={paddingTop} x2={paddingLeft} y2={paddingTop + innerHeight} stroke="#cbd5e1" strokeWidth="1" />
-        <text x={paddingLeft - 8} y={paddingTop + 4} fontSize="10" fill="#64748b" textAnchor="end">Rp {(maxPrice/1000).toFixed(0)}k</text>
-        <text x={paddingLeft - 8} y={paddingTop + innerHeight} fontSize="10" fill="#64748b" textAnchor="end">Rp {(minPrice/1000).toFixed(0)}k</text>
-        
+        <line x1={paddingLeft} y1={paddingTop} x2={paddingLeft} y2={paddingTop + innerHeight} stroke="var(--color-outline)" strokeWidth="1" />
+        <text x={paddingLeft - 8} y={paddingTop + 4} fontSize="10" fill="var(--text-secondary)" textAnchor="end">Rp {(maxPrice/1000).toFixed(0)}k</text>
+        <text x={paddingLeft - 8} y={paddingTop + innerHeight} fontSize="10" fill="var(--text-secondary)" textAnchor="end">Rp {(minPrice/1000).toFixed(0)}k</text>
+
         {/* X Axis */}
-        <line x1={paddingLeft} y1={paddingTop + innerHeight} x2={paddingLeft + innerWidth} y2={paddingTop + innerHeight} stroke="#cbd5e1" strokeWidth="1" />
-        <text x={paddingLeft} y={paddingTop + innerHeight + 16} fontSize="10" fill="#64748b" textAnchor="middle">30 Hari Lalu</text>
-        <text x={paddingLeft + innerWidth} y={paddingTop + innerHeight + 16} fontSize="10" fill="#64748b" textAnchor="middle">Hari Ini</text>
+        <line x1={paddingLeft} y1={paddingTop + innerHeight} x2={paddingLeft + innerWidth} y2={paddingTop + innerHeight} stroke="var(--color-outline)" strokeWidth="1" />
+        <text x={paddingLeft} y={paddingTop + innerHeight + 16} fontSize="10" fill="var(--text-secondary)" textAnchor="middle">30 Hari Lalu</text>
+        <text x={paddingLeft + innerWidth} y={paddingTop + innerHeight + 16} fontSize="10" fill="var(--text-secondary)" textAnchor="middle">Hari Ini</text>
 
         {/* Grid line untuk baseline */}
-        <line 
-          x1={paddingLeft} 
-          y1={getY(baselinePrice)} 
-          x2={paddingLeft + innerWidth} 
-          y2={getY(baselinePrice)} 
-          stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4 4" 
+        <line
+          x1={paddingLeft}
+          y1={getY(baselinePrice)}
+          x2={paddingLeft + innerWidth}
+          y2={getY(baselinePrice)}
+          stroke="var(--color-outline)" strokeWidth="1" strokeDasharray="4 4"
         />
-        
-        {/* Line */}
-        <polyline
+
+        {/* Gradient fill tipis di bawah kurva */}
+        <path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
+
+        {/* Kurva harga (smooth, bukan garis lurus) */}
+        <path
+          d={linePath}
           fill="none"
-          stroke="#dc2626"
+          stroke="var(--color-danger)"
           strokeWidth="2.5"
           strokeLinejoin="round"
-          points={points}
+          strokeLinecap="round"
         />
 
         {/* Data points */}
@@ -119,14 +162,14 @@ function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baseli
           const cx = getX(d.time);
           const cy = getY(d.price);
           return (
-            <circle 
-              key={i} 
-              cx={cx} 
-              cy={cy} 
-              r="4.5" 
-              fill="#ffffff" 
-              stroke="#dc2626" 
-              strokeWidth="2" 
+            <circle
+              key={i}
+              cx={cx}
+              cy={cy}
+              r="4.5"
+              fill="var(--color-canvas)"
+              stroke="var(--color-danger)"
+              strokeWidth="2"
               style={{ cursor: 'pointer', transition: 'r 0.2s' }}
               onMouseEnter={() => setHovered({ x: cx, y: cy, price: d.price, time: d.time })}
               onMouseLeave={() => setHovered(null)}
@@ -137,14 +180,14 @@ function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baseli
         {/* Tooltip */}
         {hovered && (
           <g transform={`translate(${hovered.x}, ${hovered.y - 8})`} style={{ pointerEvents: 'none' }}>
-            <rect x="-55" y="-36" width="110" height="32" rx="6" fill="#1e293b" />
-            <text x="0" y="-21" fontSize="11" fill="#f8fafc" textAnchor="middle" fontWeight="bold">
+            <rect x="-55" y="-36" width="110" height="32" rx="10" fill="var(--color-ink-deep)" filter={`url(#${shadowId})`} />
+            <text x="0" y="-21" fontSize="11" fill="var(--color-canvas)" textAnchor="middle" fontWeight="bold">
               Rp {hovered.price.toLocaleString('id-ID')}
             </text>
-            <text x="0" y="-9" fontSize="9" fill="#cbd5e1" textAnchor="middle">
+            <text x="0" y="-9" fontSize="9" fill="rgba(255,255,255,0.7)" textAnchor="middle">
               {new Date(hovered.time).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
             </text>
-            <polygon points="-5,-4 5,-4 0,1" fill="#1e293b" />
+            <polygon points="-5,-4 5,-4 0,1" fill="var(--color-ink-deep)" />
           </g>
         )}
       </svg>
@@ -193,10 +236,13 @@ function PriceAlertItem({ alert }: { alert: PriceAlert }) {
   };
 
   return (
-    <div className="alert-item card border-danger" onClick={toggleExpand} style={{ cursor: 'pointer' }}>
+    <div className="alert-item" onClick={toggleExpand} style={{ cursor: 'pointer' }}>
       <div className="alert-item-header">
         <h3>{alert.ingredientName}</h3>
         <span className="badge badge-danger">
+          <svg width="12" height="12" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+            <path d="m136-240-56-56 296-298 160 160 208-206H600v-80h240v240h-80v-144L536-408 376-568 136-240Z"/>
+          </svg>
           Naik {alert.increasePercent.toFixed(0)}%
         </span>
       </div>
@@ -215,11 +261,10 @@ function PriceAlertItem({ alert }: { alert: PriceAlert }) {
           </ul>
         </div>
       )}
-      
+
       {expanded && (
-        // TODO(Raihan): polish styling/animasi/aksesibilitas warna
-        <div className="alert-history-chart" style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }} onClick={(e) => e.stopPropagation()}>
-          <h4 style={{ fontSize: '0.85rem', marginBottom: '10px' }}>Tren Harga (30 Hari Terakhir)</h4>
+        <div className="alert-history-chart" onClick={(e) => e.stopPropagation()}>
+          <h4>Tren Harga (30 Hari Terakhir)</h4>
           {loading ? (
             <p className="text-secondary" style={{ fontSize: '0.85rem' }}>Memuat grafik...</p>
           ) : error ? (
@@ -229,6 +274,48 @@ function PriceAlertItem({ alert }: { alert: PriceAlert }) {
           ) : null}
         </div>
       )}
+
+      <style jsx>{`
+        .alert-item {
+          background-color: var(--color-canvas);
+          border: 1px solid var(--color-danger);
+          border-radius: var(--radius-lg);
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          transition: var(--transition-fast);
+        }
+        .alert-item:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
+        }
+        .alert-item-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .alert-item-header h3 {
+          font-size: 15px;
+          font-weight: 700;
+        }
+        .badge-danger {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .alert-history-chart {
+          margin-top: 12px;
+          border-top: 1px solid var(--color-outline);
+          padding-top: 12px;
+        }
+        .alert-history-chart h4 {
+          font-size: 13px;
+          font-weight: 700;
+          margin-bottom: 10px;
+        }
+      `}</style>
     </div>
   );
 }
