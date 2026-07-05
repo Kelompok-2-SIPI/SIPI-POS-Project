@@ -58,11 +58,11 @@ router.get('/critical-margins', async (_req: Request, res: Response) => {
 router.get('/price-alerts', async (_req: Request, res: Response) => {
   try {
     const ings = await prisma.ingredient.findMany({ include: { recipes: { include: { menu: true } } } });
-    const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const alerts = [];
     for (const ing of ings) {
       const currentPrice = Number(ing.latestPrice); if (currentPrice <= 0) continue;
-      let baseline = await prisma.ingredientPriceHistory.findFirst({ where: { ingredientId: ing.id, recordedAt: { lte: sevenDaysAgo } }, orderBy: { recordedAt: 'desc' } });
+      let baseline = await prisma.ingredientPriceHistory.findFirst({ where: { ingredientId: ing.id, recordedAt: { lte: thirtyDaysAgo } }, orderBy: { recordedAt: 'desc' } });
       if (!baseline) baseline = await prisma.ingredientPriceHistory.findFirst({ where: { ingredientId: ing.id }, orderBy: { recordedAt: 'asc' } });
       if (!baseline) continue;
       const baselinePrice = Number(baseline.price); if (baselinePrice <= 0) continue;

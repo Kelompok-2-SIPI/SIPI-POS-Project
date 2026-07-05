@@ -45,39 +45,110 @@ interface PriceHistory {
   recordedBy: string;
 }
 
-function SimpleLineChart({ data }: { data: PriceHistory[] }) {
-  const width = 400;
-  const height = 150;
-  const padding = 20; 
+function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baselinePrice: number }) {
+  const [hovered, setHovered] = useState<{x: number, y: number, price: number, time: number} | null>(null);
+
+  const width = 500;
+  const height = 210;
+  const paddingLeft = 50;
+  const paddingRight = 60; // Provide enough space on the right for the tooltip
+  const paddingTop = 45; // Provide enough space on the top for the tooltip
+  const paddingBottom = 30;
   
-  const minPrice = Math.min(...data.map(d => Number(d.price)));
-  const maxPrice = Math.max(...data.map(d => Number(d.price)));
+  const innerWidth = width - paddingLeft - paddingRight;
+  const innerHeight = height - paddingTop - paddingBottom;
   
-  const priceRange = maxPrice - minPrice || 1; 
-  const timeStart = new Date(data[0].recordedAt).getTime();
-  const timeEnd = new Date(data[data.length - 1].recordedAt).getTime();
-  const timeRange = timeEnd - timeStart || 1;
+  const timeEnd = new Date().getTime();
+  const timeStart = timeEnd - (30 * 24 * 60 * 60 * 1000);
+  const timeRange = timeEnd - timeStart;
+
+  const chartPoints = [
+    { price: baselinePrice, time: timeStart },
+    ...data.map(d => ({ price: Number(d.price), time: new Date(d.recordedAt).getTime() })),
+    { price: data.length > 0 ? Number(data[data.length - 1].price) : baselinePrice, time: timeEnd }
+  ];
   
-  const points = data.map(d => {
-    const x = ((new Date(d.recordedAt).getTime() - timeStart) / timeRange) * width;
-    const y = height - padding - (((Number(d.price) - minPrice) / priceRange) * (height - padding * 2));
-    return `${x},${y}`;
-  }).join(' ');
+  const minPrice = Math.min(...chartPoints.map(d => d.price));
+  const maxPrice = Math.max(...chartPoints.map(d => d.price));
+  
+  const priceRange = (maxPrice - minPrice) || 1; 
+  const yPadding = priceRange * 0.1;
+  const displayMin = minPrice - yPadding;
+  const displayMax = maxPrice + yPadding;
+  const displayRange = displayMax - displayMin;
+
+  const getX = (t: number) => paddingLeft + ((t - timeStart) / timeRange) * innerWidth;
+  const getY = (p: number) => paddingTop + innerHeight - (((p - displayMin) / displayRange) * innerHeight);
+  
+  const points = chartPoints.map(d => `${getX(d.time)},${getY(d.price)}`).join(' ');
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} style={{ overflow: 'visible' }}>
-      <polyline
-        fill="none"
-        stroke="#dc2626"
-        strokeWidth="2"
-        points={points}
-      />
-      {data.map((d, i) => {
-        const x = ((new Date(d.recordedAt).getTime() - timeStart) / timeRange) * width;
-        const y = height - padding - (((Number(d.price) - minPrice) / priceRange) * (height - padding * 2));
-        return <circle key={i} cx={x} cy={y} r="4" fill="#dc2626" />;
-      })}
-    </svg>
+    <div style={{ position: 'relative', width: '100%', maxWidth: '100%', overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '400px', overflow: 'visible' }}>
+        {/* Y Axis */}
+        <line x1={paddingLeft} y1={paddingTop} x2={paddingLeft} y2={paddingTop + innerHeight} stroke="#cbd5e1" strokeWidth="1" />
+        <text x={paddingLeft - 8} y={paddingTop + 4} fontSize="10" fill="#64748b" textAnchor="end">Rp {(maxPrice/1000).toFixed(0)}k</text>
+        <text x={paddingLeft - 8} y={paddingTop + innerHeight} fontSize="10" fill="#64748b" textAnchor="end">Rp {(minPrice/1000).toFixed(0)}k</text>
+        
+        {/* X Axis */}
+        <line x1={paddingLeft} y1={paddingTop + innerHeight} x2={paddingLeft + innerWidth} y2={paddingTop + innerHeight} stroke="#cbd5e1" strokeWidth="1" />
+        <text x={paddingLeft} y={paddingTop + innerHeight + 16} fontSize="10" fill="#64748b" textAnchor="middle">30 Hari Lalu</text>
+        <text x={paddingLeft + innerWidth} y={paddingTop + innerHeight + 16} fontSize="10" fill="#64748b" textAnchor="middle">Hari Ini</text>
+
+        {/* Grid line untuk baseline */}
+        <line 
+          x1={paddingLeft} 
+          y1={getY(baselinePrice)} 
+          x2={paddingLeft + innerWidth} 
+          y2={getY(baselinePrice)} 
+          stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4 4" 
+        />
+        
+        {/* Line */}
+        <polyline
+          fill="none"
+          stroke="#dc2626"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+          points={points}
+        />
+
+        {/* Data points */}
+        {chartPoints.map((d, i) => {
+          if (i === 0 || i === chartPoints.length - 1) return null;
+          const cx = getX(d.time);
+          const cy = getY(d.price);
+          return (
+            <circle 
+              key={i} 
+              cx={cx} 
+              cy={cy} 
+              r="4.5" 
+              fill="#ffffff" 
+              stroke="#dc2626" 
+              strokeWidth="2" 
+              style={{ cursor: 'pointer', transition: 'r 0.2s' }}
+              onMouseEnter={() => setHovered({ x: cx, y: cy, price: d.price, time: d.time })}
+              onMouseLeave={() => setHovered(null)}
+            />
+          );
+        })}
+
+        {/* Tooltip */}
+        {hovered && (
+          <g transform={`translate(${hovered.x}, ${hovered.y - 8})`} style={{ pointerEvents: 'none' }}>
+            <rect x="-55" y="-36" width="110" height="32" rx="6" fill="#1e293b" />
+            <text x="0" y="-21" fontSize="11" fill="#f8fafc" textAnchor="middle" fontWeight="bold">
+              Rp {hovered.price.toLocaleString('id-ID')}
+            </text>
+            <text x="0" y="-9" fontSize="9" fill="#cbd5e1" textAnchor="middle">
+              {new Date(hovered.time).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+            </text>
+            <polygon points="-5,-4 5,-4 0,1" fill="#1e293b" />
+          </g>
+        )}
+      </svg>
+    </div>
   );
 }
 
@@ -97,12 +168,12 @@ function PriceAlertItem({ alert }: { alert: PriceAlert }) {
           if (res.ok) {
             const data: PriceHistory[] = await res.json();
             
-            // Filter 7 hari terakhir, sort ascending
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            // Filter 30 hari terakhir, sort ascending
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             
             const filtered = data
-              .filter((d: PriceHistory) => new Date(d.recordedAt) >= sevenDaysAgo)
+              .filter((d: PriceHistory) => new Date(d.recordedAt) >= thirtyDaysAgo)
               .sort((a: PriceHistory, b: PriceHistory) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
               
             setChartData(filtered);
@@ -130,7 +201,7 @@ function PriceAlertItem({ alert }: { alert: PriceAlert }) {
         </span>
       </div>
       <p className="alert-meta">
-        Harga baseline: Rp {alert.baselinePrice.toLocaleString('id-ID')} ➜ Sekarang: Rp {alert.currentPrice.toLocaleString('id-ID')} (7 hari terakhir)
+        Harga baseline: Rp {alert.baselinePrice.toLocaleString('id-ID')} ➜ Sekarang: Rp {alert.currentPrice.toLocaleString('id-ID')} (30 hari terakhir)
       </p>
       {alert.affectedMenus.length > 0 && (
         <div className="affected-menus">
@@ -148,16 +219,14 @@ function PriceAlertItem({ alert }: { alert: PriceAlert }) {
       {expanded && (
         // TODO(Raihan): polish styling/animasi/aksesibilitas warna
         <div className="alert-history-chart" style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }} onClick={(e) => e.stopPropagation()}>
-          <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>Tren Harga (7 Hari Terakhir)</h4>
-          {loading && <p className="text-secondary text-sm">Memuat grafik...</p>}
-          {error && <p className="text-danger text-sm">{error}</p>}
-          {!loading && !error && chartData && (
-            chartData.length < 2 ? (
-              <p className="text-secondary text-sm">Data harga belum cukup untuk grafik</p>
-            ) : (
-              <SimpleLineChart data={chartData} />
-            )
-          )}
+          <h4 style={{ fontSize: '0.85rem', marginBottom: '10px' }}>Tren Harga (30 Hari Terakhir)</h4>
+          {loading ? (
+            <p className="text-secondary" style={{ fontSize: '0.85rem' }}>Memuat grafik...</p>
+          ) : error ? (
+            <p className="text-danger" style={{ fontSize: '0.85rem' }}>{error}</p>
+          ) : chartData ? (
+            <SimpleLineChart data={chartData} baselinePrice={alert.baselinePrice} />
+          ) : null}
         </div>
       )}
     </div>
