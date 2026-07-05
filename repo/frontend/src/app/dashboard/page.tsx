@@ -389,7 +389,11 @@ export default function DashboardPage() {
       {/* Summary Text Alert Banner (FR-14) */}
       {summary && (
         <div className="summary-banner card">
-          <div className="banner-icon">⚡</div>
+          <div className="banner-icon">
+            <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+              <path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/>
+            </svg>
+          </div>
           <p>{summary.summaryText}</p>
         </div>
       )}
@@ -398,18 +402,27 @@ export default function DashboardPage() {
       {summary && (
         <div className="stats-grid">
           <div className="stat-card card">
+            <svg className="stat-watermark" width="72" height="72" viewBox="0 -960 960 960" fill="currentColor">
+              <path d="M320-240q-83 0-141.5-58.5T120-440q0-83 58.5-141.5T320-640h320q83 0 141.5 58.5T840-440q0 83-58.5 141.5T640-240H320Zm0-80h320q50 0 85-35t35-85q0-50-35-85t-85-35H320q-50 0-85 35t-35 85q0 50 35 85t85 35Zm160-40q33 0 56.5-23.5T560-440q0-33-23.5-56.5T480-520q-33 0-56.5 23.5T400-440q0 33 23.5 56.5T480-360Z"/>
+            </svg>
             <span className="label">Pendapatan Kotor</span>
             <span className="value text-primary">
               Rp {summary.totalRevenue.toLocaleString('id-ID')}
             </span>
           </div>
           <div className="stat-card card">
+            <svg className="stat-watermark" width="72" height="72" viewBox="0 -960 960 960" fill="currentColor">
+              <path d="M240-80q-33 0-56.5-23.5T160-160v-480l40-40 40 40 40-40 40 40 40-40 40 40 40-40 40 40 40-40 40 40 40-40 40 40v480q0 33-23.5 56.5T760-80H240Zm0-80h480v-424l-8 8-40-40-40 40-40-40-40 40-40-40-40 40-40-40-40 40-8-8v424Zm120-120h240v-80H360v80Zm0-160h240v-80H360v80Z"/>
+            </svg>
             <span className="label">Transaksi Selesai</span>
             <span className="value text-secondary">
               {summary.transactionsCount} Selesai
             </span>
           </div>
           <div className="stat-card card">
+            <svg className="stat-watermark" width="72" height="72" viewBox="0 -960 960 960" fill="currentColor">
+              <path d="M160-200q-33 0-56.5-23.5T80-280v-400q0-33 23.5-56.5T160-760h640q33 0 56.5 23.5T880-680v400q0 33-23.5 56.5T800-200H160Zm0-80h640v-400H160v400Zm480-120q33 0 56.5-23.5T720-480q0-33-23.5-56.5T640-560q-33 0-56.5 23.5T560-480q0 33 23.5 56.5T640-400ZM160-600h640v-80H160v80Z"/>
+            </svg>
             <span className="label">Estimasi Laba Kotor</span>
             <span className="value text-success">
               Rp {summary.grossProfit.toLocaleString('id-ID')}
@@ -476,28 +489,140 @@ export default function DashboardPage() {
               <p>Belum ada menu yang terjual hari ini.</p>
             </div>
           ) : (
-            topMenus.map((menu, idx) => (
-              <div key={menu.id} className="top-menu-row">
-                <div className="top-menu-left">
-                  <span className="top-rank">#{idx + 1}</span>
-                  <div>
-                    <h4>{menu.name}</h4>
-                    <span className="top-sales-count">{menu.quantitySold} porsi terjual</span>
+            topMenus.map((menu, idx) => {
+              const maxQty = topMenus[0]?.quantitySold || 1;
+              const barPct = maxQty > 0 ? Math.max(6, (menu.quantitySold / maxQty) * 100) : 0;
+              return (
+                <div key={menu.id} className="top-menu-row">
+                  <div className="top-menu-left">
+                    <div className="top-menu-photo">
+                      <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                        <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
+                      </svg>
+                      <span className="top-rank">{idx + 1}</span>
+                    </div>
+                    <div className="top-menu-info">
+                      <h4>{menu.name}</h4>
+                      <span className="top-sales-count">{menu.quantitySold} porsi terjual</span>
+                      <div className="top-menu-bar-track">
+                        <div className="top-menu-bar-fill" style={{ width: `${barPct}%` }} />
+                      </div>
+                    </div>
                   </div>
+                  <span className="top-total-sales">
+                    Rp {menu.totalSales.toLocaleString('id-ID')}
+                  </span>
                 </div>
-                <span className="top-total-sales">
-                  Rp {menu.totalSales.toLocaleString('id-ID')}
-                </span>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
       </div>
 
       <LaporanRangeSection />
-      
+
       <AiChatWidget />
+
+      {/* Tahap 5a: banner ringkasan, stat cards, dan Menu Terlaris — styling scoped di sini.
+          Margin Kritis, Price Alerts, SimpleLineChart, LaporanRangeSection tidak disentuh. */}
+      <style jsx>{`
+        .summary-banner {
+          background-color: var(--color-info-light);
+          border: 1px solid var(--color-info);
+          align-items: flex-start;
+        }
+        .banner-icon {
+          width: 40px;
+          height: 40px;
+          flex-shrink: 0;
+          border-radius: var(--radius-sm);
+          background-color: var(--color-info);
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .summary-banner p {
+          line-height: 1.5;
+        }
+        .stat-card {
+          position: relative;
+          overflow: hidden;
+        }
+        .stat-watermark {
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          color: var(--color-primary);
+          opacity: 0.08;
+        }
+        .stat-card .label {
+          position: relative;
+        }
+        .stat-card .value {
+          position: relative;
+          font-size: 22px;
+          font-weight: 700;
+        }
+        @media (min-width: 768px) {
+          .stat-card .value {
+            font-size: 26px;
+          }
+        }
+        .top-menu-left {
+          align-items: center;
+        }
+        .top-menu-photo {
+          position: relative;
+          flex-shrink: 0;
+          width: 48px;
+          height: 48px;
+          border-radius: var(--radius-sm);
+          background-color: var(--color-surface-soft);
+          color: var(--text-tertiary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .top-menu-photo .top-rank {
+          position: absolute;
+          bottom: -4px;
+          left: -4px;
+          width: 20px;
+          height: 20px;
+          font-family: var(--font-jakarta);
+          font-size: 11px;
+          font-weight: 700;
+          color: #fff;
+          background-color: var(--color-primary);
+          border: 2px solid var(--color-canvas);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .top-menu-info {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
+        }
+        .top-menu-bar-track {
+          width: 100%;
+          min-width: 120px;
+          height: 5px;
+          border-radius: var(--radius-pill);
+          background-color: var(--color-surface-soft);
+          overflow: hidden;
+          margin-top: 2px;
+        }
+        .top-menu-bar-fill {
+          height: 100%;
+          border-radius: var(--radius-pill);
+          background-color: var(--color-primary);
+        }
+      `}</style>
     </div>
   );
 }
