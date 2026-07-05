@@ -256,6 +256,7 @@ export default function LoginPage() {
           flex-direction: column;
           align-items: center;
           gap: 24px;
+          isolation: isolate; /* buat stacking context sendiri, cegah background leak dari body */
         }
 
         /* ── Brand header ── */
@@ -289,8 +290,10 @@ export default function LoginPage() {
           color: var(--color-primary);
           letter-spacing: -0.02em;
           line-height: 1;
-          /* override global h1 margin */
+          /* override global h1 margin & pastikan background transparan di semua breakpoint */
           margin: 0;
+          background: transparent;
+          -webkit-text-fill-color: var(--color-primary); /* cegah override warna teks dari WebKit autofill/inherited */
         }
         .brand-tagline {
           font-size: var(--font-size-body-sm); /* 14px */

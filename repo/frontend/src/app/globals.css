@@ -109,10 +109,12 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-outfit);
+  /* Plus Jakarta Sans — font tunggal sesuai DESIGN.md §2.2 (--font-outfit dihapus di Tahap 0) */
+  font-family: var(--font-jakarta);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.02em;
+  background: transparent; /* pastikan tidak ada background inherited dari ancestor */
 }
 
 /* Scrollbar styling */
