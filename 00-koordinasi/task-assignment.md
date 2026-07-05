@@ -1,6 +1,6 @@
 # Task Assignment — SIPI POS
 
-**Terakhir diperbarui:** 28 Juni 2026 (rev. 4 — tambah Sprint 5 & 6)
+**Terakhir diperbarui:** 5 Juli 2026 (rev. 5 — Sprint 5 implementasi inti selesai; Sprint 6 ↔ 7 ditukar penomoran)
 
 ---
 
@@ -95,7 +95,7 @@
 
 ---
 
-### Sprint 5 — AI Chatbot Bidirectional (🔵 Berjalan)
+### Sprint 5 — AI Chatbot Bidirectional (🟢 Done — implementasi inti)
 
 | Task | Deskripsi | PIC | Status |
 |------|-----------|-----|--------|
@@ -105,54 +105,64 @@
 | S5-04 | Controller `confirmAction()` — eksekusi restock + catat harga, validasi nama bahan baku | Janu | ✅ Done |
 | S5-05 | Route `/api/v1/ai/chat` dan `/api/v1/ai/confirm-action`, daftarkan di `index.ts` | Janu | ✅ Done |
 | S5-06 | Testing manual endpoint (Q&A + Action flow) | Janu | ✅ Done |
-| S5-07 | Core: Floating 💬 button di halaman Dashboard + Inventaris | Favian | ⬜ To Do |
-| S5-08 | Core: Komponen bottom sheet chatbot UI (bubble chat Owner vs AI) | Favian | ⬜ To Do |
-| S5-09 | Core: Tampilkan konfirmasi parsing + tombol "Ya, Lanjutkan" / "Batal" | Favian | ⬜ To Do |
-| S5-10 | Core: Tampilkan ringkasan hasil setelah eksekusi konfirmasi | Favian | ⬜ To Do |
-| S5-16 | Polish: styling bubble/bottom sheet, animasi, aksesibilitas, cek `ENABLE_AI_CHAT` untuk sembunyikan tombol | Raihan | ⬜ To Do |
-| S5-11 | Uji manual Sprint 5 terhadap Acceptance Criteria FR-12/13/17/18 | Rinda, Ibnu | ⬜ To Do |
-| S5-12 | FR-16a Core: mini-card + expand/collapse + fetch price-history di kartu alert Dashboard | Favian | ⬜ To Do |
-| S5-13 | FR-16a Core: grafik garis SVG sederhana 7 hari + edge case data kurang/error | Favian | ⬜ To Do |
-| S5-14 | FR-16a Polish: styling, kontras/font §6, aksesibilitas warna, animasi | Raihan | ⬜ To Do |
-| S5-15 | Uji manual FR-16a | Rinda, Ibnu | ⬜ To Do |
+| S5-07 | Core: Floating 💬 button di halaman Dashboard + Inventaris | Favian | ✅ Done |
+| S5-08 | Core: Komponen bottom sheet chatbot UI (bubble chat Owner vs AI) | Favian | ✅ Done |
+| S5-09 | Core: Tampilkan konfirmasi parsing + tombol "Ya, Lanjutkan" / "Batal" | Favian | ✅ Done |
+| S5-10 | Core: Tampilkan ringkasan hasil setelah eksekusi konfirmasi | Favian | ✅ Done |
+| S5-16 | Polish: styling bubble/bottom sheet, animasi, aksesibilitas, cek `ENABLE_AI_CHAT` untuk sembunyikan tombol | Raihan | ➡️ Dipindah ke Sprint 7 (S7-14) |
+| S5-11 | Uji manual Sprint 5 terhadap Acceptance Criteria FR-12/13/17/18 | Rinda, Ibnu | ➡️ Dipindah ke Sprint 7 (S7-15) |
+| S5-12 | FR-16a Core: mini-card + expand/collapse + fetch price-history di kartu alert Dashboard | Favian | ✅ Done |
+| S5-13 | FR-16a Core: grafik garis SVG sederhana 7 hari + edge case data kurang/error | Favian | ✅ Done |
+| S5-14 | FR-16a Polish: styling, kontras/font §6, aksesibilitas warna, animasi | Raihan | ➡️ Dipindah ke Sprint 7 (S7-16) |
+| S5-15 | Uji manual FR-16a | Rinda, Ibnu | ➡️ Dipindah ke Sprint 7 (S7-17) |
 
 ---
 
-### Sprint 6 — Mobile Testing & PWA Polish (🔵 Berjalan, paralel)
+### Sprint 6 — Laporan Rentang Tanggal & Export PDF (🟢 Done)
+
+_Sprint ini semula bernomor Sprint 7 (task ID lama S7-xx) — ditukar jadi Sprint 6 pada 5 Juli 2026 karena sudah selesai duluan. Detail: `sprint-6-laporan-export.md`._
 
 | Task | Deskripsi | PIC | Status |
 |------|-----------|-----|--------|
-| S6-01 | Setup environment testing mobile (akses via IP lokal di HP) | Favian | ⬜ To Do |
-| S6-02 | Uji modul POS/Kasir di mobile — FR-01–FR-05 | Rinda, Ibnu | ⬜ To Do |
-| S6-03 | Uji modul Inventaris di mobile — FR-06–FR-10a | Rinda, Ibnu | ⬜ To Do |
-| S6-04 | Uji modul Dashboard di mobile — FR-11, FR-14–FR-16 | Rinda, Ibnu | ⬜ To Do |
-| S6-05 | Verifikasi PWA installable (manifest.json + Service Worker) | Favian | ⬜ To Do |
-| S6-06 | Uji offline mode POS — transaksi saat offline, sync saat pulih | Rinda, Ibnu | ⬜ To Do |
-| S6-07 | Cek tap target semua tombol utama ≥ 44×44px | Raihan | ⬜ To Do |
-| S6-08 | Cek kontras warna & ukuran font (min 14px body, 16px angka harga) | Raihan | ⬜ To Do |
-| S6-09 | Cek empty state semua halaman (POS, Inventaris, Dashboard) | Raihan | ⬜ To Do |
-| S6-10 | Buat bug report di `03-output-review/bug-report-sprint6.md` | Rinda, Ibnu | ⬜ To Do |
-| S6-11 | Fix bug prioritas tinggi hasil testing | Raihan / Janu | ⬜ To Do |
-| S6-12 | Retest setelah fix — sign-off final | Rinda, Ibnu | ⬜ To Do |
+| S6-01 | Migrasi Prisma: tabel `menu_hpp_history` | Janu | ✅ Done |
+| S6-02 | Hook snapshot HPP+harga jual ke `menu_hpp_history` (FR-09 & OQ-4) | Janu | ✅ Done |
+| S6-03 | `GET /dashboard/summary-range` | Janu | ✅ Done |
+| S6-04 | `GET /dashboard/top-menus-range` | Janu | ✅ Done |
+| S6-05 | `GET /dashboard/price-alerts-range` | Janu | ✅ Done |
+| S6-06 | `GET /dashboard/critical-margins-range` | Janu | ✅ Done |
+| S6-07 | Testing manual endpoint rentang tanggal | Janu | ✅ Done |
+| S6-08 | Date range picker custom di bagian "Laporan" Dashboard | Raihan | ✅ Done |
+| S6-09 | Render ringkasan agregat rentang (pendapatan, transaksi, laba, top menu) | Raihan | ✅ Done |
+| S6-10 | Render kenaikan harga & margin kritis rentang | Raihan | ✅ Done |
+| S6-11 | Tombol Export PDF (client-side) | Raihan | ✅ Done |
+| S6-12 | Uji manual Sprint 6 | Rinda, Ibnu | ✅ Done |
 
 ---
 
-### Sprint 7 — Laporan Rentang Tanggal & Export PDF (⬜ Belum Mulai)
+### Sprint 7 — Mobile Testing & PWA Polish (🔵 Berjalan)
+
+_Sprint ini semula bernomor Sprint 6 (task ID lama S6-xx) — ditukar jadi Sprint 7 dan dipindah ke akhir alur, karena mobile testing & polish PWA sebaiknya menguji fitur yang sudah stabil (Sprint 5 chatbot AI & Sprint 6 Laporan). Detail: `sprint-7-mobile-testing.md`._
 
 | Task | Deskripsi | PIC | Status |
 |------|-----------|-----|--------|
-| S7-01 | Migrasi Prisma: tabel `menu_hpp_history` | Janu | ⬜ To Do |
-| S7-02 | Hook snapshot HPP+harga jual ke `menu_hpp_history` (FR-09 & OQ-4) | Janu | ⬜ To Do |
-| S7-03 | `GET /dashboard/summary-range` | Janu | ⬜ To Do |
-| S7-04 | `GET /dashboard/top-menus-range` | Janu | ⬜ To Do |
-| S7-05 | `GET /dashboard/price-alerts-range` | Janu | ⬜ To Do |
-| S7-06 | `GET /dashboard/critical-margins-range` | Janu | ⬜ To Do |
-| S7-07 | Testing manual endpoint rentang tanggal | Janu | ⬜ To Do |
-| S7-08 | Date range picker custom di bagian "Laporan" Dashboard | Raihan | ⬜ To Do |
-| S7-09 | Render ringkasan agregat rentang (pendapatan, transaksi, laba, top menu) | Raihan | ⬜ To Do |
-| S7-10 | Render kenaikan harga & margin kritis rentang | Raihan | ⬜ To Do |
-| S7-11 | Tombol Export PDF (client-side) | Raihan | ⬜ To Do |
-| S7-12 | Uji manual Sprint 7 | Rinda, Ibnu | ⬜ To Do |
+| S7-00 | Generate dummy data simulasi 6 bulan (transaksi, stok, riwayat harga) | Favian | ✅ Done |
+| S7-01 | Setup environment testing mobile (akses via IP lokal di HP) | Favian | ⬜ To Do |
+| S7-02 | Uji modul POS/Kasir di mobile — FR-01–FR-05 | Rinda, Ibnu | ⬜ To Do |
+| S7-03 | Uji modul Inventaris di mobile — FR-06–FR-10a | Rinda, Ibnu | ⬜ To Do |
+| S7-04 | Uji modul Dashboard di mobile — FR-11, FR-14–FR-16 | Rinda, Ibnu | ⬜ To Do |
+| S7-05 | Uji bagian Laporan di mobile — FR-19–FR-22 | Rinda, Ibnu | ⬜ To Do |
+| S7-06 | Verifikasi PWA installable (manifest.json + Service Worker) | Favian | ⬜ To Do |
+| S7-07 | Uji offline mode POS — transaksi saat offline, sync saat pulih | Rinda, Ibnu | ⬜ To Do |
+| S7-08 | Cek tap target semua tombol utama ≥ 44×44px | Raihan | ⬜ To Do |
+| S7-09 | Cek kontras warna & ukuran font (min 14px body, 16px angka harga) | Raihan | ⬜ To Do |
+| S7-10 | Cek empty state semua halaman (POS, Inventaris, Dashboard, Laporan) | Raihan | ⬜ To Do |
+| S7-11 | Buat bug report di `03-output-review/bug-report-sprint7.md` | Rinda, Ibnu | ⬜ To Do |
+| S7-12 | Fix bug prioritas tinggi hasil testing | Raihan / Janu | ⬜ To Do |
+| S7-13 | Retest setelah fix — sign-off final | Rinda, Ibnu | ⬜ To Do |
+| S7-14 | Polish chatbot AI (eks-S5-16) | Raihan | ⬜ To Do |
+| S7-15 | Uji manual chatbot AI Sprint 5 (eks-S5-11) | Rinda, Ibnu | ⬜ To Do |
+| S7-16 | Polish FR-16a (eks-S5-14) | Raihan | ⬜ To Do |
+| S7-17 | Uji manual FR-16a (eks-S5-15) | Rinda, Ibnu | ⬜ To Do |
 
 ---
 
