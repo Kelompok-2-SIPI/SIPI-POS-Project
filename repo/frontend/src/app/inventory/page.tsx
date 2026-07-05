@@ -525,21 +525,23 @@ export default function InventoryPage() {
         <div>
           <h1>Gudang &amp; Inventaris</h1>
           <p>
-            {activeTab === 'ingredients' 
+            {activeTab === 'ingredients'
               ? 'Pantau persediaan bahan baku secara real-time'
+              : activeTab === 'restock'
+              ? 'Rekomendasi restock berdasarkan proyeksi pemakaian harian'
               : 'Atur menu jual beserta komposisi resep bahan baku'}
           </p>
         </div>
-        
+
         {activeTab === 'ingredients' ? (
           <button onClick={() => setModalType('create')} className="btn btn-primary">
             + Bahan Baku
           </button>
-        ) : (
+        ) : activeTab === 'menus' ? (
           <button onClick={() => handleOpenMenuModal(null, 'create-menu')} className="btn btn-primary">
             + Menu Baru
           </button>
-        )}
+        ) : null}
       </header>
 
       {/* Sub-Tab Navigation Toggles (OQ-7 / OQ-4 Constraint) */}
@@ -566,71 +568,96 @@ export default function InventoryPage() {
 
       {/* 1. Ingredients Tab View */}
       {activeTab === 'ingredients' && (
-        <div className="ingredients-list">
-          {ingredients.length === 0 ? (
-            <div className="empty-state">
-              <p>Belum ada bahan baku terdaftar.</p>
-            </div>
-          ) : (
-            ingredients.map((ing) => {
-              const isLowStock = ing.stockQty <= ing.minStockQty;
+        <div className="ingredients-tab-container">
+          <div className="ingredients-grid">
+            {ingredients.length === 0 ? (
+              <div className="empty-state">
+                <p>Belum ada bahan baku terdaftar.</p>
+              </div>
+            ) : (
+              ingredients.map((ing) => {
+                const isLowStock = ing.stockQty <= ing.minStockQty;
 
-              return (
-                <div key={ing.id} className="ingredient-card card">
-                  <div className="ing-info">
-                    <div className="ing-title-row">
-                      <h3>{ing.name}</h3>
-                      {isLowStock && (
-                        <span className="badge badge-danger">Stok Menipis</span>
+                return (
+                  <div key={ing.id} className="inv-card group">
+                    <div className="inv-card-badge">
+                      {isLowStock ? (
+                        <span className="inv-badge inv-badge-critical">
+                          <svg width="14" height="14" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                            <path d="M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm-40-160h80v-240h-80v240Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
+                          </svg>
+                          Stok Kritis: {ing.stockQty} {ing.unit}
+                        </span>
+                      ) : (
+                        <span className="inv-badge inv-badge-normal">
+                          Stok: {ing.stockQty} {ing.unit}
+                        </span>
                       )}
                     </div>
-                    <div className="ing-stats-row">
-                      <div className="ing-stat">
-                        <span className="stat-label">Sisa Stok</span>
-                        <span className="stat-value">
-                          {ing.stockQty} {ing.unit}
-                        </span>
+                    
+                    <div className="inv-card-body">
+                      <div className="inv-card-icon">
+                        <svg width="32" height="32" viewBox="0 -960 960 960" fill="currentColor">
+                          <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
+                        </svg>
                       </div>
-                      <div className="ing-stat">
-                        <span className="stat-label">Stok Min</span>
-                        <span className="stat-value">
-                          {ing.minStockQty} {ing.unit}
-                        </span>
-                      </div>
-                      <div className="ing-stat">
-                        <span className="stat-label">Harga Beli</span>
-                        <span className="stat-value text-underline" onClick={() => handleOpenModal(ing, 'price-history')} title="Lihat riwayat harga">
-                          Rp {ing.latestPrice.toLocaleString('id-ID')}/{ing.unit} 📈
-                        </span>
+                      
+                      <div className="inv-card-info">
+                        <h3 className="inv-card-title">{ing.name}</h3>
+                        <p className="inv-card-subtitle">Min. Stok: {ing.minStockQty} {ing.unit}</p>
+                        
+                        <div className="inv-card-bottom">
+                          <div className="inv-price-col">
+                            <p className="inv-price-label">Harga Pasar Terbaru</p>
+                            <div 
+                              className="inv-price-val" 
+                              onClick={() => handleOpenModal(ing, 'price-history')} 
+                              title="Lihat riwayat harga"
+                            >
+                              Rp {ing.latestPrice.toLocaleString('id-ID')}/{ing.unit}
+                              <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" className="trend-icon">
+                                <path d="m136-240-56-56 296-298 160 160 208-206H600v-80h240v240h-80v-144L536-408 376-568 136-240Z"/>
+                              </svg>
+                            </div>
+                          </div>
+                          
+                          <div className="inv-actions">
+                            <button 
+                              className="inv-action-btn outline" 
+                              onClick={() => handleOpenModal(ing, 'price')} 
+                              title="Atur Harga"
+                            >
+                              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                                <path d="M440-200h80v-40h40q17 0 28.5-11.5T600-280v-120q0-17-11.5-28.5T560-440H440v-80h160v-80h-80v-40h-80v40h-40q-17 0-28.5 11.5T360-560v120q0 17 11.5 28.5T400-400h120v80H360v80h80v40ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/>
+                              </svg>
+                            </button>
+                            <button
+                              className="inv-action-btn outline"
+                              onClick={() => handleOpenModal(ing, 'edit')}
+                              title="Edit Konfigurasi"
+                            >
+                              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                                <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
+                              </svg>
+                            </button>
+                            <button
+                              className="inv-action-btn primary"
+                              onClick={() => handleOpenModal(ing, 'restock')}
+                              title="Restok"
+                            >
+                              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                                <path d="M280-80q-33 0-56.5-23.5T200-160q0-33 23.5-56.5T280-240q33 0 56.5 23.5T360-160q0 33-23.5 56.5T280-80Zm400 0q-33 0-56.5-23.5T600-160q0-33 23.5-56.5T680-240q33 0 56.5 23.5T760-160q0 33-23.5 56.5T680-80ZM40-800v-80h131l170 360h280l156-280h91L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68-39.5t-2-78.5l54-98-144-304H40Zm434 260v-80h-80v80h80ZM374-600v-80h-80v80h80Zm120 0v-80h-80v80h80ZM120 0v-80h-80v80h80ZM494-440v-80h-80v80h80Zm120 0v-80h-80v80h80Z"/>
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  <div className="ing-actions">
-                    <button
-                      onClick={() => handleOpenModal(ing, 'restock')}
-                      className="btn btn-secondary flex-1"
-                    >
-                      Restok
-                    </button>
-                    <button
-                      onClick={() => handleOpenModal(ing, 'price')}
-                      className="btn btn-secondary flex-1"
-                    >
-                      Atur Harga
-                    </button>
-                    <button
-                      onClick={() => handleOpenModal(ing, 'edit')}
-                      className="btn btn-secondary icon-btn"
-                      title="Edit Konfigurasi"
-                    >
-                      ⚙
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
       )}
 
@@ -1199,7 +1226,7 @@ export default function InventoryPage() {
         /* Sub-Tab Navigation Toggle */
         .sub-tab-nav {
           display: flex;
-          background: #e8e2d5;
+          background: var(--color-surface-soft);
           padding: 4px;
           border-radius: var(--radius-md);
         }
@@ -1222,11 +1249,180 @@ export default function InventoryPage() {
           box-shadow: var(--shadow-sm);
         }
 
-        .ingredients-list, .menus-list {
+        .menus-list {
           display: flex;
           flex-direction: column;
           gap: 16px;
           padding-bottom: 60px;
+        }
+        
+        /* New Ingredients UI Styles (Stok) */
+        .ingredients-tab-container {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          padding-bottom: 60px;
+        }
+        
+        .ingredients-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+        @media (min-width: 768px) {
+          .ingredients-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        @media (min-width: 1200px) {
+          .ingredients-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+
+        .inv-card {
+          background-color: var(--color-canvas);
+          border-radius: var(--radius-lg);
+          padding: 16px;
+          border: 1px solid var(--color-outline);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          position: relative;
+          overflow: hidden;
+          transition: var(--transition-fast);
+        }
+        .inv-card:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
+        }
+        .inv-card-badge {
+          position: absolute;
+          top: 0;
+          right: 0;
+          padding: 12px;
+        }
+        @media (max-width: 767px) {
+          /* Jaga jarak dari FAB chat AI yang fixed di kanan-bawah (bottom:90px, right:20px, 56px)
+             agar badge Stok Kritis tidak pernah tertutup FAB, di posisi scroll manapun. */
+          .inv-card-badge {
+            right: 56px;
+          }
+        }
+        .inv-badge {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          border-radius: var(--radius-pill);
+          font-size: 11px;
+          font-weight: 700;
+        }
+        .inv-badge-critical {
+          background-color: var(--color-danger);
+          color: #fff;
+        }
+        .inv-badge-normal {
+          background-color: var(--color-surface-soft);
+          color: var(--text-secondary);
+        }
+
+        .inv-card-body {
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+          margin-top: 12px;
+        }
+        .inv-card-icon {
+          width: 56px;
+          height: 56px;
+          border-radius: var(--radius-md);
+          background-color: var(--color-surface-soft);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--text-tertiary);
+          flex-shrink: 0;
+        }
+        .inv-card-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+        .inv-card-title {
+          font-family: var(--font-jakarta);
+          font-size: 16px;
+          font-weight: 700;
+          color: var(--text-primary);
+          margin: 0;
+          line-height: 1.2;
+        }
+        .inv-card-subtitle {
+          font-size: 12px;
+          color: var(--text-secondary);
+          margin: 4px 0 16px 0;
+        }
+        .inv-card-bottom {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          margin-top: auto;
+        }
+        .inv-price-col {
+          display: flex;
+          flex-direction: column;
+        }
+        .inv-price-label {
+          font-size: 10px;
+          color: var(--text-tertiary);
+          margin: 0 0 2px 0;
+        }
+        .inv-price-val {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 14px;
+          font-weight: 700;
+          color: var(--color-primary);
+          cursor: pointer;
+        }
+        .inv-price-val:hover {
+          text-decoration: underline;
+        }
+        .trend-icon {
+          color: var(--color-primary);
+        }
+        
+        .inv-actions {
+          display: flex;
+          gap: 8px;
+        }
+        .inv-action-btn {
+          width: 36px;
+          height: 36px;
+          flex-shrink: 0;
+          border-radius: var(--radius-pill);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: none;
+          cursor: pointer;
+          transition: var(--transition-fast);
+        }
+        .inv-action-btn.primary {
+          background-color: var(--color-primary);
+          color: #fff;
+        }
+        .inv-action-btn.primary:hover {
+          opacity: 0.9;
+          transform: scale(0.95);
+        }
+        .inv-action-btn.outline {
+          background-color: transparent;
+          color: var(--color-primary);
+          border: 1px solid var(--color-primary);
+        }
+        .inv-action-btn.outline:hover {
+          background-color: var(--color-surface-soft);
+          transform: scale(0.95);
         }
         .ingredient-card, .menu-card {
           display: flex;
