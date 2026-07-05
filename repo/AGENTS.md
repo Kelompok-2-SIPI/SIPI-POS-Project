@@ -139,3 +139,30 @@ docker compose -f repo/docker-compose.yml exec backend npx prisma db seed
 # Frontend: http://localhost:3000
 # Backend:  http://localhost:4000
 ```
+
+---
+
+## ⚠️ SEDANG ADA REDESIGN UI/UX (branch `redesign/uiux-stitch-janu`)
+
+**Jika tugas yang diminta berkaitan dengan tampilan/styling/CSS/komponen visual apa pun**
+(bukan logic backend, bukan skema database), **WAJIB baca dulu 2 file ini sebelum
+menulis atau mengubah kode apa pun**:
+
+1. **`repo/DESIGN.md`** — source of truth desain: design tokens (warna, tipografi, radius,
+   shadow), struktur navigasi (Bottom Nav mobile vs Sidebar 280px desktop), dan komponen
+   yang masih perlu didesain.
+2. **`repo/AGENTS-UIUX.md`** — instruksi eksekusi & guardrail khusus redesign: urutan
+   tahap pengerjaan (Tahap 0–4), batasan apa yang boleh/tidak boleh disentuh, dan
+   penjelasan bahwa proyek ini **TIDAK memakai Tailwind** (pakai CSS custom properties
+   di `globals.css` + `styled-jsx`).
+
+**Referensi visual (mockup Stitch):** folder `02-design/stitch-janu/` berisi hasil
+eksplorasi Google Stitch (kode HTML + screenshot) untuk tiap halaman, mobile & desktop.
+Ini referensi ARAH GAYA VISUAL (layout, hierarki, komponen) — bukan kode yang harus
+di-copy-paste mentah, dan bukan piksel-demi-piksel yang wajib ditiru persis.
+
+**Jangan pernah pakai file `design_meta.md`** kalau muncul di dalam folder Stitch —
+itu referensi desain pihak ketiga (meta.com) yang tidak relevan dengan SIPI.
+
+Progress redesign dilacak lewat commit message berformat `style(ui): [modul] ...` —
+cek `git log --oneline` untuk tahu tahap mana yang sudah selesai sebelum melanjutkan.
