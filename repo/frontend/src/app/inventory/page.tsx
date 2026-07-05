@@ -665,7 +665,7 @@ export default function InventoryPage() {
       {activeTab === 'restock' && (
         <div className="recommendations-list">
           {recommendations.length === 0 ? (
-            <div className="empty-state card">
+            <div className="rec-empty-state">
               <div className="empty-icon">✓</div>
               <h3>Stok Anda Aman!</h3>
               <p>Semua bahan baku memiliki persediaan yang cukup untuk minimal 2 hari ke depan berdasarkan rata-rata penjualan.</p>
@@ -676,9 +676,12 @@ export default function InventoryPage() {
               const urgentClass = item.sisaHari < 0.5 ? 'critical' : item.sisaHari < 1 ? 'warning' : 'info';
 
               return (
-                <div key={item.id} className="recommendation-card card">
+                <div key={item.id} className="recommendation-card">
                   <div className="rec-badge-row">
                     <span className={`status-pill ${urgentClass}`}>
+                      <svg width="14" height="14" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                        <path d="M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm-40-160h80v-240h-80v240Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
+                      </svg>
                       {item.sisaHari <= 0 ? 'Stok Habis' : `Sisa Proyeksi: ${roundedDays} Hari`}
                     </span>
                     <button
@@ -718,14 +721,19 @@ export default function InventoryPage() {
             </div>
           ) : (
             menus.map((menu) => (
-              <div key={menu.id} className="menu-card card">
+              <div key={menu.id} className="menu-card">
                 <div className="menu-card-header">
                   <div className="menu-meta">
                     <h3>{menu.name}</h3>
                     <span className="badge badge-success">{menu.category}</span>
                   </div>
                   {!menu.isAvailable && (
-                    <span className="badge badge-danger">Stok Habis</span>
+                    <span className="badge badge-danger">
+                      <svg width="12" height="12" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                        <path d="M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm-40-160h80v-240h-80v240Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
+                      </svg>
+                      Stok Habis
+                    </span>
                   )}
                 </div>
 
@@ -757,7 +765,7 @@ export default function InventoryPage() {
                 <div className="menu-actions">
                   <button
                     onClick={() => handleOpenMenuModal(menu, 'edit-menu')}
-                    className="btn btn-secondary flex-1"
+                    className="btn btn-secondary flex-1 menu-edit-btn"
                   >
                     Atur Resep &amp; Harga
                   </button>
@@ -1424,59 +1432,39 @@ export default function InventoryPage() {
           background-color: var(--color-surface-soft);
           transform: scale(0.95);
         }
-        .ingredient-card, .menu-card {
+        .menu-card {
           display: flex;
           flex-direction: column;
           gap: 16px;
+          background-color: var(--color-canvas);
+          border-radius: var(--radius-lg);
+          padding: 16px;
+          border: 1px solid var(--color-outline);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          transition: var(--transition-fast);
         }
-        .ing-info {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
+        .menu-card:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
         }
-        .ing-title-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .ing-stats-row {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 8px;
-          border-top: 1px solid var(--border-color);
-          padding-top: 10px;
-        }
-        .ing-stat {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-        .stat-label {
-          font-size: 10px;
-          text-transform: uppercase;
-          font-weight: 700;
-          color: var(--text-tertiary);
-          letter-spacing: 0.05em;
-        }
-        .stat-value {
-          font-size: 13px;
-          font-weight: 600;
-        }
-        .text-underline {
-          text-decoration: underline;
-          cursor: pointer;
-          color: var(--primary-color);
-        }
-        .ing-actions, .menu-actions {
+        .menu-actions {
           display: flex;
           gap: 10px;
         }
         .flex-1 { flex: 1; }
         .flex-2 { flex: 2; }
+        .menu-edit-btn {
+          border-radius: var(--radius-pill);
+        }
         .icon-btn {
           width: 42px;
+          height: 42px;
           padding: 0;
           font-size: 16px;
+          border-radius: var(--radius-pill);
+        }
+        .badge {
+          gap: 4px;
         }
 
         /* Restock Tab Specifics */
@@ -1490,6 +1478,16 @@ export default function InventoryPage() {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          background-color: var(--color-canvas);
+          border-radius: var(--radius-lg);
+          padding: 16px;
+          border: 1px solid var(--color-outline);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          transition: var(--transition-fast);
+        }
+        .recommendation-card:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
         }
         .rec-badge-row {
           display: flex;
@@ -1497,10 +1495,13 @@ export default function InventoryPage() {
           align-items: center;
         }
         .status-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
           font-size: 12px;
           font-weight: 700;
           padding: 4px 10px;
-          border-radius: 30px;
+          border-radius: var(--radius-pill);
         }
         .status-pill.critical {
           background-color: var(--danger-light);
@@ -1511,19 +1512,19 @@ export default function InventoryPage() {
           color: var(--warning-color);
         }
         .status-pill.info {
-          background-color: hsl(200, 100%, 96%);
-          color: hsl(200, 100%, 40%);
+          background-color: var(--color-info-light);
+          color: var(--color-info);
         }
         .rec-details h3 {
           font-size: 16px;
-          font-weight: 600;
+          font-weight: 700;
           margin-bottom: 8px;
         }
         .rec-stats {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 12px;
-          border-top: 1px solid var(--border-color);
+          border-top: 1px solid var(--color-outline);
           padding-top: 10px;
         }
         .rec-stat {
@@ -1541,6 +1542,14 @@ export default function InventoryPage() {
           font-size: 13px;
           font-weight: 600;
         }
+        .rec-empty-state {
+          background-color: var(--color-canvas);
+          border-radius: var(--radius-lg);
+          border: 1px solid var(--color-outline);
+          padding: 32px 24px;
+          text-align: center;
+          color: var(--text-secondary);
+        }
         .empty-icon {
           width: 60px;
           height: 60px;
@@ -1557,6 +1566,7 @@ export default function InventoryPage() {
         .btn-sm {
           padding: 6px 12px;
           font-size: 12px;
+          border-radius: var(--radius-pill);
         }
         
         /* Menu Cards specifics */
@@ -1792,7 +1802,7 @@ export default function InventoryPage() {
         }
         .menu-price-warning-box {
           background-color: var(--danger-light);
-          border: 1px solid rgba(239, 68, 68, 0.2);
+          border: 1px solid rgba(228, 30, 63, 0.2);
           padding: 8px 12px;
           border-radius: var(--radius-sm);
           font-size: 11px;
