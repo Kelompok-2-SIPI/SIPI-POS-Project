@@ -119,6 +119,15 @@ export default function InventoryPage() {
     fetchIngredients();
     fetchMenus();
     fetchRecommendations();
+
+    // Listen to sync completed event to reload data dynamically
+    const handleSyncComplete = () => {
+      fetchIngredients();
+      fetchMenus();
+      fetchRecommendations();
+    };
+    window.addEventListener('sipi_sync_completed', handleSyncComplete);
+    return () => window.removeEventListener('sipi_sync_completed', handleSyncComplete);
   }, []);
 
   const fetchIngredients = async () => {
@@ -503,7 +512,6 @@ export default function InventoryPage() {
     }
   };
 
-  // Delete Menu
   const deleteMenu = async (menuId: string) => {
     if (!confirm('Apakah Anda yakin ingin menghapus menu ini?')) return;
     try {
@@ -517,6 +525,9 @@ export default function InventoryPage() {
       alert('Gagal menghapus menu.');
     }
   };
+
+  const defaultCategories = ['Minuman', 'Makanan', 'Snack', 'Paket'];
+  const uniqueCategories = Array.from(new Set([...defaultCategories, ...menus.map(m => m.category)]));
 
   return (
     <div className="inventory-layout">
@@ -1063,17 +1074,21 @@ export default function InventoryPage() {
                 <div className="form-row">
                   <div className="form-group flex-1">
                     <label className="form-label">Kategori</label>
-                    <select
+                    <input
+                      type="text"
+                      list="menu-category-list"
                       className="input-field"
+                      placeholder="Contoh: Makanan, Minuman, Paket"
                       value={menuCategory}
                       onChange={(e) => setMenuCategory(e.target.value)}
                       required
                       disabled={loading}
-                    >
-                      <option value="Minuman">Minuman</option>
-                      <option value="Makanan">Makanan</option>
-                      <option value="Snack">Snack</option>
-                    </select>
+                    />
+                    <datalist id="menu-category-list">
+                      {uniqueCategories.map(cat => (
+                        <option key={cat} value={cat} />
+                      ))}
+                    </datalist>
                   </div>
 
                   <div className="form-group flex-1">
