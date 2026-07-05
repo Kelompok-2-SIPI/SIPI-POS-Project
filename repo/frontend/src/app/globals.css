@@ -1,42 +1,90 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
+/* =============================================================
+   DESIGN TOKENS — SIPI Modern Merchant (v1.0, DESIGN.md §2)
+   Menggantikan tema "Premium Warm Bistro".
+   Sumber kebenaran: repo/DESIGN.md §2.1–§2.3
+   ============================================================= */
 :root {
-  --font-outfit: 'Outfit', sans-serif;
+  /* ── Tipografi ── */
+  /* Font tunggal Plus Jakarta Sans untuk semua breakpoint (DESIGN.md §2.2) */
   --font-jakarta: 'Plus Jakarta Sans', sans-serif;
 
-  /* Color Palette - Premium Warm Bistro (Terracotta, Amber, Cream, Charcoal) */
-  --primary: 24 90% 46%; /* #e65c00 */
-  --primary-color: hsl(var(--primary));
-  --primary-hover: hsl(24 90% 38%);
-  --primary-light: hsl(24 100% 96%);
+  /* Skala font (DESIGN.md §2.2) */
+  --font-size-display-lg: 48px;   /* hero/judul halaman besar — 32px di mobile via media query */
+  --font-size-headline: 28px;     /* judul section, angka besar (Rp, jumlah) */
+  --font-size-title: 20px;        /* judul kartu, sub-section */
+  --font-size-body: 16px;         /* teks paragraf, deskripsi, label form */
+  --font-size-body-sm: 14px;      /* body sekunder, metadata — MINIMUM, jangan lebih kecil */
+  --font-size-label: 12px;        /* label badge, caption, tombol */
 
-  --accent: 38 95% 52%; /* #f39c12 */
-  --accent-color: hsl(var(--accent));
+  /* ── Warna Utama — Commerce Cobalt (DESIGN.md §2.1) ── */
+  --color-primary: #0064E0;       /* tombol utama, nav aktif, link */
+  --color-primary-deep: #004DB0;  /* hover/pressed state tombol primary */
+  --color-secondary: #0058BD;     /* aksen sekunder, elemen interaktif pendukung */
 
-  --background-color: #f9f6f0; /* Creamy soft background */
-  --card-bg: #ffffff;
-  --border-color: #e8e2d5;
-  
-  --text-primary: #211915; /* Dark roast brown/black */
-  --text-secondary: #6e645e;
-  --text-tertiary: #a39891;
+  /* Alias ringkas untuk kompatibilitas kode komponen yang sudah ada */
+  --primary-color: var(--color-primary);
+  --primary-hover: var(--color-primary-deep);
+  --primary-light: #EBF2FF;       /* tint cobalt ringan untuk background pill/badge primary */
 
-  --success-color: #10b981;
-  --success-light: #ecfdf5;
-  --danger-color: #ef4444;
-  --danger-light: #fef2f2;
-  --warning-color: #f59e0b;
-  --warning-light: #fefbeb;
+  /* ── Warna Canvas & Surface (DESIGN.md §2.1) ── */
+  --color-canvas: #FFFFFF;        /* background utama, kartu */
+  --color-surface-soft: #F1F4F7;  /* thumbnail produk, search bar, pembeda dari canvas */
 
-  --shadow-sm: 0 1px 3px rgba(33, 25, 21, 0.05);
-  --shadow-md: 0 4px 18px -2px rgba(33, 25, 21, 0.06), 0 2px 8px -1px rgba(33, 25, 21, 0.04);
-  --shadow-lg: 0 12px 32px -4px rgba(33, 25, 21, 0.1), 0 4px 12px -2px rgba(33, 25, 21, 0.05);
-  --shadow-glass: 0 8px 32px 0 rgba(33, 25, 21, 0.04);
+  /* Alias ringkas untuk kompatibilitas */
+  --background-color: var(--color-surface-soft);
+  --card-bg: var(--color-canvas);
 
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 24px;
-  
+  /* ── Warna Teks / Ink (DESIGN.md §2.1) ── */
+  --color-ink-deep: #0A1317;      /* judul, headline utama */
+  --color-ink: #1C1E21;           /* teks body standar */
+
+  /* Alias ringkas */
+  --text-primary: var(--color-ink-deep);
+  --text-secondary: #4B5563;      /* teks pendukung — kontras WCAG AA di atas canvas putih */
+  --text-tertiary: #9CA3AF;       /* placeholder, label tidak aktif */
+
+  /* ── Warna Outline / Hairline (DESIGN.md §2.1) ── */
+  --color-outline: #CED0D4;       /* border kartu, divider */
+  --border-color: var(--color-outline);
+
+  /* ── Warna Semantik Alert (DESIGN.md §2.1) ──
+     WAJIB disertai ikon — tidak pernah warna polos saja (WCAG AA) */
+  --color-danger: #E41E3F;        /* stok kritis — ikon ⚠️ wajib */
+  --color-warning: #F2A918;       /* margin kritis — ikon 🔺 wajib */
+  --color-info: #1876F2;          /* info kenaikan harga — ikon 📈 wajib */
+  --color-success: #31A24C;       /* sukses / stabil — ikon ✓ wajib */
+
+  /* Tint warna semantik untuk background badge/alert */
+  --color-danger-light: #FFF0F2;
+  --color-warning-light: #FFF8EC;
+  --color-info-light: #EBF3FF;
+  --color-success-light: #EDFBF1;
+
+  /* Alias ringkas untuk kompatibilitas kode yang sudah ada */
+  --danger-color: var(--color-danger);
+  --danger-light: var(--color-danger-light);
+  --warning-color: var(--color-warning);
+  --warning-light: var(--color-warning-light);
+  --success-color: var(--color-success);
+  --success-light: var(--color-success-light);
+
+  /* ── Shadow (DESIGN.md §4) ──
+     Flat + hairline border sebagai default; shadow lembut hanya untuk
+     elemen sticky/floating (bottom bar, FAB, sticky header). */
+  --shadow-sm: 0 1px 2px rgba(10, 19, 23, 0.04);
+  --shadow-md: 0 4px 12px rgba(10, 19, 23, 0.08); /* sticky/floating hanya */
+  --shadow-lg: 0 8px 24px rgba(10, 19, 23, 0.10); /* FAB, bottom nav */
+  --shadow-glass: 0 8px 32px rgba(10, 19, 23, 0.06);
+
+  /* ── Radius (DESIGN.md §2.3 & §4) ── */
+  --radius-sm: 8px;               /* input field, badge */
+  --radius-md: 16px;              /* card utility — inventaris, list item */
+  --radius-lg: 32px;              /* card feature — dashboard alert, promo, photo */
+  --radius-pill: 9999px;          /* tombol pill-shaped, search bar, badge */
+
+  /* ── Transisi ── */
   --transition-fast: 0.15s ease;
   --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
