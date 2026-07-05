@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import PwaRegister from '@/components/PwaRegister';
-import BottomNav from '@/components/BottomNav';
 import AuthShield from '@/components/AuthShield';
+import AppShell from '@/components/AppShell';
 
 export const metadata: Metadata = {
   title: 'SIPI - Sistem Informasi POS & Inventaris Stok',
@@ -30,10 +30,9 @@ export default function RootLayout({
       <body>
         <PwaRegister />
         <AuthShield>
-          <div className="main-wrapper">
+          <AppShell>
             {children}
-          </div>
-          <BottomNav />
+          </AppShell>
         </AuthShield>
       </body>
     </html>
