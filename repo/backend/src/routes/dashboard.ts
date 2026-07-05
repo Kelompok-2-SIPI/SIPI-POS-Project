@@ -118,8 +118,9 @@ router.get('/summary-range', async (req: Request, res: Response) => {
       topMenu: { name: topMenuName, quantity: maxQty }, 
       summaryText: `Periode ini terdapat ${txs.length} transaksi, pendapatan Rp ${fmt.format(totalRevenue)}, estimasi laba Rp ${fmt.format(grossProfit)}. Menu terlaris: ${topMenuName}.` 
     });
-  } catch (e: any) { 
-    return res.status(500).json({ error: 'Gagal mengambil ringkasan rentang waktu.' }); 
+  } catch (e: any) {
+    console.error('[summary-range]', e);
+    return res.status(500).json({ error: 'Gagal mengambil ringkasan rentang waktu.' });
   }
 });
 
@@ -146,8 +147,9 @@ router.get('/top-menus-range', async (req: Request, res: Response) => {
     return res.json(Object.entries(agg)
       .map(([id, d]) => ({ id, name: d.menuName, quantitySold: d.qty, totalSales: d.totalSales }))
       .sort((a, b) => b.quantitySold - a.quantitySold).slice(0, limit));
-  } catch (e: any) { 
-    return res.status(500).json({ error: 'Gagal mengambil menu terlaris dalam rentang waktu.' }); 
+  } catch (e: any) {
+    console.error('[top-menus-range]', e);
+    return res.status(500).json({ error: 'Gagal mengambil menu terlaris dalam rentang waktu.' });
   }
 });
 
@@ -199,8 +201,9 @@ router.get('/price-alerts-range', async (req: Request, res: Response) => {
       }
     }
     return res.json(alerts);
-  } catch (e: any) { 
-    return res.status(500).json({ error: 'Gagal mengambil peringatan harga dalam rentang.' }); 
+  } catch (e: any) {
+    console.error('[price-alerts-range]', e);
+    return res.status(500).json({ error: 'Gagal mengambil peringatan harga dalam rentang.' });
   }
 });
 
@@ -243,8 +246,9 @@ router.get('/critical-margins-range', async (req: Request, res: Response) => {
       }
     }
     return res.json(Object.values(maxMargins));
-  } catch (e: any) { 
-    return res.status(500).json({ error: 'Gagal mengambil margin kritis dalam rentang.' }); 
+  } catch (e: any) {
+    console.error('[critical-margins-range]', e);
+    return res.status(500).json({ error: 'Gagal mengambil margin kritis dalam rentang.' });
   }
 });
 
