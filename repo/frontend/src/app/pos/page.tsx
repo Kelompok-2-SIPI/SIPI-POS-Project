@@ -29,6 +29,102 @@ interface ReceiptData {
   isOffline?: boolean;
 }
 
+interface CartPanelContentProps {
+  cart: CartItem[];
+  error: string;
+  loading: boolean;
+  paymentMethod: 'cash' | 'non_cash';
+  totalCartPrice: number;
+  decrementQty: (menuId: string) => void;
+  incrementQty: (menuId: string) => void;
+  setPaymentMethod: (method: 'cash' | 'non_cash') => void;
+  clearCart: () => void;
+  handleCheckout: () => void;
+}
+
+// Isi keranjang (list item, metode bayar, total, tombol aksi) — dipakai identik oleh
+// bottom sheet mobile (Tahap 4b) dan panel tetap desktop (Tahap 4c), state/handler sama persis.
+function CartPanelContent({
+  cart,
+  error,
+  loading,
+  paymentMethod,
+  totalCartPrice,
+  decrementQty,
+  incrementQty,
+  setPaymentMethod,
+  clearCart,
+  handleCheckout,
+}: CartPanelContentProps) {
+  return (
+    <>
+      {error && <div className="error-alert">{error}</div>}
+
+      <div className="cart-items-list">
+        {cart.length === 0 ? (
+          <div className="empty-state">
+            <p>Keranjang masih kosong.</p>
+          </div>
+        ) : (
+          cart.map((item) => (
+            <div key={item.menuId} className="cart-item-row">
+              <div className="item-info">
+                <h4>{item.name}</h4>
+                <span>Rp {item.price.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="item-qty-controls">
+                <button onClick={() => decrementQty(item.menuId)} className="qty-btn">−</button>
+                <span className="qty-val">{item.qty}</span>
+                <button onClick={() => incrementQty(item.menuId)} className="qty-btn">+</button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="sheet-footer">
+        <div className="payment-selector">
+          <span className="form-label">Metode Pembayaran</span>
+          <div className="payment-options">
+            <button
+              onClick={() => setPaymentMethod('cash')}
+              className={`pay-opt-btn ${paymentMethod === 'cash' ? 'active' : ''}`}
+            >
+              Tunai
+            </button>
+            <button
+              onClick={() => setPaymentMethod('non_cash')}
+              className={`pay-opt-btn ${paymentMethod === 'non_cash' ? 'active' : ''}`}
+            >
+              Non-tunai
+            </button>
+          </div>
+        </div>
+
+        <div className="checkout-summary">
+          <div className="summary-row font-bold">
+            <span>Total Bayar</span>
+            <span>Rp {totalCartPrice.toLocaleString('id-ID')}</span>
+          </div>
+        </div>
+
+        <div className="cart-action-buttons">
+          <button onClick={clearCart} className="btn btn-secondary flex-1">
+            Batal Transaksi
+          </button>
+          <button
+            onClick={handleCheckout}
+            disabled={loading || cart.length === 0}
+            className="btn btn-primary flex-2"
+          >
+            {loading ? 'Memproses...' : 'Konfirmasi Bayar'}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function PosPage() {
   const router = useRouter();
   const [menus, setMenus] = useState<MenuItem[]>([]);
@@ -293,37 +389,62 @@ export default function PosPage() {
         </div>
       </div>
 
-      {/* Menu Grid */}
-      <div className="menu-grid">
-        {filteredMenus.length === 0 ? (
-          <div className="empty-state">
-            <p>Tidak ada menu dalam kategori ini.</p>
+      {/* Baris utama: grid menu (kiri) + panel keranjang tetap desktop (kanan, >=1024px).
+          Panel desktop SELALU dirender (bukan conditional JS per breakpoint) — visibility
+          diatur murni lewat CSS media query di bawah, pola sama seperti AppShell.tsx,
+          supaya tidak ada hydration mismatch. */}
+      <div className="pos-main-row">
+        <div className="menu-grid">
+          {filteredMenus.length === 0 ? (
+            <div className="empty-state">
+              <p>Tidak ada menu dalam kategori ini.</p>
+            </div>
+          ) : (
+            filteredMenus.map((menu) => (
+              <button
+                key={menu.id}
+                onClick={() => addToCart(menu)}
+                disabled={!menu.isAvailable}
+                className={`menu-card ${!menu.isAvailable ? 'disabled' : ''}`}
+              >
+                <div className="menu-photo">
+                  <svg width="40" height="40" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                    <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
+                  </svg>
+                  {!menu.isAvailable && <span className="sold-out-badge">Habis</span>}
+                </div>
+                <div className="menu-details">
+                  <h3>{menu.name}</h3>
+                  <span className="menu-cat">{menu.category}</span>
+                  <span className="menu-price">Rp {menu.sellingPrice.toLocaleString('id-ID')}</span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Panel Keranjang Desktop (>=1024px) — persistent, tidak perlu isCartOpen */}
+        <aside className="desktop-cart-panel">
+          <div className="sheet-header">
+            <h2>Keranjang Belanja</h2>
+            {totalCartItems > 0 && <span className="badge cart-item-count">{totalCartItems} Item</span>}
           </div>
-        ) : (
-          filteredMenus.map((menu) => (
-            <button
-              key={menu.id}
-              onClick={() => addToCart(menu)}
-              disabled={!menu.isAvailable}
-              className={`menu-card ${!menu.isAvailable ? 'disabled' : ''}`}
-            >
-              <div className="menu-photo">
-                <svg width="40" height="40" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
-                  <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
-                </svg>
-                {!menu.isAvailable && <span className="sold-out-badge">Habis</span>}
-              </div>
-              <div className="menu-details">
-                <h3>{menu.name}</h3>
-                <span className="menu-cat">{menu.category}</span>
-                <span className="menu-price">Rp {menu.sellingPrice.toLocaleString('id-ID')}</span>
-              </div>
-            </button>
-          ))
-        )}
+          <CartPanelContent
+            cart={cart}
+            error={error}
+            loading={loading}
+            paymentMethod={paymentMethod}
+            totalCartPrice={totalCartPrice}
+            decrementQty={decrementQty}
+            incrementQty={incrementQty}
+            setPaymentMethod={setPaymentMethod}
+            clearCart={clearCart}
+            handleCheckout={handleCheckout}
+          />
+        </aside>
       </div>
 
-      {/* Floating Cart Bar (FR-01) */}
+      {/* Floating Cart Bar (FR-01) — mobile only, disembunyikan di desktop via CSS */}
       {totalCartItems > 0 && (
         <div className="floating-cart-bar" onClick={() => setIsCartOpen(true)}>
           <div className="cart-bar-info">
@@ -334,73 +455,27 @@ export default function PosPage() {
         </div>
       )}
 
-      {/* Cart Bottom Sheet */}
+      {/* Cart Bottom Sheet — mobile only, disembunyikan di desktop via CSS (cart-sheet-backdrop) */}
       {isCartOpen && (
-        <div className="bottom-sheet-backdrop" onClick={() => setIsCartOpen(false)}>
+        <div className="bottom-sheet-backdrop cart-sheet-backdrop" onClick={() => setIsCartOpen(false)}>
           <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="bottom-sheet-handle"></div>
             <div className="sheet-header">
               <h2>Keranjang Belanja</h2>
               <button onClick={() => setIsCartOpen(false)} className="btn-close">Tutup</button>
             </div>
-
-            {error && <div className="error-alert">{error}</div>}
-
-            <div className="cart-items-list">
-              {cart.map((item) => (
-                <div key={item.menuId} className="cart-item-row">
-                  <div className="item-info">
-                    <h4>{item.name}</h4>
-                    <span>Rp {item.price.toLocaleString('id-ID')}</span>
-                  </div>
-                  <div className="item-qty-controls">
-                    <button onClick={() => decrementQty(item.menuId)} className="qty-btn">−</button>
-                    <span className="qty-val">{item.qty}</span>
-                    <button onClick={() => incrementQty(item.menuId)} className="qty-btn">+</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="sheet-footer">
-              <div className="payment-selector">
-                <span className="form-label">Metode Pembayaran</span>
-                <div className="payment-options">
-                  <button
-                    onClick={() => setPaymentMethod('cash')}
-                    className={`pay-opt-btn ${paymentMethod === 'cash' ? 'active' : ''}`}
-                  >
-                    Tunai
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('non_cash')}
-                    className={`pay-opt-btn ${paymentMethod === 'non_cash' ? 'active' : ''}`}
-                  >
-                    Non-tunai
-                  </button>
-                </div>
-              </div>
-
-              <div className="checkout-summary">
-                <div className="summary-row font-bold">
-                  <span>Total Bayar</span>
-                  <span>Rp {totalCartPrice.toLocaleString('id-ID')}</span>
-                </div>
-              </div>
-
-              <div className="cart-action-buttons">
-                <button onClick={clearCart} className="btn btn-secondary flex-1">
-                  Batal Transaksi
-                </button>
-                <button
-                  onClick={handleCheckout}
-                  disabled={loading || cart.length === 0}
-                  className="btn btn-primary flex-2"
-                >
-                  {loading ? 'Memproses...' : 'Konfirmasi Bayar'}
-                </button>
-              </div>
-            </div>
+            <CartPanelContent
+              cart={cart}
+              error={error}
+              loading={loading}
+              paymentMethod={paymentMethod}
+              totalCartPrice={totalCartPrice}
+              decrementQty={decrementQty}
+              incrementQty={incrementQty}
+              setPaymentMethod={setPaymentMethod}
+              clearCart={clearCart}
+              handleCheckout={handleCheckout}
+            />
           </div>
         </div>
       )}
@@ -522,6 +597,9 @@ export default function PosPage() {
           background-color: var(--color-primary);
           color: #fff;
         }
+        .pos-main-row {
+          display: block;
+        }
         .menu-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -536,6 +614,45 @@ export default function PosPage() {
         @media (min-width: 1200px) {
           .menu-grid {
             grid-template-columns: repeat(4, 1fr);
+          }
+        }
+        /* Tahap 4c: Panel Keranjang Desktop (>=1024px) */
+        .desktop-cart-panel {
+          display: none;
+        }
+        @media (min-width: 1024px) {
+          .pos-main-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+          }
+          .menu-grid {
+            flex: 1;
+            min-width: 0;
+            grid-template-columns: repeat(3, 1fr);
+            padding-bottom: 0;
+          }
+          .desktop-cart-panel {
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            width: 400px;
+            background-color: var(--color-canvas);
+            border-left: 1px solid var(--color-outline);
+            box-shadow: var(--shadow-lg);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            position: sticky;
+            top: 24px;
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+          }
+          .desktop-cart-panel .sheet-header {
+            margin-bottom: 16px;
+          }
+          .desktop-cart-panel .cart-items-list {
+            max-height: none;
+            overflow-y: visible;
           }
         }
         .menu-card {
@@ -615,6 +732,10 @@ export default function PosPage() {
         }
         .badge {
           gap: 4px;
+        }
+        .cart-item-count {
+          background-color: var(--color-info-light);
+          color: var(--color-info);
         }
 
         /* Tahap 4b: Cart Bottom Sheet & Digital Receipt Modal */
@@ -853,6 +974,18 @@ export default function PosPage() {
         }
         .w-full { width: 100%; }
         .mt-6 { margin-top: 24px; }
+
+        /* Tahap 4c: sembunyikan pemicu mobile (floating bar + bottom sheet keranjang) di desktop —
+           diletakkan di akhir supaya menang di urutan cascade atas definisi Tahap 4b di atas.
+           Modal Struk Digital TIDAK disembunyikan (tidak punya class cart-sheet-backdrop). */
+        @media (min-width: 1024px) {
+          .floating-cart-bar {
+            display: none;
+          }
+          .cart-sheet-backdrop {
+            display: none;
+          }
+        }
       `}</style>
     </div>
   );
