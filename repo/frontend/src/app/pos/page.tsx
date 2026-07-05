@@ -417,7 +417,12 @@ export default function PosPage() {
                 <p className="receipt-id">ID: #{receipt.id.slice(0, 12).toUpperCase()}</p>
                 <p className="receipt-date">{new Date(receipt.createdAt).toLocaleString('id-ID')}</p>
                 {receipt.isOffline && (
-                  <span className="badge badge-warning">Tersimpan Offline</span>
+                  <span className="badge badge-warning">
+                    <svg width="12" height="12" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                      <path d="M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm-40-160h80v-240h-80v240Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
+                    </svg>
+                    Tersimpan Offline
+                  </span>
                 )}
               </div>
 
@@ -608,10 +613,11 @@ export default function PosPage() {
           border-radius: var(--radius-pill);
           text-transform: uppercase;
         }
-      `}</style>
+        .badge {
+          gap: 4px;
+        }
 
-      {/* Styles below still sourced from globals.css — untouched (Tahap 4b: cart, receipt) */}
-      {false && <style>{`
+        /* Tahap 4b: Cart Bottom Sheet & Digital Receipt Modal */
         .floating-cart-bar {
           position: fixed;
           bottom: 84px;
@@ -619,16 +625,19 @@ export default function PosPage() {
           transform: translateX(-50%);
           width: calc(100% - 24px);
           max-width: 456px;
-          background-color: var(--text-primary);
-          color: white;
+          background-color: var(--color-ink-deep);
+          color: #fff;
           padding: 12px 16px;
-          border-radius: var(--radius-md);
+          border-radius: var(--radius-pill);
           display: flex;
           justify-content: space-between;
           align-items: center;
           cursor: pointer;
           box-shadow: var(--shadow-lg);
           z-index: 800;
+        }
+        .floating-cart-bar .btn-primary {
+          border-radius: var(--radius-pill);
         }
         .cart-bar-info {
           display: flex;
@@ -637,7 +646,7 @@ export default function PosPage() {
         }
         .cart-qty {
           font-size: 12px;
-          color: var(--text-tertiary);
+          color: rgba(255, 255, 255, 0.7);
         }
         .cart-total {
           font-size: 15px;
@@ -648,6 +657,9 @@ export default function PosPage() {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 20px;
+        }
+        .sheet-header h2 {
+          font-size: 20px;
         }
         .btn-close {
           background: transparent;
@@ -669,15 +681,16 @@ export default function PosPage() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          border-bottom: 1px solid var(--border-color);
+          border-bottom: 1px solid var(--color-outline);
           padding-bottom: 12px;
         }
         .item-info h4 {
           font-size: 14px;
+          font-weight: 700;
           margin-bottom: 2px;
         }
         .item-info span {
-          font-size: 12px;
+          font-size: 13px;
           color: var(--text-secondary);
         }
         .item-qty-controls {
@@ -688,18 +701,24 @@ export default function PosPage() {
         .qty-btn {
           width: 32px;
           height: 32px;
-          border-radius: var(--radius-sm);
-          border: 1px solid var(--border-color);
-          background: #fafaf9;
+          border-radius: var(--radius-pill);
+          border: 1px solid var(--color-outline);
+          background: var(--color-surface-soft);
+          color: var(--color-primary);
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
+          transition: var(--transition-fast);
+        }
+        .qty-btn:hover {
+          background: var(--color-primary);
+          color: #fff;
         }
         .qty-val {
-          font-weight: 600;
+          font-weight: 700;
           min-width: 20px;
           text-align: center;
         }
@@ -707,36 +726,46 @@ export default function PosPage() {
           margin-bottom: 20px;
         }
         .payment-options {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 10px;
-          margin-top: 6px;
+          display: flex;
+          gap: 4px;
+          background-color: var(--color-surface-soft);
+          padding: 4px;
+          border-radius: var(--radius-pill);
+          margin-top: 8px;
         }
         .pay-opt-btn {
+          flex: 1;
           font-family: var(--font-jakarta);
           font-weight: 600;
           font-size: 13px;
           padding: 10px;
-          background: #fafaf9;
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm);
+          background: transparent;
+          color: var(--text-secondary);
+          border: none;
+          border-radius: var(--radius-pill);
           cursor: pointer;
           transition: var(--transition-fast);
         }
         .pay-opt-btn.active {
-          background-color: var(--primary-light);
-          color: var(--primary-color);
-          border-color: var(--primary-color);
+          background-color: var(--color-canvas);
+          color: var(--color-primary);
+          box-shadow: var(--shadow-sm);
         }
         .checkout-summary {
-          border-top: 1px solid var(--border-color);
+          border-top: 1px solid var(--color-outline);
           padding-top: 16px;
           margin-bottom: 24px;
         }
         .summary-row {
           display: flex;
           justify-content: space-between;
+          align-items: center;
           font-size: 14px;
+        }
+        .summary-row.font-bold span:last-child {
+          font-size: 20px;
+          font-weight: 700;
+          color: var(--color-primary);
         }
         .font-bold {
           font-weight: 700;
@@ -746,9 +775,12 @@ export default function PosPage() {
           display: flex;
           gap: 12px;
         }
+        .cart-action-buttons .btn {
+          border-radius: var(--radius-pill);
+        }
         .flex-1 { flex: 1; }
         .flex-2 { flex: 2; }
-        
+
         /* Receipt Modal Specifics */
         .receipt-sheet {
           border-radius: var(--radius-lg);
@@ -756,6 +788,9 @@ export default function PosPage() {
         }
         .receipt-container {
           text-align: center;
+        }
+        .receipt-container .btn {
+          border-radius: var(--radius-pill);
         }
         .success-icon {
           width: 56px;
@@ -780,7 +815,7 @@ export default function PosPage() {
           color: var(--text-secondary);
         }
         .receipt-divider {
-          border-top: 2px dashed var(--border-color);
+          border-top: 2px dashed var(--color-outline);
           margin: 20px 0;
         }
         .receipt-items {
@@ -818,7 +853,7 @@ export default function PosPage() {
         }
         .w-full { width: 100%; }
         .mt-6 { margin-top: 24px; }
-      `}</style>}
+      `}</style>
     </div>
   );
 }
