@@ -7,7 +7,7 @@ export async function generateResponse(systemPrompt: string, userMessage: string
     throw new Error("AI_DISABLED");
   }
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-lite",
+    model: "gemini-2.5-flash",
     systemInstruction: systemPrompt,
   });
   const result = await model.generateContent(userMessage);

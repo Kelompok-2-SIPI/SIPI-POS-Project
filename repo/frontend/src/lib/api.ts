@@ -10,8 +10,18 @@ function getHeaders(extra?: HeadersInit): HeadersInit {
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  return fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: { ...getHeaders(), ...(options.headers as object) },
   });
+
+  // Global 401 handler
+  if (res.status === 401 && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+    localStorage.removeItem('sipi_token');
+    localStorage.removeItem('sipi_logged_in');
+    localStorage.removeItem('sipi_user');
+    window.location.href = '/login';
+  }
+
+  return res;
 }

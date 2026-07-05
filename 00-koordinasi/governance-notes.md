@@ -40,6 +40,11 @@ _(kosong — belum ada usulan perubahan)_
 | Tanggal | Keputusan | Diusulkan oleh | Status |
 |---------|-----------|----------------|--------|
 | 20 Jun 2026 | Inisialisasi dokumen governance | Claude Cowork | ✅ Final |
+| 4 Jul 2026 | FR-16a (mini-card + grafik tren harga 7 hari): prompt versi core disimpan di luar folder project (chat Cowork), tidak sebagai file di `repo/` atau `00-koordinasi/` | Favian | ✅ Final |
+| 5 Jul 2026 | Permintaan dummy data simulasi 6 bulan (Sprint 6) dibuatkan sebagai prompt CTCO di `prompt-queue/`, bukan dieksekusi langsung oleh Claude Cowork (sesuai batasan tidak menyentuh `repo/`) — dijalankan Favian sendiri via Claude Code/Gemini Antigravity, selesai 5 Jul 2026 | Favian | ✅ Final |
+| 5 Jul 2026 | Sprint 5 (chatbot AI) ditutup sebagai implementasi inti selesai (FR-12, FR-13, FR-17, FR-18). Task polish styling & uji manual (eks-S5-16, S5-11, S5-14, S5-15) digabung ke sprint mobile testing, karena secara alur kerja lebih efisien dipolish & diuji bersamaan dengan mobile testing | Favian | ✅ Final |
+| 5 Jul 2026 | Sprint Laporan Rentang Tanggal & Export PDF (FR-19–FR-22) dikonfirmasi selesai 100% termasuk testing manual (eks-S7-07, S7-12) | Favian | ✅ Final |
+| 5 Jul 2026 | Penomoran Sprint 6 ↔ Sprint 7 ditukar: Sprint Laporan (semula Sprint 7) jadi **Sprint 6** karena sudah selesai duluan; Sprint Mobile Testing & PWA Polish (semula Sprint 6) jadi **Sprint 7** dan diposisikan di akhir alur, karena mobile testing & polish PWA sebaiknya menguji fitur yang sudah stabil (termasuk Sprint 5 chatbot AI & Sprint 6 Laporan). Seluruh task ID direnumber total (S6-xx↔S7-xx) di `sprint-board.md`, `task-assignment.md`, dan file detail. File lama `sprint-6-mobile-testing.md` & `sprint-7-laporan-export.md` dihapus, digantikan `sprint-6-laporan-export.md` & `sprint-7-mobile-testing.md` | Favian | ✅ Final |
 
 ---
 

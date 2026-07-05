@@ -3,6 +3,27 @@
 Semua perubahan signifikan pada project ini didokumentasikan di file ini.  
 Format mengacu pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.2.0] — 2026-07-05
+
+### Added — Sprint 6 (Mobile Testing & PWA Polish)
+- **Dummy Data Seeder (6 Bulan):** Menambahkan script seeder terpisah `repo/backend/prisma/seed-dummy.ts` untuk men-generate data transaksi, pergerakan stok, dan histori harga secara realistis selama 6 bulan terakhir (Jan-Jul 2026).
+  - Berguna untuk menguji performa dashboard, laporan, peringatan stok menipis, dan fluktuasi HPP.
+  - **Cara menjalankan:** Jalankan perintah berikut dari dalam folder `repo/backend`:
+    ```bash
+    npx tsx prisma/seed-dummy.ts --reset
+    ```
+    *(Catatan: pastikan `DATABASE_URL` mengarah ke database Anda. Jika menggunakan localhost, tambahkan `$env:DATABASE_URL="postgresql://sipi_user:sipi_password@localhost:5432/sipi_db"` sebelum `npx`)*.
+
+### Fixed & Improved — Sprint 6 AI Polish & Fixes
+- **Dummy Seeder Stock Validation:** Diperbaiki bug di mana dummy seeder menyebabkan stok bahan baku menjadi minus. Sekarang seeder meniru perilaku POS asli dengan mencegah simulasi transaksi jika stok tidak mencukupi (mentok di 0).
+- **Kategori Menu Dinamis (Datalist):** Mengubah input kategori di pengaturan menu dari `<select>` statis menjadi input dinamis (menggunakan `<datalist>`), sehingga pengguna dapat bebas membuat kategori baru (seperti "Paket") atau memilih kategori yang sudah ada.
+- **Global 401 Unauthorized Handler:** Menambahkan mekanisme pembersihan otomatis (`apiFetch`) di frontend. Jika token AI atau sesi terdeteksi tidak valid (misal: setelah reset database), frontend akan otomatis logout dan memindah pengguna ke halaman Login.
+- **Pembaruan Model Gemini AI:** Memperbarui engine AI ke versi stabil yang lebih handal (`gemini-2.5-flash`) untuk menghindari gangguan (Error 503 Service Unavailable) dari Google API.
+- **Panduan Prompt Kontekstual:** Menambahkan teks rekomendasi perintah chatbot (template prompt) yang menyesuaikan halaman aktif. Saat berada di Halaman Inventaris AI akan menampilkan panduan perintah Restok; di halaman Dashboard AI memandu tentang pertanyaan analisa performa bisnis.
+- **Auto-Refresh Live Sync:** Widget AI Chat kini memancarkan event `sipi_sync_completed` ketika pemilik UMKM menyetujui perintah restok dari AI. Ini memastikan tabel Inventaris dan chart di Dashboard langsung ter-update seketika tanpa perlu *manual refresh* browser.
+
+---
+
 ## [2.1.0] — 2026-06-30
 
 ### Added — AI Chatbot Backend (Sprint 5)

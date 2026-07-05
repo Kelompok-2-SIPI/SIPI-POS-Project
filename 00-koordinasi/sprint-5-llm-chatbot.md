@@ -2,11 +2,11 @@
 
 **Sprint Goal:** Implementasi LLM chatbot bidirectional (FR-12, FR-13, FR-17, FR-18) — backend API + frontend UI — sehingga Owner dapat bertanya performa bisnis dan melaporkan belanja bahan baku via chat natural language.
 
-**Status Sprint:** 🔵 Berjalan
+**Status Sprint:** 🟢 Done (implementasi inti). Polish styling & uji manual dipindah ke Sprint 7, digabung dengan mobile testing.
 **Tanggal Mulai:** 28 Juni 2026
 **Target Selesai:** —
 **Branch:** `feat/llm-chatbot`
-**Berjalan paralel dengan:** Sprint 6 (Mobile Testing)
+**Berjalan paralel dengan:** Sprint 7 (Mobile Testing)
 
 ---
 
@@ -20,12 +20,12 @@
 | S5-04 | Buat `backend/src/controllers/aiController.ts` — fungsi `confirmAction()` | Janu | ✅ Done | Eksekusi restock + catat harga ke DB, validasi nama bahan baku |
 | S5-05 | Buat `backend/src/routes/ai.ts` + daftarkan di `index.ts` | Janu | ✅ Done | `POST /api/v1/ai/chat`, `POST /api/v1/ai/confirm-action` |
 | S5-06 | Testing manual endpoint via curl/REST client | Janu | ✅ Done | Uji Q&A + Action flow, pastikan parsing akurat |
-| S5-07 | Core: Floating 💬 button di halaman Dashboard + Inventaris | Favian | ⬜ To Do | OQ-19: floating button, buka bottom sheet. Favian implementasi core dulu, Raihan polish (S5-16) |
-| S5-08 | Core: Komponen bottom sheet chatbot UI | Favian | ⬜ To Do | Input teks, tampilkan pesan, bubble chat Owner vs AI |
-| S5-09 | Core: Tampilkan konfirmasi parsing + tombol "Ya, Lanjutkan" / "Batal" | Favian | ⬜ To Do | Terhubung ke `POST /ai/confirm-action` |
-| S5-10 | Core: Tampilkan ringkasan hasil setelah konfirmasi dieksekusi | Favian | ⬜ To Do | "✅ Stok diperbarui: Gula +2.000g …" |
-| S5-16 | Polish: styling bubble/bottom sheet, animasi, aksesibilitas warna, sembunyikan tombol kalau `ENABLE_AI_CHAT=false` | Raihan | ⬜ To Do | Setelah S5-07–S5-10 selesai |
-| S5-11 | Uji manual Sprint 5 terhadap Acceptance Criteria | Rinda, Ibnu | ⬜ To Do | Setelah S5-07–S5-10 & S5-16 selesai |
+| S5-07 | Core: Floating 💬 button di halaman Dashboard + Inventaris | Favian | 🟢 Done | OQ-19: floating button, buka bottom sheet |
+| S5-08 | Core: Komponen bottom sheet chatbot UI | Favian | 🟢 Done | Input teks, tampilkan pesan, bubble chat Owner vs AI |
+| S5-09 | Core: Tampilkan konfirmasi parsing + tombol "Ya, Lanjutkan" / "Batal" | Favian | 🟢 Done | Terhubung ke `POST /ai/confirm-action` |
+| S5-10 | Core: Tampilkan ringkasan hasil setelah konfirmasi dieksekusi | Favian | 🟢 Done | "✅ Stok diperbarui: Gula +2.000g …" |
+| S5-16 | Polish: styling bubble/bottom sheet, animasi, aksesibilitas warna, sembunyikan tombol kalau `ENABLE_AI_CHAT=false` | Raihan | ➡️ Dipindah | Dipindah ke Sprint 7 sebagai **S7-14**, digabung dengan mobile polish |
+| S5-11 | Uji manual Sprint 5 terhadap Acceptance Criteria | Rinda, Ibnu | ➡️ Dipindah | Dipindah ke Sprint 7 sebagai **S7-15**, setelah S7-14 selesai |
 
 ---
 
@@ -56,3 +56,4 @@
 | Tanggal | Update | Oleh |
 |---------|--------|------|
 | 28 Jun 2026 | Sprint 5 dibuat | Claude Cowork |
+| 5 Jul 2026 | Implementasi inti (S5-01–S5-10) dikonfirmasi selesai. S5-16 & S5-11 (polish + uji manual) dipindah ke Sprint 7 (S7-14, S7-15) setelah penukaran nomor Sprint 6 ↔ 7. Sprint 5 dianggap selesai untuk bagian implementasi | Favian |

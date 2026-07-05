@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 
 interface ParsedItem {
@@ -22,6 +23,7 @@ interface ChatMessage {
 }
 
 export default function AiChatWidget() {
+  const pathname = usePathname();
   // TODO(Raihan): Cek ENABLE_AI_CHAT environment variable untuk sembunyikan widget jika fitur dimatikan.
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -29,6 +31,38 @@ export default function AiChatWidget() {
   const [isLoading, setIsLoading] = useState(false);
 
   const toggleSheet = () => setIsOpen(!isOpen);
+
+  // Dynamic suggestions based on current page
+  let aiGuideTitle = "Asisten AI Siap Membantu";
+  let promptSuggestions: string[] = [];
+
+  if (pathname === '/inventory') {
+    aiGuideTitle = "Panduan Restok via AI";
+    promptSuggestions = [
+      "Saya baru beli 5 kg beras seharga 80000",
+      "Restok cabai rawit 2 kg dengan harga total 120000",
+      "Ada tambahan minyak goreng 10 liter, harga per liter 15000",
+      "Bahan apa saja yang stoknya sedang kritis saat ini?"
+    ];
+  } else if (pathname === '/dashboard') {
+    aiGuideTitle = "Analisa Bisnis via AI";
+    promptSuggestions = [
+      "Berapa total pendapatan laba kotor hari ini?",
+      "Apakah ada menu yang hpp nya merugi?",
+      "Menu apa yang paling laris hari ini?"
+    ];
+  } else {
+    aiGuideTitle = "Tanya AI";
+    promptSuggestions = [
+      "Berapa total pendapatan hari ini?",
+      "Bahan apa yang hampir habis?",
+      "Menu mana yang marginnya kritis?"
+    ];
+  }
+
+  const handleSuggestionClick = (text: string) => {
+    setInputText(text);
+  };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,6 +150,9 @@ export default function AiChatWidget() {
           ...prev,
           { id: Date.now().toString(), role: 'system', text: updatedList }
         ]);
+
+        // Beritahu seluruh halaman (Inventory, Dashboard, POS) untuk refresh data mereka
+        window.dispatchEvent(new Event('sipi_sync_completed'));
       } else {
         setMessages((prev) => [
           ...prev,
@@ -140,10 +177,10 @@ export default function AiChatWidget() {
         onClick={toggleSheet}
         style={{
           position: 'fixed',
-          bottom: '90px', // Offset for bottom nav (76px padding-bottom on body)
+          bottom: '80px',
           right: '20px',
-          width: '56px',
-          height: '56px',
+          width: '60px',
+          height: '60px',
           borderRadius: '50%',
           backgroundColor: 'var(--primary-color, #007bff)',
           color: 'white',
@@ -178,9 +215,33 @@ export default function AiChatWidget() {
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {messages.length === 0 && (
-                <p style={{ textAlign: 'center', color: 'var(--text-secondary, #888)', marginTop: '20px', fontSize: '0.9rem' }}>
-                  Silakan sapa Asisten AI atau berikan perintah untuk restok/ubah harga.
-                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                  <h4 style={{ margin: 0, color: 'var(--text-primary, #333)', fontSize: '0.95rem' }}>{aiGuideTitle}</h4>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary, #666)' }}>
+                    Coba klik salah satu template perintah di bawah ini untuk memulai:
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {promptSuggestions.map((suggestion, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        style={{
+                          textAlign: 'left',
+                          padding: '10px 12px',
+                          backgroundColor: 'var(--background-alt, #f1f3f5)',
+                          border: '1px solid var(--border-color, #ddd)',
+                          borderRadius: '8px',
+                          color: 'var(--primary-color, #007bff)',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s'
+                        }}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
               {messages.map((msg) => (
                 <div key={msg.id} style={{
