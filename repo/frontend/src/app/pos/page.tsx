@@ -268,7 +268,7 @@ export default function PosPage() {
       {/* Search & Categories */}
       <div className="pos-controls">
         <div className="search-box">
-          <svg className="search-icon" viewBox="0 0 24 24">
+          <svg className="search-icon" width="20" height="20" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
             <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
           </svg>
           <input
@@ -307,13 +307,17 @@ export default function PosPage() {
               disabled={!menu.isAvailable}
               className={`menu-card ${!menu.isAvailable ? 'disabled' : ''}`}
             >
-              <div className="menu-avatar">{menu.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}</div>
+              <div className="menu-photo">
+                <svg width="40" height="40" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                  <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
+                </svg>
+                {!menu.isAvailable && <span className="sold-out-badge">Habis</span>}
+              </div>
               <div className="menu-details">
                 <h3>{menu.name}</h3>
                 <span className="menu-cat">{menu.category}</span>
                 <span className="menu-price">Rp {menu.sellingPrice.toLocaleString('id-ID')}</span>
               </div>
-              {!menu.isAvailable && <span className="sold-out-badge">Habis</span>}
             </button>
           ))
         )}
@@ -449,45 +453,10 @@ export default function PosPage() {
         </div>
       )}
 
-      {/* Styles moved to globals.css */}
-      {false && <style>{`
-        .pos-layout {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .pos-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid var(--border-color);
-          padding-bottom: 12px;
-        }
-        .pos-header h1 {
-          font-size: 24px;
-        }
-        .pos-header p {
-          font-size: 13px;
-          color: var(--text-secondary);
-        }
-        .btn-logout {
-          background: transparent;
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm);
-          color: var(--text-secondary);
-          width: 38px;
-          height: 38px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: var(--transition-fast);
-        }
-        .btn-logout:hover {
-          color: var(--danger-color);
-          border-color: rgba(239, 68, 68, 0.2);
-          background-color: var(--danger-light);
-        }
+      {/* Tahap 4a: search bar, filter kategori, grid card menu — styling scoped di sini.
+          Sisanya (header, floating cart, bottom sheet, receipt) masih pakai globals.css,
+          belum disentuh (Tahap 4b). */}
+      <style jsx>{`
         .pos-controls {
           display: flex;
           flex-direction: column;
@@ -500,21 +469,33 @@ export default function PosPage() {
         }
         .search-icon {
           position: absolute;
-          left: 14px;
-          width: 18px;
-          height: 18px;
+          left: 16px;
           fill: var(--text-tertiary);
+          pointer-events: none;
         }
         .search-box input {
           width: 100%;
-          padding-left: 42px;
+          background-color: var(--color-surface-soft);
+          border: 1px solid var(--color-outline);
+          border-radius: var(--radius-pill);
+          padding: 12px 16px 12px 48px;
+          font-family: var(--font-jakarta);
+          font-size: 14px;
+          color: var(--text-primary);
+          transition: var(--transition-fast);
+        }
+        .search-box input:focus {
+          outline: none;
+          border-color: var(--color-primary);
+          background-color: var(--color-canvas);
+          box-shadow: 0 0 0 3px rgba(0, 100, 224, 0.15);
         }
         .category-scroll {
           display: flex;
           gap: 8px;
           overflow-x: auto;
           padding-bottom: 4px;
-          -scrollbar-width: none;
+          scrollbar-width: none;
         }
         .category-scroll::-webkit-scrollbar {
           display: none;
@@ -523,19 +504,18 @@ export default function PosPage() {
           font-family: var(--font-jakarta);
           font-weight: 600;
           font-size: 13px;
-          padding: 8px 16px;
-          background: white;
+          padding: 8px 18px;
+          background: var(--color-surface-soft);
           color: var(--text-secondary);
-          border: 1px solid var(--border-color);
-          border-radius: 30px;
+          border: none;
+          border-radius: var(--radius-pill);
           cursor: pointer;
           white-space: nowrap;
           transition: var(--transition-fast);
         }
         .cat-btn.active {
-          background-color: var(--primary-color);
-          color: white;
-          border-color: var(--primary-color);
+          background-color: var(--color-primary);
+          color: #fff;
         }
         .menu-grid {
           display: grid;
@@ -543,65 +523,74 @@ export default function PosPage() {
           gap: 12px;
           padding-bottom: 60px;
         }
+        @media (min-width: 768px) {
+          .menu-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+        @media (min-width: 1200px) {
+          .menu-grid {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
         .menu-card {
-          background: white;
-          border: 1px solid var(--border-color);
+          background: var(--color-canvas);
+          border: 1px solid var(--color-outline);
           border-radius: var(--radius-md);
-          padding: 14px;
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
+          align-items: stretch;
           text-align: left;
-          gap: 10px;
           cursor: pointer;
           transition: var(--transition-fast);
           position: relative;
           overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .menu-card:hover:not(.disabled) {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
         }
         .menu-card:active:not(.disabled) {
           transform: scale(0.97);
         }
         .menu-card.disabled {
-          background-color: #f2ede4;
-          border-color: #dfd7cc;
           opacity: 0.6;
           cursor: not-allowed;
         }
-        .menu-avatar {
-          width: 44px;
-          height: 44px;
-          background-color: var(--primary-light);
-          color: var(--primary-color);
-          border-radius: var(--radius-sm);
-          font-family: var(--font-outfit);
-          font-weight: 700;
-          font-size: 14px;
+        .menu-photo {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 1 / 1;
+          background-color: var(--color-surface-soft);
+          color: var(--text-tertiary);
           display: flex;
           align-items: center;
           justify-content: center;
         }
-        .menu-card.disabled .menu-avatar {
-          background-color: var(--text-tertiary);
-          color: white;
+        .menu-card.disabled .menu-photo {
+          background-color: var(--color-outline);
         }
         .menu-details {
           display: flex;
           flex-direction: column;
           gap: 2px;
+          padding: 12px 14px 0;
         }
         .menu-details h3 {
           font-size: 14px;
-          font-weight: 600;
+          font-weight: 700;
+          color: var(--text-primary);
         }
         .menu-cat {
           font-size: 11px;
           color: var(--text-secondary);
         }
         .menu-price {
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 700;
-          color: var(--primary-color);
-          margin-top: 2px;
+          color: var(--color-primary);
+          padding: 4px 14px 14px;
         }
         .menu-card.disabled .menu-price {
           color: var(--text-secondary);
@@ -612,12 +601,17 @@ export default function PosPage() {
           right: 10px;
           font-size: 10px;
           font-weight: 700;
-          background-color: var(--danger-color);
-          color: white;
-          padding: 2px 6px;
-          border-radius: 4px;
+          background-color: var(--color-canvas);
+          color: var(--color-danger);
+          border: 1px solid var(--color-danger);
+          padding: 3px 10px;
+          border-radius: var(--radius-pill);
           text-transform: uppercase;
         }
+      `}</style>
+
+      {/* Styles below still sourced from globals.css — untouched (Tahap 4b: cart, receipt) */}
+      {false && <style>{`
         .floating-cart-bar {
           position: fixed;
           bottom: 84px;
