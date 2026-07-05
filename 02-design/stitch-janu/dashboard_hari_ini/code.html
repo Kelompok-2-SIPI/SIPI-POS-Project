@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800&amp;family=Inter:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#ededf1",
+                        "surface-soft": "#F1F4F7",
+                        "canvas": "#FFFFFF",
+                        "primary-container": "#0064e0",
+                        "tertiary-fixed-dim": "#bec8cd",
+                        "on-secondary-fixed": "#001a41",
+                        "on-primary-fixed": "#001944",
+                        "on-tertiary-fixed-variant": "#3f484d",
+                        "hairline": "#CED0D4",
+                        "outline": "#727786",
+                        "critical-margin": "#F2A918",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#424754",
+                        "price-alert": "#1876F2",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#0059c8",
+                        "on-primary-fixed-variant": "#004299",
+                        "surface-dim": "#d9dade",
+                        "on-background": "#1a1c1f",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#e8e8ec",
+                        "secondary-fixed": "#d8e2ff",
+                        "commerce-cobalt": "#0064E0",
+                        "surface-container-highest": "#e2e2e6",
+                        "background": "#f9f9fd",
+                        "inverse-on-surface": "#f0f0f4",
+                        "inverse-surface": "#2f3034",
+                        "on-primary-container": "#e6ebff",
+                        "surface-variant": "#e2e2e6",
+                        "outline-variant": "#c2c6d6",
+                        "tertiary-container": "#636c71",
+                        "on-secondary-fixed-variant": "#004494",
+                        "tertiary": "#4a5458",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#0270ec",
+                        "secondary": "#0058bd",
+                        "surface-container-low": "#f3f3f7",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#afc6ff",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed": "#dae4ea",
+                        "on-tertiary-fixed": "#141d21",
+                        "on-secondary-container": "#fefcff",
+                        "success-green": "#31A24C",
+                        "primary-fixed": "#d9e2ff",
+                        "on-tertiary-container": "#e4edf3",
+                        "on-surface": "#1a1c1f",
+                        "critical-stock": "#E41E3F",
+                        "inverse-primary": "#afc6ff",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "surface-bright": "#f9f9fd",
+                        "primary": "#004db0",
+                        "on-error-container": "#93000a",
+                        "surface": "#f9f9fd"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "lg": "24px",
+                        "xl": "32px",
+                        "tap-target": "44px",
+                        "section": "64px",
+                        "xs": "4px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "price-display": ["Inter"],
+                        "button-label": ["Inter"],
+                        "display-lg": ["Montserrat"],
+                        "body-sm": ["Inter"],
+                        "headline-lg-mobile": ["Montserrat"],
+                        "subtitle-bold": ["Inter"],
+                        "heading-sm": ["Montserrat"],
+                        "caption": ["Inter"],
+                        "headline-lg": ["Montserrat"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "price-display": ["16px", {"lineHeight": "1.50", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "button-label": ["14px", {"lineHeight": "1.43", "letterSpacing": "0", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "1.17", "letterSpacing": "0", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "1.43", "letterSpacing": "-0.01em", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "1.25", "letterSpacing": "0", "fontWeight": "500"}],
+                        "subtitle-bold": ["18px", {"lineHeight": "1.44", "letterSpacing": "0", "fontWeight": "700"}],
+                        "heading-sm": ["24px", {"lineHeight": "1.25", "letterSpacing": "0", "fontWeight": "500"}],
+                        "caption": ["12px", {"lineHeight": "1.33", "letterSpacing": "0", "fontWeight": "400"}],
+                        "headline-lg": ["36px", {"lineHeight": "1.28", "letterSpacing": "0", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "1.50", "letterSpacing": "-0.01em", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f9f9fd; color: #1a1c1f; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .chart-line { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: dash 3s linear forwards; }
+        @keyframes dash { to { stroke-dashoffset: 0; } }
+        .bento-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+        @media (min-width: 768px) { .bento-grid { grid-template-columns: repeat(3, 1fr); } }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-canvas sticky top-0 z-50 border-b border-hairline">
+<div class="flex justify-between items-center w-full px-lg h-tap-target max-w-7xl mx-auto">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-commerce-cobalt">signal_cellular_alt</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-commerce-cobalt">SIPI</h1>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-low p-xs rounded-full transition-all">search</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-hairline">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a business owner in a modern, brightly lit office environment. The style is clean and minimalist with soft, high-key lighting that emphasizes a corporate but approachable brand identity. The background is a crisp white canvas, aligning with the SIPI design principles of utilitarian elegance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA25A3KDcnUhwCJ-dT5zES7SEHftPMsblu8Kkgsn4iJvvsK5NiZQYLwXh2H5JIQDF4D-O_tP9vhrqrfwm5h7xRyf7vySzv_7I8DZA-1IhIeUwkvbg08aK3MQJfkPLGywU0uHwbRpyRC-qGl_ms8QhGMMebH6AQhfICXdXm8zKWY3PZXtzaQ4JOqyRsurt68MP7U7n36ffY8-yL5ZMDPUQyTVshG0xhIfiSI-pNaaCa-SrbaBoMR4JZXmSqX6nkclrCbxs7L9pegsA7R"/>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-lg pt-lg space-y-lg">
+<!-- AI Summary Section -->
+<section class="relative overflow-hidden rounded-[32px] bg-primary-container p-lg text-on-primary-container shadow-sm">
+<div class="absolute top-0 right-0 p-md opacity-20">
+<span class="material-symbols-outlined text-[80px]">auto_awesome</span>
+</div>
+<div class="relative z-10 space-y-xs">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<p class="font-button-label text-button-label uppercase tracking-wider opacity-80">AI Ringkasan Bisnis</p>
+</div>
+<h2 class="font-subtitle-bold text-subtitle-bold">Hari ini 12 transaksi, pendapatan Rp 850.000...</h2>
+<p class="font-body-sm text-body-sm opacity-90 max-w-md">Kinerja hari ini stabil. Estimasi laba bersih meningkat 5% dibandingkan kemarin karena efisiensi penggunaan bahan baku.</p>
+</div>
+</section>
+<!-- Summary Cards (Bento Style) -->
+<section class="bento-grid">
+<!-- Pendapatan -->
+<div class="bg-canvas border border-hairline p-md rounded-xl flex flex-col justify-between hover:shadow-md transition-all group">
+<div class="flex justify-between items-start">
+<div class="p-xs bg-surface-container rounded-lg text-primary">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<span class="text-success-green font-button-label text-caption flex items-center">
+                        +12% <span class="material-symbols-outlined text-[14px]">trending_up</span>
+</span>
+</div>
+<div class="mt-md">
+<p class="font-caption text-on-surface-variant">Pendapatan</p>
+<p class="font-subtitle-bold text-subtitle-bold text-commerce-cobalt">Rp 850.000</p>
+</div>
+</div>
+<!-- Transaksi -->
+<div class="bg-canvas border border-hairline p-md rounded-xl flex flex-col justify-between hover:shadow-md transition-all">
+<div class="flex justify-between items-start">
+<div class="p-xs bg-surface-container rounded-lg text-primary">
+<span class="material-symbols-outlined">receipt_long</span>
+</div>
+<span class="text-success-green font-button-label text-caption flex items-center">
+                        +3 <span class="material-symbols-outlined text-[14px]">add</span>
+</span>
+</div>
+<div class="mt-md">
+<p class="font-caption text-on-surface-variant">Transaksi</p>
+<p class="font-subtitle-bold text-subtitle-bold text-commerce-cobalt">12 Pesanan</p>
+</div>
+</div>
+<!-- Estimasi Laba -->
+<div class="bg-canvas border border-hairline p-md rounded-xl flex flex-col justify-between hover:shadow-md transition-all">
+<div class="flex justify-between items-start">
+<div class="p-xs bg-surface-container rounded-lg text-primary">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+<span class="text-success-green font-button-label text-caption flex items-center">
+                        Target tercapai
+                    </span>
+</div>
+<div class="mt-md">
+<p class="font-caption text-on-surface-variant">Estimasi Laba</p>
+<p class="font-subtitle-bold text-subtitle-bold text-commerce-cobalt">Rp 320.000</p>
+</div>
+</div>
+</section>
+<!-- Alerts Section -->
+<section class="space-y-md">
+<h3 class="font-subtitle-bold text-subtitle-bold flex items-center gap-sm">
+<span class="material-symbols-outlined text-price-alert">notifications_active</span>
+                Alerts Bisnis
+            </h3>
+<div class="border-2 border-price-alert bg-[#F0F7FF] rounded-[24px] p-md">
+<div class="flex items-center justify-between mb-md">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-price-alert">trending_up</span>
+<p class="font-subtitle-bold text-body-md text-on-surface">Harga Tepung naik <span class="text-error">25%</span></p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">expand_more</span>
+</div>
+<!-- Expandable Mini Card -->
+<div class="bg-canvas rounded-xl p-md border border-hairline shadow-sm overflow-hidden transition-all duration-300">
+<div class="flex justify-between items-end">
+<div>
+<p class="font-caption text-on-surface-variant">Komoditas</p>
+<h4 class="font-subtitle-bold text-subtitle-bold">Tepung Terigu Pro Tinggi</h4>
+</div>
+<div class="text-right">
+<p class="font-caption text-on-surface-variant">Harga Sekarang</p>
+<p class="font-price-display text-price-display text-error">Rp 15.500/kg</p>
+</div>
+</div>
+<!-- Line Chart Placeholder -->
+<div class="mt-lg h-32 w-full relative">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 400 100">
+<path class="chart-line" d="M0,80 L50,85 L100,75 L150,80 L200,60 L250,55 L300,40 L350,20 L400,10" fill="none" stroke="#1876F2" stroke-width="3"></path>
+<path d="M0,80 L50,85 L100,75 L150,80 L200,60 L250,55 L300,40 L350,20 L400,10 V100 H0 Z" fill="url(#gradient-alert)" opacity="0.1"></path>
+<defs>
+<lineargradient id="gradient-alert" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#1876F2"></stop>
+<stop offset="100%" stop-color="#1876F2" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="absolute inset-0 flex justify-between items-end px-xs pb-xs text-[10px] text-on-surface-variant opacity-50 font-caption">
+<span>Minggu 1</span>
+<span>Minggu 2</span>
+<span>Minggu 3</span>
+<span>Hari ini</span>
+</div>
+</div>
+<button class="mt-md w-full py-sm bg-inverse-surface text-canvas font-button-label text-button-label rounded-full hover:opacity-90 transition-opacity">
+                        Sesuaikan Harga Menu
+                    </button>
+</div>
+</div>
+</section>
+<!-- Top Menus Ranking -->
+<section class="space-y-md">
+<div class="flex justify-between items-center">
+<h3 class="font-subtitle-bold text-subtitle-bold">Top 5 Menu Laris</h3>
+<button class="text-commerce-cobalt font-button-label text-button-label">Lihat Semua</button>
+</div>
+<div class="bg-canvas border border-hairline rounded-[24px] overflow-hidden">
+<div class="divide-y divide-hairline">
+<!-- Rank 1 -->
+<div class="flex items-center gap-md p-md hover:bg-surface-container-low transition-colors">
+<div class="relative">
+<div class="w-12 h-12 rounded-lg bg-surface-soft overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A macro photography shot of a delicious Indonesian Nasi Goreng Special, garnished with a sunny-side-up egg and fresh cucumber slices. The lighting is warm and inviting, highlighting the textures of the grains and the vibrant colors. Professional F&amp;B photography style with a shallow depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGTGyMd2iH3p0QSWmxvDGW0OQP4--Red5XXILviYfnDauaiZ05b2__YmGdMPm44tOG8-HRUirPtOGObdRp4kbpBsUoXn_k3bMklYMXMEpV7H8xYZI-lCOYfLIyhQ44jccKgtmLaMi3ezD7HkPsHnCJIs9kU03rRupTTAwX2Hbr2K1vvTQwZMiQ16dbvNdh3o9_0CgrRn3TjrvUSaYBrGqD2Dxmra8FPOguqMrKg7-6SzgI6S_1zgpFIHBee5rWolAcjBZTGyoVJiK7"/>
+</div>
+<span class="absolute -top-2 -left-2 bg-commerce-cobalt text-canvas text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-canvas">1</span>
+</div>
+<div class="flex-grow">
+<h4 class="font-button-label text-body-md">Nasi Goreng Special</h4>
+<p class="font-caption text-on-surface-variant">450 porsi terjual</p>
+</div>
+<div class="text-right">
+<p class="font-price-display text-price-display">Rp 25k</p>
+<span class="text-success-green text-[10px] flex items-center justify-end font-bold uppercase">
+<span class="material-symbols-outlined text-[12px]">trending_up</span> 5%
+                            </span>
+</div>
+</div>
+<!-- Rank 2 -->
+<div class="flex items-center gap-md p-md hover:bg-surface-container-low transition-colors">
+<div class="relative">
+<div class="w-12 h-12 rounded-lg bg-surface-soft overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A close-up shot of an iced cafe latte in a tall glass, showing beautiful layers of milk and espresso. The lighting is bright and natural, reflecting the minimalist and clean aesthetic of a modern coffee shop. High-quality commercial food photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYXRRCRyoHuqoswKsB00DYfOZiDnnPUy8uGueMmQ17s5HVLIdK2z8Vx4M1eLZc0SWeWGPf3fWPmFdp7aVPU0nwWLL2X5Y_MIB3ZuBhC0q3mQyXXJtm4ULfbc0oQWUjmPeew5U3hby4NoinzU1GnB-nIDeQRCwksWOjgKCJzxby3mNY2H5mkeqHpGTAXzhPI6MODgsamn1nQOAiGB92vJbranBVieDWFYEGxDV3AlTGQdh4ZxR0s_h7FdrowM1aP5fLJYtOMZ7ZFe8G"/>
+</div>
+<span class="absolute -top-2 -left-2 bg-outline text-canvas text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-canvas">2</span>
+</div>
+<div class="flex-grow">
+<h4 class="font-button-label text-body-md">Es Kopi Susu Aren</h4>
+<p class="font-caption text-on-surface-variant">320 porsi terjual</p>
+</div>
+<div class="text-right">
+<p class="font-price-display text-price-display">Rp 18k</p>
+<span class="text-on-surface-variant text-[10px] flex items-center justify-end font-bold uppercase">
+<span class="material-symbols-outlined text-[12px]">remove</span> 0%
+                            </span>
+</div>
+</div>
+<!-- Rank 3 -->
+<div class="flex items-center gap-md p-md hover:bg-surface-container-low transition-colors">
+<div class="relative">
+<div class="w-12 h-12 rounded-lg bg-surface-soft overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Crispy golden Fried Chicken served on a clean white plate with a side of spicy sambal. The skin of the chicken is perfectly textured and glimmers under soft studio lighting. High-end food photography for a professional F&amp;B application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3rnoU_0HCaCACPqy9uv5EdcdhmQd-WawFbmbjG0vgTvvLhhYQ1Y0JivgzldN7Zt2QIi3WmljXS75sbXo7IQh9zshV2g0Di9i9N1Ispu7NgFbIQIWESGgQsDfdHV7d6cxXA-90H87ujZlFRCKbkOe3Cb_wqc5IxiyWcg7B2Wr9iK-hyAGatWRz8lWH-SnvYwPMcA6mA3o9qW3rAZF95Vg0vGFhUs0TGklAVjxYmjexw8NlV-7FZyqZ1Zn6Eti4HoFijReAlqVS8xRs"/>
+</div>
+<span class="absolute -top-2 -left-2 bg-outline-variant text-on-surface text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-canvas">3</span>
+</div>
+<div class="flex-grow">
+<h4 class="font-button-label text-body-md">Ayam Goreng Krispi</h4>
+<p class="font-caption text-on-surface-variant">280 porsi terjual</p>
+</div>
+<div class="text-right">
+<p class="font-price-display text-price-display">Rp 22k</p>
+<span class="text-error text-[10px] flex items-center justify-end font-bold uppercase">
+<span class="material-symbols-outlined text-[12px]">trending_down</span> 2%
+                            </span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- AI Assistant FAB -->
+<button class="fixed bottom-24 right-lg w-14 h-14 bg-commerce-cobalt text-canvas rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform z-40">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat</span>
+</button>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-sm pb-sm bg-surface-container-lowest shadow-[0_-2px_10px_rgba(0,0,0,0.08)] h-20">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-md py-xs hover:opacity-80 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span class="font-button-label text-[10px]">POS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-md py-xs hover:opacity-80 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-button-label text-[10px]">Inventaris</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-md py-xs scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-button-label text-[10px]">Dashboard</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for expand/collapse alert
+        document.querySelector('.material-symbols-outlined.cursor-pointer').addEventListener('click', function() {
+            const chartSection = this.parentElement.nextElementSibling;
+            const isHidden = chartSection.classList.contains('h-0');
+            
+            if (this.innerText === 'expand_more') {
+                this.innerText = 'expand_less';
+                // Toggle height logic could go here
+            } else {
+                this.innerText = 'expand_more';
+            }
+        });
+
+        // Simple parallax for the AI summary icon
+        window.addEventListener('scroll', () => {
+            const icon = document.querySelector('.material-symbols-outlined.text-\\[80px\\]');
+            const scroll = window.pageYOffset;
+            icon.style.transform = `translateY(${scroll * 0.1}px) rotate(${scroll * 0.05}deg)`;
+        });
+    </script>
+</body></html>

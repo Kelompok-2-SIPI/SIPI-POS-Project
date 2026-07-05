@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+
+<html class="light" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login - SIPI Merchant Portal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Inter:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Montserrat:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#ededf1",
+                        "surface-bright": "#f9f9fd",
+                        "error-container": "#ffdad6",
+                        "on-background": "#1a1c1f",
+                        "outline-variant": "#c2c6d6",
+                        "commerce-cobalt": "#0064E0",
+                        "on-error-container": "#93000a",
+                        "outline": "#727786",
+                        "secondary-container": "#0270ec",
+                        "tertiary-container": "#636c71",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "surface-variant": "#e2e2e6",
+                        "on-primary-container": "#e6ebff",
+                        "surface-container-low": "#f3f3f7",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#3f484d",
+                        "on-tertiary-fixed": "#141d21",
+                        "primary-container": "#0064e0",
+                        "critical-stock": "#E41E3F",
+                        "inverse-primary": "#afc6ff",
+                        "hairline": "#CED0D4",
+                        "on-primary-fixed-variant": "#004299",
+                        "tertiary": "#4a5458",
+                        "success-green": "#31A24C",
+                        "on-secondary-fixed": "#001a41",
+                        "on-primary-fixed": "#001944",
+                        "surface": "#f9f9fd",
+                        "tertiary-fixed-dim": "#bec8cd",
+                        "primary-fixed-dim": "#afc6ff",
+                        "on-surface-variant": "#424754",
+                        "inverse-on-surface": "#f0f0f4",
+                        "surface-dim": "#d9dade",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "canvas": "#FFFFFF",
+                        "on-secondary-fixed-variant": "#004494",
+                        "on-secondary-container": "#fefcff",
+                        "on-tertiary-container": "#e4edf3",
+                        "surface-soft": "#F1F4F7",
+                        "surface-container-high": "#e8e8ec",
+                        "on-surface": "#1a1c1f",
+                        "tertiary-fixed": "#dae4ea",
+                        "on-tertiary": "#ffffff",
+                        "critical-margin": "#F2A918",
+                        "primary-fixed": "#d9e2ff",
+                        "secondary": "#0058bd",
+                        "surface-container-highest": "#e2e2e6",
+                        "surface-tint": "#0059c8",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#d8e2ff",
+                        "price-alert": "#1876F2",
+                        "inverse-surface": "#2f3034",
+                        "background": "#f9f9fd",
+                        "primary": "#004db0"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "md": "16px",
+                        "sm": "8px",
+                        "lg": "24px",
+                        "section": "64px",
+                        "xs": "4px",
+                        "tap-target": "44px"
+                    },
+                    "fontFamily": {
+                        "heading-sm": ["Montserrat"],
+                        "subtitle-bold": ["Inter"],
+                        "display-lg": ["Montserrat"],
+                        "price-display": ["Inter"],
+                        "button-label": ["Inter"],
+                        "headline-lg": ["Montserrat"],
+                        "body-sm": ["Inter"],
+                        "headline-lg-mobile": ["Montserrat"],
+                        "caption": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "heading-sm": ["24px", {"lineHeight": "1.25", "letterSpacing": "0", "fontWeight": "500"}],
+                        "subtitle-bold": ["18px", {"lineHeight": "1.44", "letterSpacing": "0", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "1.17", "letterSpacing": "0", "fontWeight": "500"}],
+                        "price-display": ["16px", {"lineHeight": "1.50", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "button-label": ["14px", {"lineHeight": "1.43", "letterSpacing": "0", "fontWeight": "700"}],
+                        "headline-lg": ["36px", {"lineHeight": "1.28", "letterSpacing": "0", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "1.43", "letterSpacing": "-0.01em", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "1.25", "letterSpacing": "0", "fontWeight": "500"}],
+                        "caption": ["12px", {"lineHeight": "1.33", "letterSpacing": "0", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "1.50", "letterSpacing": "-0.01em", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        
+        body {
+            background-color: #f9f9fd;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .login-card {
+            box-shadow: 0 4px 60px rgba(0, 0, 0, 0.05), 0 2px 10px rgba(0, 0, 0, 0.02);
+        }
+
+        .input-focus-ring:focus {
+            outline: none;
+            border-color: #0064E0;
+            box-shadow: 0 0 0 4px rgba(0, 100, 224, 0.1);
+        }
+        
+        .floating-label-group {
+            position: relative;
+        }
+        
+        .floating-label-group input:placeholder-shown ~ label {
+            transform: translateY(12px);
+            font-size: 16px;
+            color: #727786;
+        }
+        
+        .floating-label-group label {
+            position: absolute;
+            top: 0;
+            left: 12px;
+            padding: 0 4px;
+            background: white;
+            transition: all 0.2s ease;
+            pointer-events: none;
+            font-size: 12px;
+            color: #0064E0;
+            transform: translateY(-8px);
+        }
+
+        /* Prevent chrome autofill yellow background */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-lg">
+<!-- Background Pattern/Atmosphere -->
+<div class="fixed inset-0 z-[-1] overflow-hidden opacity-30 pointer-events-none">
+<div class="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-commerce-cobalt/10 blur-[120px] rounded-full"></div>
+<div class="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-commerce-cobalt/5 blur-[120px] rounded-full"></div>
+</div>
+<!-- Main Login Shell (Linear Transactional - Navigation Suppressed) -->
+<main class="w-full max-w-[440px] animate-in fade-in slide-in-from-bottom-4 duration-700">
+<div class="bg-canvas login-card rounded-[32px] p-xl flex flex-col items-center">
+<!-- Brand Identity Anchor -->
+<div class="mb-xl text-center">
+<div class="flex items-center justify-center gap-2 mb-sm">
+<div class="w-12 h-12 bg-primary-container rounded-xl flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[32px]">storefront</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg tracking-tight text-primary">SIPI</h1>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Merchant Portal</p>
+</div>
+<!-- Login Form Content -->
+<form action="#" class="w-full space-y-lg" method="POST">
+<!-- Email Input -->
+<div class="space-y-xs">
+<label class="font-button-label text-button-label text-on-surface ml-1" for="email">Email Address</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-outline">mail</span>
+<input class="w-full h-tap-target pl-12 pr-4 bg-white border border-hairline rounded-xl font-body-md text-body-md text-on-surface input-focus-ring transition-all placeholder:text-outline/50" id="email" name="email" placeholder="nama@bisnisanda.com" required="" type="email"/>
+</div>
+</div>
+<!-- Password Input -->
+<div class="space-y-xs">
+<div class="flex justify-between items-end ml-1">
+<label class="font-button-label text-button-label text-on-surface" for="password">Password</label>
+<a class="font-caption text-caption text-secondary hover:underline transition-all" href="#">Lupa Password?</a>
+</div>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-outline">lock</span>
+<input class="w-full h-tap-target pl-12 pr-12 bg-white border border-hairline rounded-xl font-body-md text-body-md text-on-surface input-focus-ring transition-all placeholder:text-outline/50" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+<button class="absolute right-4 text-outline hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+<!-- Remember Me -->
+<div class="flex items-center gap-3 py-1">
+<input class="w-5 h-5 rounded-md border-hairline text-commerce-cobalt focus:ring-commerce-cobalt transition-all cursor-pointer" id="remember" name="remember" type="checkbox"/>
+<label class="font-body-sm text-body-sm text-on-surface-variant cursor-pointer select-none" for="remember">Ingat saya di perangkat ini</label>
+</div>
+<!-- Primary Action -->
+<button class="w-full h-[56px] bg-commerce-cobalt hover:bg-primary transition-all text-on-primary font-button-label text-button-label rounded-full shadow-lg shadow-commerce-cobalt/20 active:scale-[0.98] duration-150 flex items-center justify-center gap-2" type="submit">
+                    Masuk
+                    <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</form>
+<!-- Secondary Actions/Footer -->
+<div class="mt-xl text-center space-y-md">
+<div class="relative">
+<div class="absolute inset-0 flex items-center"><span class="w-full border-t border-hairline"></span></div>
+<div class="relative flex justify-center text-caption"><span class="bg-canvas px-4 text-outline">Atau masuk dengan</span></div>
+</div>
+<div class="grid grid-cols-1 gap-sm">
+<button class="w-full h-tap-target border border-hairline rounded-full flex items-center justify-center gap-3 font-button-label text-button-label text-on-surface hover:bg-surface-container-low transition-all">
+<img class="w-5 h-5" data-alt="A clean, high-resolution vector logo of Google, featuring its signature four-color palette of blue, red, yellow, and green, designed for a modern professional UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBq-AZ1kxvXViQMNXXMKMk6xH1tWoKv6JYGPAfm1U11NDX8iqnzjIme1RVP1Jb35RBZlAJXntNBUajZngM-mHasShXx2lYwgi_8Hx3bQIryf8BelxbWCh_Z4qbHacbaaP1YdL0a0y28o1LZ5GbJDIyC5UZ9wI3FfIbsSZY1y-VbPiniKqL7mS3zvnF7020RCL4zzVGP91dvyP7qUd_S_4ti1tHDvmVIu3HXgpgy_ze7RuzhdVFIR37Ff-WdxYeli6LX1TioL8YNtIVx"/>
+                        Google
+                    </button>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                    Belum punya akun? 
+                    <a class="text-secondary font-bold hover:underline" href="#">Daftar Sekarang</a>
+</p>
+</div>
+</div>
+<!-- Help & Legal Footer -->
+<footer class="mt-lg flex justify-center gap-lg font-caption text-caption text-outline">
+<a class="hover:text-on-surface transition-colors" href="#">Pusat Bantuan</a>
+<a class="hover:text-on-surface transition-colors" href="#">Kebijakan Privasi</a>
+<a class="hover:text-on-surface transition-colors" href="#">Syarat & Ketentuan</a>
+</footer>
+</main>
+<!-- AI Assistant Floating Button (Contextual Suppression Logic applied for Transactional screen, but keeping for stylistic consistency if mandated by UI guidelines, usually hidden on login) -->
+<!-- Suppressed on Login per UX guidelines -->
+<script>
+        // Micro-interaction for password visibility
+        const toggleBtn = document.querySelector('button[type="button"]');
+        const passwordInput = document.getElementById('password');
+        const iconSpan = toggleBtn.querySelector('span');
+
+        toggleBtn.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            iconSpan.innerText = type === 'password' ? 'visibility' : 'visibility_off';
+        });
+
+        // Simple form handling simulation
+        document.querySelector('form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalContent = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> Memproses...';
+            
+            setTimeout(() => {
+                alert('Sistem sedang dalam pengembangan. Silakan hubungi admin SIPI.');
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }, 1500);
+        });
+    </script>
+</body></html>
