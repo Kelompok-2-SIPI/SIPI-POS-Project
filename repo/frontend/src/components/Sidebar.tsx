@@ -34,15 +34,6 @@ export default function Sidebar() {
           <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM9 17H7V10H9V17ZM13 17H11V7H13V17ZM17 17H15V12H17V17Z"/>
         </svg>
       )
-    },
-    {
-      label: 'Lainnya',
-      href: '#', // placeholder
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
-          <path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-        </svg>
-      )
     }
   ];
 
@@ -59,7 +50,7 @@ export default function Sidebar() {
 
       <nav className="sidebar-nav">
         {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href) && item.href !== '#';
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.label}
