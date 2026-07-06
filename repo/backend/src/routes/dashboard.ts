@@ -65,6 +65,90 @@ router.get('/monthly-sales', async (req: Request, res: Response) => {
   }
 });
 
+// Helper: geser instant UTC transaksi ke "jam dinding" Asia/Jakarta (UTC+7), dibaca lewat getUTC*
+function toJakartaWallClock(date: Date): Date {
+  return new Date(date.getTime() + 7 * 60 * 60 * 1000);
+}
+
+const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
+// Pola kunjungan per hari (Senin-Minggu), rata-rata dari 4 minggu terakhir — proxy pakai jumlah transaksi selesai
+router.get('/visit-pattern-by-day', async (_req: Request, res: Response) => {
+  try {
+    const weeks = 4;
+    const now = new Date();
+    const nowJakarta = toJakartaWallClock(now);
+    // Akhir periode: akhir hari ini (waktu Jakarta), awal: 28 hari sebelumnya jam 00:00 Jakarta
+    const endJakartaMidnight = Date.UTC(nowJakarta.getUTCFullYear(), nowJakarta.getUTCMonth(), nowJakarta.getUTCDate() + 1); // esok 00:00 Jakarta (exclusive)
+    const startJakartaMidnight = endJakartaMidnight - weeks * 7 * 24 * 60 * 60 * 1000;
+    const start = new Date(startJakartaMidnight - 7 * 60 * 60 * 1000); // balik ke UTC instant
+    const end = new Date(endJakartaMidnight - 7 * 60 * 60 * 1000);
+
+    const txs = await prisma.transaction.findMany({
+      where: { status: TransactionStatus.completed, completedAt: { gte: start, lt: end } },
+      select: { completedAt: true },
+    });
+
+    const countByDay = [0, 0, 0, 0, 0, 0, 0]; // index 0 = Senin ... 6 = Minggu
+    for (const tx of txs) {
+      if (!tx.completedAt) continue;
+      const jakarta = toJakartaWallClock(tx.completedAt);
+      const jsDay = jakarta.getUTCDay(); // 0 = Minggu
+      const idx = (jsDay + 6) % 7; // 0 = Senin ... 6 = Minggu
+      countByDay[idx]++;
+    }
+
+    const result = DAY_NAMES.map((day, idx) => ({
+      day,
+      totalTransactions: countByDay[idx],
+      avgTransactions: Math.round((countByDay[idx] / weeks) * 100) / 100,
+    }));
+
+    let busiestDay = result[0];
+    for (const r of result) if (r.avgTransactions > busiestDay.avgTransactions) busiestDay = r;
+
+    return res.json({ weeksAnalyzed: weeks, startDate: start.toISOString(), endDate: end.toISOString(), data: result, busiestDay: { day: busiestDay.day, avgTransactions: busiestDay.avgTransactions } });
+  } catch (e: any) {
+    console.error('[visit-pattern-by-day]', e);
+    return res.status(500).json({ error: 'Gagal mengambil pola kunjungan per hari.' });
+  }
+});
+
+// Pola kunjungan per jam (0-23), total dari 4 minggu terakhir — proxy pakai jumlah transaksi selesai
+router.get('/visit-pattern-by-hour', async (_req: Request, res: Response) => {
+  try {
+    const weeks = 4;
+    const now = new Date();
+    const nowJakarta = toJakartaWallClock(now);
+    const endJakartaMidnight = Date.UTC(nowJakarta.getUTCFullYear(), nowJakarta.getUTCMonth(), nowJakarta.getUTCDate() + 1);
+    const startJakartaMidnight = endJakartaMidnight - weeks * 7 * 24 * 60 * 60 * 1000;
+    const start = new Date(startJakartaMidnight - 7 * 60 * 60 * 1000);
+    const end = new Date(endJakartaMidnight - 7 * 60 * 60 * 1000);
+
+    const txs = await prisma.transaction.findMany({
+      where: { status: TransactionStatus.completed, completedAt: { gte: start, lt: end } },
+      select: { completedAt: true },
+    });
+
+    const countByHour = new Array(24).fill(0);
+    for (const tx of txs) {
+      if (!tx.completedAt) continue;
+      const jakarta = toJakartaWallClock(tx.completedAt);
+      countByHour[jakarta.getUTCHours()]++;
+    }
+
+    const result = countByHour.map((count, hour) => ({ hour, totalTransactions: count }));
+
+    let busiestHour = result[0];
+    for (const r of result) if (r.totalTransactions > busiestHour.totalTransactions) busiestHour = r;
+
+    return res.json({ weeksAnalyzed: weeks, startDate: start.toISOString(), endDate: end.toISOString(), data: result, busiestHour: { hour: busiestHour.hour, totalTransactions: busiestHour.totalTransactions } });
+  } catch (e: any) {
+    console.error('[visit-pattern-by-hour]', e);
+    return res.status(500).json({ error: 'Gagal mengambil pola kunjungan per jam.' });
+  }
+});
+
 router.get('/top-menus', async (req: Request, res: Response) => {
   try {
     let dateStr = req.query.date as string;

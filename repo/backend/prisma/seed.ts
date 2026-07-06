@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Ayam Geprek Bu Yuli — UMKM F&B Jogja, buka Januari 2026
+
 async function main() {
   console.log('Seeding database...');
 
@@ -28,21 +30,29 @@ async function main() {
     console.log(`User 'admin' already exists.`);
   }
 
-  // 2. Create Default Ingredients (Ayam Geprek)
+  // 2. Create Default Ingredients (Ayam Geprek Bu Yuli)
   const ingredientsData = [
-    { name: 'Ayam Potong (Dada)', unit: 'potong', minStockQty: 20, stockQty: 100, latestPrice: 13000 },
-    { name: 'Ayam Potong (Paha Atas)', unit: 'potong', minStockQty: 20, stockQty: 100, latestPrice: 12500 },
-    { name: 'Ayam Potong (Paha Bawah)', unit: 'potong', minStockQty: 20, stockQty: 100, latestPrice: 12000 },
-    { name: 'Ayam Potong (Sayap)', unit: 'potong', minStockQty: 20, stockQty: 100, latestPrice: 11000 },
-    { name: 'Cabai Rawit', unit: 'gram', minStockQty: 1000, stockQty: 5000, latestPrice: 80 },
-    { name: 'Bawang Putih', unit: 'gram', minStockQty: 500, stockQty: 2000, latestPrice: 40 },
-    { name: 'Tepung Terigu', unit: 'gram', minStockQty: 5000, stockQty: 20000, latestPrice: 12 },
-    { name: 'Minyak Goreng', unit: 'ml', minStockQty: 5000, stockQty: 15000, latestPrice: 18 },
-    { name: 'Beras Putih', unit: 'gram', minStockQty: 10000, stockQty: 50000, latestPrice: 15 },
-    { name: 'Teh Melati', unit: 'gram', minStockQty: 500, stockQty: 2000, latestPrice: 100 },
-    { name: 'Gula Pasir', unit: 'gram', minStockQty: 2000, stockQty: 10000, latestPrice: 18 },
-    { name: 'Es Batu', unit: 'pcs', minStockQty: 100, stockQty: 500, latestPrice: 500 },
-    { name: 'Air Mineral', unit: 'ml', minStockQty: 5000, stockQty: 20000, latestPrice: 2 },
+    { name: 'Ayam Potong (Sayap)', unit: 'potong', minStockQty: 15, stockQty: 30, latestPrice: 4500 },
+    { name: 'Ayam Potong (Paha Bawah)', unit: 'potong', minStockQty: 15, stockQty: 30, latestPrice: 6500 },
+    { name: 'Ayam Potong (Paha Atas)', unit: 'potong', minStockQty: 15, stockQty: 30, latestPrice: 7500 },
+    { name: 'Ayam Potong (Dada)', unit: 'potong', minStockQty: 15, stockQty: 30, latestPrice: 8000 },
+    { name: 'Ayam Fillet (Dada Tanpa Tulang)', unit: 'potong', minStockQty: 10, stockQty: 20, latestPrice: 9500 },
+    { name: 'Cabai Rawit', unit: 'gram', minStockQty: 800, stockQty: 3000, latestPrice: 70 },
+    { name: 'Bawang Putih', unit: 'gram', minStockQty: 400, stockQty: 1500, latestPrice: 40 },
+    { name: 'Tepung Terigu', unit: 'gram', minStockQty: 2000, stockQty: 8000, latestPrice: 11 },
+    { name: 'Minyak Goreng', unit: 'ml', minStockQty: 1500, stockQty: 6000, latestPrice: 17 },
+    { name: 'Beras Putih', unit: 'gram', minStockQty: 4000, stockQty: 15000, latestPrice: 14 },
+    { name: 'Tahu', unit: 'potong', minStockQty: 15, stockQty: 40, latestPrice: 800 },
+    { name: 'Tempe', unit: 'potong', minStockQty: 15, stockQty: 40, latestPrice: 900 },
+    { name: 'Timun', unit: 'gram', minStockQty: 500, stockQty: 2000, latestPrice: 10 },
+    { name: 'Kemangi', unit: 'gram', minStockQty: 150, stockQty: 500, latestPrice: 35 },
+    { name: 'Kol', unit: 'gram', minStockQty: 400, stockQty: 1500, latestPrice: 8 },
+    { name: 'Teh Celup', unit: 'pcs', minStockQty: 30, stockQty: 100, latestPrice: 180 },
+    { name: 'Gula Pasir', unit: 'gram', minStockQty: 800, stockQty: 3000, latestPrice: 16 },
+    { name: 'Es Batu', unit: 'pcs', minStockQty: 60, stockQty: 200, latestPrice: 500 },
+    { name: 'Air Mineral', unit: 'ml', minStockQty: 3000, stockQty: 10000, latestPrice: 3 },
+    { name: 'Jeruk Peras', unit: 'pcs', minStockQty: 20, stockQty: 60, latestPrice: 1200 },
+    { name: 'Air Mineral Botol', unit: 'pcs', minStockQty: 15, stockQty: 50, latestPrice: 3000 },
   ];
 
   const ingredientMap: Record<string, string> = {};
@@ -83,7 +93,7 @@ async function main() {
           createdBy: userId,
         },
       });
-      
+
       console.log(`Created ingredient: ${item.name}`);
     } else {
       console.log(`Ingredient ${item.name} already exists.`);
@@ -91,105 +101,156 @@ async function main() {
     ingredientMap[item.name] = ing.id;
   }
 
-  // 3. Create Default Menus (Ayam Geprek)
+  // 3. Create Default Menus (Ayam Geprek Bu Yuli)
   const menusData = [
     {
-      name: 'Ayam Geprek (Dada)',
-      category: 'Makanan',
+      name: 'Ayam Geprek Sayap',
+      category: 'Ayam Geprek',
+      sellingPrice: 12000,
+      recipe: [
+        { name: 'Ayam Potong (Sayap)', qty: 1 },
+        { name: 'Cabai Rawit', qty: 15 },
+        { name: 'Bawang Putih', qty: 6 },
+        { name: 'Tepung Terigu', qty: 30 },
+        { name: 'Minyak Goreng', qty: 30 },
+      ],
+    },
+    {
+      name: 'Ayam Geprek Paha Bawah',
+      category: 'Ayam Geprek',
+      sellingPrice: 16000,
+      recipe: [
+        { name: 'Ayam Potong (Paha Bawah)', qty: 1 },
+        { name: 'Cabai Rawit', qty: 15 },
+        { name: 'Bawang Putih', qty: 6 },
+        { name: 'Tepung Terigu', qty: 30 },
+        { name: 'Minyak Goreng', qty: 30 },
+      ],
+    },
+    {
+      name: 'Ayam Geprek Paha Atas',
+      category: 'Ayam Geprek',
+      sellingPrice: 17000,
+      recipe: [
+        { name: 'Ayam Potong (Paha Atas)', qty: 1 },
+        { name: 'Cabai Rawit', qty: 15 },
+        { name: 'Bawang Putih', qty: 6 },
+        { name: 'Tepung Terigu', qty: 30 },
+        { name: 'Minyak Goreng', qty: 30 },
+      ],
+    },
+    {
+      name: 'Ayam Geprek Dada',
+      category: 'Ayam Geprek',
+      sellingPrice: 18000,
+      recipe: [
+        { name: 'Ayam Potong (Dada)', qty: 1 },
+        { name: 'Cabai Rawit', qty: 15 },
+        { name: 'Bawang Putih', qty: 6 },
+        { name: 'Tepung Terigu', qty: 30 },
+        { name: 'Minyak Goreng', qty: 30 },
+      ],
+    },
+    {
+      name: 'Ayam Geprek Level Setan',
+      category: 'Ayam Geprek',
+      sellingPrice: 20000,
+      recipe: [
+        { name: 'Ayam Potong (Paha Atas)', qty: 1 },
+        { name: 'Cabai Rawit', qty: 25 },
+        { name: 'Bawang Putih', qty: 8 },
+        { name: 'Tepung Terigu', qty: 40 },
+        { name: 'Minyak Goreng', qty: 40 },
+      ],
+    },
+    {
+      name: 'Ayam Geprek Fillet Crispy',
+      category: 'Ayam Geprek',
+      sellingPrice: 17000,
+      recipe: [
+        { name: 'Ayam Fillet (Dada Tanpa Tulang)', qty: 1 },
+        { name: 'Cabai Rawit', qty: 20 },
+        { name: 'Bawang Putih', qty: 8 },
+        { name: 'Tepung Terigu', qty: 50 },
+        { name: 'Minyak Goreng', qty: 50 },
+      ],
+    },
+    {
+      name: 'Paket Hemat Sayap',
+      category: 'Paket',
+      sellingPrice: 16000,
+      recipe: [
+        { name: 'Ayam Potong (Sayap)', qty: 1 },
+        { name: 'Cabai Rawit', qty: 15 },
+        { name: 'Bawang Putih', qty: 6 },
+        { name: 'Tepung Terigu', qty: 30 },
+        { name: 'Minyak Goreng', qty: 30 },
+        { name: 'Beras Putih', qty: 150 },
+        { name: 'Timun', qty: 20 },
+        { name: 'Kemangi', qty: 5 },
+        { name: 'Kol', qty: 20 },
+      ],
+    },
+    {
+      name: 'Paket Komplit Paha Atas',
+      category: 'Paket',
       sellingPrice: 25000,
       recipe: [
-        { name: 'Ayam Potong (Dada)', qty: 1 },
-        { name: 'Cabai Rawit', qty: 20 },
-        { name: 'Bawang Putih', qty: 10 },
-        { name: 'Tepung Terigu', qty: 50 },
-        { name: 'Minyak Goreng', qty: 100 },
-      ],
-    },
-    {
-      name: 'Ayam Geprek (Paha Atas)',
-      category: 'Makanan',
-      sellingPrice: 24000,
-      recipe: [
         { name: 'Ayam Potong (Paha Atas)', qty: 1 },
-        { name: 'Cabai Rawit', qty: 20 },
-        { name: 'Bawang Putih', qty: 10 },
-        { name: 'Tepung Terigu', qty: 50 },
-        { name: 'Minyak Goreng', qty: 100 },
+        { name: 'Cabai Rawit', qty: 15 },
+        { name: 'Bawang Putih', qty: 6 },
+        { name: 'Tepung Terigu', qty: 30 },
+        { name: 'Minyak Goreng', qty: 30 },
+        { name: 'Beras Putih', qty: 150 },
+        { name: 'Tahu', qty: 2 },
+        { name: 'Tempe', qty: 2 },
+        { name: 'Timun', qty: 20 },
+        { name: 'Kemangi', qty: 5 },
+        { name: 'Kol', qty: 20 },
       ],
     },
     {
-      name: 'Ayam Geprek (Paha Bawah)',
-      category: 'Makanan',
-      sellingPrice: 23000,
-      recipe: [
-        { name: 'Ayam Potong (Paha Bawah)', qty: 1 },
-        { name: 'Cabai Rawit', qty: 20 },
-        { name: 'Bawang Putih', qty: 10 },
-        { name: 'Tepung Terigu', qty: 50 },
-        { name: 'Minyak Goreng', qty: 100 },
-      ],
-    },
-    {
-      name: 'Ayam Geprek (Sayap)',
-      category: 'Makanan',
-      sellingPrice: 22000,
+      name: 'Paket Anak Kos',
+      category: 'Paket',
+      sellingPrice: 18500,
       recipe: [
         { name: 'Ayam Potong (Sayap)', qty: 1 },
-        { name: 'Cabai Rawit', qty: 20 },
-        { name: 'Bawang Putih', qty: 10 },
-        { name: 'Tepung Terigu', qty: 50 },
-        { name: 'Minyak Goreng', qty: 100 },
+        { name: 'Cabai Rawit', qty: 15 },
+        { name: 'Bawang Putih', qty: 6 },
+        { name: 'Tepung Terigu', qty: 30 },
+        { name: 'Minyak Goreng', qty: 30 },
+        { name: 'Beras Putih', qty: 150 },
+        { name: 'Teh Celup', qty: 1 },
+        { name: 'Gula Pasir', qty: 20 },
+        { name: 'Air Mineral', qty: 200 },
+        { name: 'Es Batu', qty: 3 },
       ],
     },
     {
-      name: 'Paket Hemat (Nasi + Sayap)',
-      category: 'Paket',
-      sellingPrice: 27000,
+      name: 'Tahu Tempe Goreng',
+      category: 'Pelengkap',
+      sellingPrice: 5000,
       recipe: [
-        { name: 'Ayam Potong (Sayap)', qty: 1 },
-        { name: 'Cabai Rawit', qty: 20 },
-        { name: 'Bawang Putih', qty: 10 },
-        { name: 'Tepung Terigu', qty: 50 },
-        { name: 'Minyak Goreng', qty: 100 },
-        { name: 'Beras Putih', qty: 200 },
+        { name: 'Tahu', qty: 2 },
+        { name: 'Tempe', qty: 2 },
+        { name: 'Minyak Goreng', qty: 15 },
       ],
     },
     {
-      name: 'Paket Hemat (Nasi + Paha Bawah)',
-      category: 'Paket',
-      sellingPrice: 28000,
+      name: 'Lalapan Komplit',
+      category: 'Pelengkap',
+      sellingPrice: 3000,
       recipe: [
-        { name: 'Ayam Potong (Paha Bawah)', qty: 1 },
-        { name: 'Cabai Rawit', qty: 20 },
-        { name: 'Bawang Putih', qty: 10 },
-        { name: 'Tepung Terigu', qty: 50 },
-        { name: 'Minyak Goreng', qty: 100 },
-        { name: 'Beras Putih', qty: 200 },
+        { name: 'Timun', qty: 30 },
+        { name: 'Kemangi', qty: 8 },
+        { name: 'Kol', qty: 25 },
       ],
     },
     {
-      name: 'Paket Pas (Nasi + Dada)',
-      category: 'Paket',
-      sellingPrice: 30000,
+      name: 'Nasi Putih',
+      category: 'Pelengkap',
+      sellingPrice: 4000,
       recipe: [
-        { name: 'Ayam Potong (Dada)', qty: 1 },
-        { name: 'Cabai Rawit', qty: 20 },
-        { name: 'Bawang Putih', qty: 10 },
-        { name: 'Tepung Terigu', qty: 50 },
-        { name: 'Minyak Goreng', qty: 100 },
-        { name: 'Beras Putih', qty: 200 },
-      ],
-    },
-    {
-      name: 'Paket Pas (Nasi + Paha Atas)',
-      category: 'Paket',
-      sellingPrice: 29000,
-      recipe: [
-        { name: 'Ayam Potong (Paha Atas)', qty: 1 },
-        { name: 'Cabai Rawit', qty: 20 },
-        { name: 'Bawang Putih', qty: 10 },
-        { name: 'Tepung Terigu', qty: 50 },
-        { name: 'Minyak Goreng', qty: 100 },
         { name: 'Beras Putih', qty: 200 },
       ],
     },
@@ -198,10 +259,39 @@ async function main() {
       category: 'Minuman',
       sellingPrice: 5000,
       recipe: [
-        { name: 'Teh Melati', qty: 5 },
+        { name: 'Teh Celup', qty: 1 },
         { name: 'Gula Pasir', qty: 20 },
         { name: 'Air Mineral', qty: 200 },
-        { name: 'Es Batu', qty: 2 },
+        { name: 'Es Batu', qty: 3 },
+      ],
+    },
+    {
+      name: 'Es Jeruk',
+      category: 'Minuman',
+      sellingPrice: 6000,
+      recipe: [
+        { name: 'Jeruk Peras', qty: 2 },
+        { name: 'Gula Pasir', qty: 15 },
+        { name: 'Air Mineral', qty: 150 },
+        { name: 'Es Batu', qty: 3 },
+      ],
+    },
+    {
+      name: 'Teh Anget',
+      category: 'Minuman',
+      sellingPrice: 4000,
+      recipe: [
+        { name: 'Teh Celup', qty: 1 },
+        { name: 'Gula Pasir', qty: 15 },
+        { name: 'Air Mineral', qty: 200 },
+      ],
+    },
+    {
+      name: 'Air Mineral Botol',
+      category: 'Minuman',
+      sellingPrice: 4000,
+      recipe: [
+        { name: 'Air Mineral Botol', qty: 1 },
       ],
     },
   ];
