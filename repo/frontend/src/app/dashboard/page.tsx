@@ -53,6 +53,27 @@ interface PriceHistory {
   recordedBy: string;
 }
 
+interface VisitDayData {
+  day: string;
+  totalTransactions: number;
+  avgTransactions: number;
+}
+
+interface VisitDayResponse {
+  data: VisitDayData[];
+  busiestDay: { day: string; avgTransactions: number };
+}
+
+interface VisitHourData {
+  hour: number;
+  totalTransactions: number;
+}
+
+interface VisitHourResponse {
+  data: VisitHourData[];
+  busiestHour: { hour: number; totalTransactions: number };
+}
+
 function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baselinePrice: number }) {
   const [hovered, setHovered] = useState<{x: number, y: number, price: number, time: number} | null>(null);
   const uid = useId();
@@ -284,6 +305,167 @@ function MonthlySalesChart({ data }: { data: MonthlySales[] }) {
   );
 }
 
+// Pola kunjungan per hari itu kategorikal (7 hari tetap, bukan deret waktu berkelanjutan),
+// jadi tetap pakai bar chart sederhana seperti MonthlySalesChart — cukup ganti sumbu X ke hari.
+function WeeklyPatternChart({ data, busiestDay }: { data: VisitDayData[]; busiestDay: string }) {
+  const [hovered, setHovered] = useState<{ x: number; y: number; item: VisitDayData } | null>(null);
+
+  const width = 500;
+  const height = 240;
+  const paddingLeft = 40;
+  const paddingRight = 10;
+  const paddingTop = 40;
+  const paddingBottom = 30;
+
+  const innerWidth = width - paddingLeft - paddingRight;
+  const innerHeight = height - paddingTop - paddingBottom;
+
+  const maxAvg = Math.max(...data.map((d) => d.avgTransactions), 1);
+  const barGap = 10;
+  const barWidth = data.length > 0 ? (innerWidth - barGap * (data.length - 1)) / data.length : 0;
+  const getBarHeight = (v: number) => (maxAvg > 0 ? (v / maxAvg) * innerHeight : 0);
+
+  return (
+    <div className="monthly-sales-chart" style={{ position: 'relative', width: '100%' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '280px', overflow: 'visible' }}>
+        <line x1={paddingLeft} y1={paddingTop} x2={paddingLeft} y2={paddingTop + innerHeight} stroke="var(--color-outline)" strokeWidth="1" />
+        <line x1={paddingLeft} y1={paddingTop + innerHeight} x2={paddingLeft + innerWidth} y2={paddingTop + innerHeight} stroke="var(--color-outline)" strokeWidth="1" />
+
+        {data.map((d, i) => {
+          const barH = getBarHeight(d.avgTransactions);
+          const x = paddingLeft + i * (barWidth + barGap);
+          const y = paddingTop + innerHeight - barH;
+          const isMax = d.day === busiestDay;
+          return (
+            <g key={d.day}>
+              {isMax && (
+                <text x={x + barWidth / 2} y={y - 8} fontSize="9" fontWeight="bold" fill="var(--color-success)" textAnchor="middle">
+                  Tertinggi
+                </text>
+              )}
+              <rect
+                x={x}
+                y={y}
+                width={barWidth}
+                height={Math.max(barH, 2)}
+                rx="4"
+                fill={isMax ? 'var(--color-success)' : 'var(--color-primary)'}
+                opacity={isMax ? 1 : 0.85}
+                style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}
+                onMouseEnter={() => setHovered({ x: x + barWidth / 2, y, item: d })}
+                onMouseLeave={() => setHovered(null)}
+              />
+              <text x={x + barWidth / 2} y={paddingTop + innerHeight + 16} fontSize="10" fill="var(--text-secondary)" textAnchor="middle">
+                {d.day.slice(0, 3)}
+              </text>
+            </g>
+          );
+        })}
+
+        {hovered && (
+          <g transform={`translate(${hovered.x}, ${hovered.y - 12})`} style={{ pointerEvents: 'none' }}>
+            <rect x="-64" y="-40" width="128" height="34" rx="10" fill="var(--color-ink-deep)" />
+            <text x="0" y="-22" fontSize="12" fill="var(--color-canvas)" textAnchor="middle" fontWeight="bold">
+              {hovered.item.avgTransactions} transaksi/hari
+            </text>
+            <text x="0" y="-9" fontSize="10" fill="rgba(255,255,255,0.7)" textAnchor="middle">
+              {hovered.item.day} (rata-rata 4 minggu)
+            </text>
+            <polygon points="-5,-4 5,-4 0,1" fill="var(--color-ink-deep)" />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+// Buang jam-jam kosong di ujung (misal 00.00-09.00 & tengah malam) supaya bar chart tidak
+// membuang ruang pada rentang warung tutup — tapi jeda di TENGAH rentang aktif (misal jam 16
+// antara siang & malam) tetap ditampilkan karena itu informasi ("sepi di antara jam makan").
+function trimToActiveHourRange(data: VisitHourData[]): VisitHourData[] {
+  const firstActive = data.findIndex((d) => d.totalTransactions > 0);
+  let lastActive = -1;
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i].totalTransactions > 0) { lastActive = i; break; }
+  }
+  if (firstActive === -1 || lastActive === -1) return data;
+  return data.slice(firstActive, lastActive + 1);
+}
+
+// Jam operasional itu juga kategorikal-diskrit (24 slot jam tetap), bukan deret waktu —
+// bar chart per jam, dipangkas ke rentang jam yang relevan (lihat trimToActiveHourRange).
+function HourlyPatternChart({ data, busiestHour }: { data: VisitHourData[]; busiestHour: number }) {
+  const [hovered, setHovered] = useState<{ x: number; y: number; item: VisitHourData } | null>(null);
+
+  const width = 500;
+  const height = 240;
+  const paddingLeft = 40;
+  const paddingRight = 10;
+  const paddingTop = 40;
+  const paddingBottom = 30;
+
+  const innerWidth = width - paddingLeft - paddingRight;
+  const innerHeight = height - paddingTop - paddingBottom;
+
+  const maxCount = Math.max(...data.map((d) => d.totalTransactions), 1);
+  const barGap = 4;
+  const barWidth = data.length > 0 ? (innerWidth - barGap * (data.length - 1)) / data.length : 0;
+  const getBarHeight = (v: number) => (maxCount > 0 ? (v / maxCount) * innerHeight : 0);
+
+  return (
+    <div className="monthly-sales-chart" style={{ position: 'relative', width: '100%' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '280px', overflow: 'visible' }}>
+        <line x1={paddingLeft} y1={paddingTop} x2={paddingLeft} y2={paddingTop + innerHeight} stroke="var(--color-outline)" strokeWidth="1" />
+        <line x1={paddingLeft} y1={paddingTop + innerHeight} x2={paddingLeft + innerWidth} y2={paddingTop + innerHeight} stroke="var(--color-outline)" strokeWidth="1" />
+
+        {data.map((d, i) => {
+          const barH = getBarHeight(d.totalTransactions);
+          const x = paddingLeft + i * (barWidth + barGap);
+          const y = paddingTop + innerHeight - barH;
+          const isMax = d.hour === busiestHour;
+          return (
+            <g key={d.hour}>
+              {isMax && (
+                <text x={x + barWidth / 2} y={y - 8} fontSize="9" fontWeight="bold" fill="var(--color-success)" textAnchor="middle">
+                  Tersibuk
+                </text>
+              )}
+              <rect
+                x={x}
+                y={y}
+                width={barWidth}
+                height={Math.max(barH, 2)}
+                rx="3"
+                fill={isMax ? 'var(--color-success)' : 'var(--color-primary)'}
+                opacity={isMax ? 1 : 0.85}
+                style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}
+                onMouseEnter={() => setHovered({ x: x + barWidth / 2, y, item: d })}
+                onMouseLeave={() => setHovered(null)}
+              />
+              <text x={x + barWidth / 2} y={paddingTop + innerHeight + 16} fontSize="9" fill="var(--text-secondary)" textAnchor="middle">
+                {String(d.hour).padStart(2, '0')}
+              </text>
+            </g>
+          );
+        })}
+
+        {hovered && (
+          <g transform={`translate(${hovered.x}, ${hovered.y - 12})`} style={{ pointerEvents: 'none' }}>
+            <rect x="-64" y="-40" width="128" height="34" rx="10" fill="var(--color-ink-deep)" />
+            <text x="0" y="-22" fontSize="12" fill="var(--color-canvas)" textAnchor="middle" fontWeight="bold">
+              {hovered.item.totalTransactions} transaksi
+            </text>
+            <text x="0" y="-9" fontSize="10" fill="rgba(255,255,255,0.7)" textAnchor="middle">
+              Jam {String(hovered.item.hour).padStart(2, '0')}:00 WIB
+            </text>
+            <polygon points="-5,-4 5,-4 0,1" fill="var(--color-ink-deep)" />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
 function PriceAlertItem({ alert, targetHpp }: { alert: PriceAlert; targetHpp: number }) {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -444,6 +626,8 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [topMenus, setTopMenus] = useState<TopMenu[]>([]);
   const [monthlySales, setMonthlySales] = useState<MonthlySales[]>([]);
+  const [visitByDay, setVisitByDay] = useState<VisitDayResponse | null>(null);
+  const [visitByHour, setVisitByHour] = useState<VisitHourResponse | null>(null);
   const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -499,6 +683,20 @@ export default function DashboardPage() {
       if (monthlySalesRes.ok) {
         const monthlySalesData = await monthlySalesRes.json();
         setMonthlySales(monthlySalesData);
+      }
+
+      // Fetch pola kunjungan per hari (4 minggu terakhir)
+      const visitByDayRes = await apiFetch('/dashboard/visit-pattern-by-day');
+      if (visitByDayRes.ok) {
+        const visitByDayData = await visitByDayRes.json();
+        setVisitByDay(visitByDayData);
+      }
+
+      // Fetch pola kunjungan per jam (4 minggu terakhir)
+      const visitByHourRes = await apiFetch('/dashboard/visit-pattern-by-hour');
+      if (visitByHourRes.ok) {
+        const visitByHourData = await visitByHourRes.json();
+        setVisitByHour(visitByHourData);
       }
 
       // Fetch all menus to calculate critical margins dynamically on the client
@@ -654,6 +852,30 @@ export default function DashboardPage() {
             <p className="section-desc">Pendapatan per bulan (6 bulan terakhir) — bandingkan bulan mana yang paling ramai.</p>
           </div>
           <MonthlySalesChart data={monthlySales} />
+        </div>
+      )}
+
+      {/* Pola Pengunjung Mingguan — proxy jumlah transaksi selesai, biar Owner tahu hari mana yg perlu disiapin lebih */}
+      {visitByDay && visitByDay.data.length > 0 && (
+        <div className="monthly-sales-section card">
+          <div className="monthly-sales-header">
+            <h2>📅 Pola Pengunjung Mingguan</h2>
+            <p className="section-desc">Rata-rata transaksi per hari (4 minggu terakhir) — {visitByDay.busiestDay.day} paling ramai.</p>
+          </div>
+          <WeeklyPatternChart data={visitByDay.data} busiestDay={visitByDay.busiestDay.day} />
+        </div>
+      )}
+
+      {/* Jam Tersibuk — biar Owner tahu jam berapa perlu siapin karyawan/bahan baku lebih */}
+      {visitByHour && visitByHour.data.length > 0 && (
+        <div className="monthly-sales-section card">
+          <div className="monthly-sales-header">
+            <h2>⏰ Jam Tersibuk</h2>
+            <p className="section-desc">
+              Jumlah transaksi per jam (4 minggu terakhir) — jam {String(visitByHour.busiestHour.hour).padStart(2, '0')}:00 WIB paling sibuk.
+            </p>
+          </div>
+          <HourlyPatternChart data={trimToActiveHourRange(visitByHour.data)} busiestHour={visitByHour.busiestHour.hour} />
         </div>
       )}
 
