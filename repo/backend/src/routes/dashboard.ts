@@ -28,6 +28,43 @@ router.get('/summary', async (req: Request, res: Response) => {
   } catch (e: any) { return res.status(500).json({ error: 'Gagal mengambil ringkasan dashboard.' }); }
 });
 
+// Tren penjualan bulanan (N bulan terakhir, default 6) — untuk grafik "bulan mana yang ramai" di dashboard
+router.get('/monthly-sales', async (req: Request, res: Response) => {
+  try {
+    const months = Math.min(Math.max(parseInt((req.query.months as string) || '6', 10), 1), 24);
+    const now = new Date();
+    const gmt7 = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60 * 1000);
+
+    const results = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const firstDay = new Date(Date.UTC(gmt7.getUTCFullYear(), gmt7.getUTCMonth() - i, 1));
+      const lastDay = new Date(Date.UTC(gmt7.getUTCFullYear(), gmt7.getUTCMonth() - i + 1, 0));
+      const startStr = `${firstDay.getUTCFullYear()}-${String(firstDay.getUTCMonth() + 1).padStart(2, '0')}-01`;
+      const endStr = `${lastDay.getUTCFullYear()}-${String(lastDay.getUTCMonth() + 1).padStart(2, '0')}-${String(lastDay.getUTCDate()).padStart(2, '0')}`;
+      const start = new Date(`${startStr}T00:00:00+07:00`);
+      const end = new Date(`${endStr}T23:59:59.999+07:00`);
+
+      const agg = await prisma.transaction.aggregate({
+        where: { status: TransactionStatus.completed, completedAt: { gte: start, lte: end } },
+        _sum: { totalPrice: true },
+        _count: true,
+      });
+
+      results.push({
+        month: `${firstDay.getUTCFullYear()}-${String(firstDay.getUTCMonth() + 1).padStart(2, '0')}`,
+        label: firstDay.toLocaleDateString('id-ID', { month: 'short', year: 'numeric', timeZone: 'UTC' }),
+        totalRevenue: Number(agg._sum.totalPrice || 0),
+        transactionsCount: agg._count,
+      });
+    }
+
+    return res.json(results);
+  } catch (e: any) {
+    console.error('[monthly-sales]', e);
+    return res.status(500).json({ error: 'Gagal mengambil data penjualan bulanan.' });
+  }
+});
+
 router.get('/top-menus', async (req: Request, res: Response) => {
   try {
     let dateStr = req.query.date as string;

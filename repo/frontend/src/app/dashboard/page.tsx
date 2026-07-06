@@ -22,6 +22,13 @@ interface TopMenu {
   imageUrl?: string | null;
 }
 
+interface MonthlySales {
+  month: string;
+  label: string;
+  totalRevenue: number;
+  transactionsCount: number;
+}
+
 interface CriticalMenu {
   id: string;
   name: string;
@@ -51,11 +58,11 @@ function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baseli
   const uid = useId();
 
   const width = 500;
-  const height = 210;
+  const height = 170;
   const paddingLeft = 50;
   const paddingRight = 60; // Provide enough space on the right for the tooltip
-  const paddingTop = 45; // Provide enough space on the top for the tooltip
-  const paddingBottom = 30;
+  const paddingTop = 40; // Provide enough space on the top for the tooltip
+  const paddingBottom = 26;
   
   const innerWidth = width - paddingLeft - paddingRight;
   const innerHeight = height - paddingTop - paddingBottom;
@@ -113,8 +120,8 @@ function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baseli
   const shadowId = `chart-tooltip-shadow-${uid}`;
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: '100%', overflowX: 'auto' }}>
-      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '400px', overflow: 'visible' }}>
+    <div style={{ position: 'relative', width: '100%', maxWidth: '420px', margin: '0 auto', overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '280px', overflow: 'visible' }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.22" />
@@ -189,6 +196,87 @@ function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baseli
               {new Date(hovered.time).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
             </text>
             <polygon points="-5,-4 5,-4 0,1" fill="var(--color-ink-deep)" />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+function MonthlySalesChart({ data }: { data: MonthlySales[] }) {
+  const [hovered, setHovered] = useState<{ x: number; y: number; item: MonthlySales } | null>(null);
+
+  const width = 500;
+  const height = 240;
+  const paddingLeft = 55;
+  const paddingRight = 20;
+  const paddingTop = 60;
+  const paddingBottom = 30;
+
+  const innerWidth = width - paddingLeft - paddingRight;
+  const innerHeight = height - paddingTop - paddingBottom;
+
+  const maxRevenue = Math.max(...data.map(d => d.totalRevenue), 1);
+  const maxIndex = data.reduce((maxI, d, i, arr) => (d.totalRevenue > arr[maxI].totalRevenue ? i : maxI), 0);
+
+  const barGap = 12;
+  const barWidth = data.length > 0 ? (innerWidth - barGap * (data.length - 1)) / data.length : 0;
+  const getBarHeight = (rev: number) => (maxRevenue > 0 ? (rev / maxRevenue) * innerHeight : 0);
+  const fmtShort = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}jt` : n >= 1_000 ? `${Math.round(n / 1000)}rb` : `${n}`);
+
+  return (
+    <div style={{ position: 'relative', width: '100%', maxWidth: '420px', margin: '0 auto', overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '280px', overflow: 'visible' }}>
+        {/* Y Axis */}
+        <line x1={paddingLeft} y1={paddingTop} x2={paddingLeft} y2={paddingTop + innerHeight} stroke="var(--color-outline)" strokeWidth="1" />
+        <text x={paddingLeft - 8} y={paddingTop + 4} fontSize="10" fill="var(--text-secondary)" textAnchor="end">Rp {fmtShort(maxRevenue)}</text>
+        <text x={paddingLeft - 8} y={paddingTop + innerHeight} fontSize="10" fill="var(--text-secondary)" textAnchor="end">Rp 0</text>
+
+        {/* X Axis */}
+        <line x1={paddingLeft} y1={paddingTop + innerHeight} x2={paddingLeft + innerWidth} y2={paddingTop + innerHeight} stroke="var(--color-outline)" strokeWidth="1" />
+
+        {data.map((d, i) => {
+          const barH = getBarHeight(d.totalRevenue);
+          const x = paddingLeft + i * (barWidth + barGap);
+          const y = paddingTop + innerHeight - barH;
+          const isMax = i === maxIndex && d.totalRevenue > 0;
+          return (
+            <g key={d.month}>
+              {isMax && (
+                <text x={x + barWidth / 2} y={y - 8} fontSize="9" fontWeight="bold" fill="var(--color-success)" textAnchor="middle">
+                  Tertinggi
+                </text>
+              )}
+              <rect
+                x={x}
+                y={y}
+                width={barWidth}
+                height={Math.max(barH, 2)}
+                rx="4"
+                fill={isMax ? 'var(--color-success)' : 'var(--color-primary)'}
+                opacity={isMax ? 1 : 0.85}
+                style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}
+                onMouseEnter={() => setHovered({ x: x + barWidth / 2, y, item: d })}
+                onMouseLeave={() => setHovered(null)}
+              />
+              <text x={x + barWidth / 2} y={paddingTop + innerHeight + 16} fontSize="10" fill="var(--text-secondary)" textAnchor="middle">
+                {d.label.split(' ')[0]}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Tooltip */}
+        {hovered && (
+          <g transform={`translate(${hovered.x}, ${hovered.y - 12})`} style={{ pointerEvents: 'none' }}>
+            <rect x="-72" y="-50" width="144" height="42" rx="10" fill="var(--color-ink-deep)" />
+            <text x="0" y="-32" fontSize="12" fill="var(--color-canvas)" textAnchor="middle" fontWeight="bold">
+              Rp {hovered.item.totalRevenue.toLocaleString('id-ID')}
+            </text>
+            <text x="0" y="-18" fontSize="10" fill="rgba(255,255,255,0.7)" textAnchor="middle">
+              {hovered.item.label} · {hovered.item.transactionsCount} transaksi
+            </text>
+            <polygon points="-5,-8 5,-8 0,-2" fill="var(--color-ink-deep)" />
           </g>
         )}
       </svg>
@@ -355,6 +443,7 @@ function PriceAlertItem({ alert, targetHpp }: { alert: PriceAlert; targetHpp: nu
 export default function DashboardPage() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [topMenus, setTopMenus] = useState<TopMenu[]>([]);
+  const [monthlySales, setMonthlySales] = useState<MonthlySales[]>([]);
   const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -403,6 +492,13 @@ export default function DashboardPage() {
       if (topMenusRes.ok) {
         const topMenusData = await topMenusRes.json();
         setTopMenus(topMenusData);
+      }
+
+      // Fetch tren penjualan 6 bulan terakhir
+      const monthlySalesRes = await apiFetch('/dashboard/monthly-sales?months=6');
+      if (monthlySalesRes.ok) {
+        const monthlySalesData = await monthlySalesRes.json();
+        setMonthlySales(monthlySalesData);
       }
 
       // Fetch all menus to calculate critical margins dynamically on the client
@@ -550,6 +646,17 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Tren Penjualan Bulanan — data asli dari histori transaksi, untuk lihat bulan mana yang ramai */}
+      {monthlySales.length > 0 && (
+        <div className="monthly-sales-section card">
+          <div className="monthly-sales-header">
+            <h2>📈 Tren Penjualan Bulanan</h2>
+            <p className="section-desc">Pendapatan per bulan (6 bulan terakhir) — bandingkan bulan mana yang paling ramai.</p>
+          </div>
+          <MonthlySalesChart data={monthlySales} />
+        </div>
+      )}
+
       {/* Price Alerts Warning Box (FR-16) */}
       {priceAlerts.length > 0 && (
         <div className="price-alerts-section">
@@ -668,6 +775,16 @@ export default function DashboardPage() {
         }
         .summary-banner p {
           line-height: 1.5;
+        }
+        .monthly-sales-header {
+          margin-bottom: 8px;
+        }
+        .monthly-sales-header h2 {
+          font-size: 18px;
+          margin-bottom: 4px;
+        }
+        .monthly-sales-header .section-desc {
+          margin: 0;
         }
         .stat-card {
           position: relative;
