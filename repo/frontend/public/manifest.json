@@ -4,8 +4,8 @@
   "description": "Progressive Web App untuk POS dan Inventarisasi Stok F&B UMKM",
   "start_url": "/pos",
   "display": "standalone",
-  "background_color": "#faf6f0",
-  "theme_color": "#d35400",
+  "background_color": "#F1F4F7",
+  "theme_color": "#0064E0",
   "orientation": "portrait",
   "icons": [
     {

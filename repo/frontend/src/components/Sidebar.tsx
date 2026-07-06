@@ -51,9 +51,7 @@ export default function Sidebar() {
       <div className="sidebar-header">
         <div className="brand-logo-row">
           <div className="brand-icon" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" width="28" height="28">
-              <path d="M160-720v-80h640v80H160Zm0 560v-240h-40v-80l40-200h640l40 200v80h-40v240h-80v-240H560v240H160Zm80-80h240v-160H240v160Z"/>
-            </svg>
+            <img src="/icons/brand-icon.png" alt="SIPI" />
           </div>
           <h1 className="brand-name">SIPI</h1>
         </div>
@@ -104,14 +102,19 @@ export default function Sidebar() {
         .sidebar .brand-icon {
           width: 44px;
           height: 44px;
-          background-color: var(--color-primary);
-          color: #fff;
           border-radius: var(--radius-sm);
           display: flex;
           align-items: center;
           justify-content: center;
+          overflow: hidden;
           box-shadow: 0 4px 12px rgba(0, 100, 224, 0.25);
           flex-shrink: 0;
+        }
+        .sidebar .brand-icon img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
         }
         
         .sidebar .brand-name {

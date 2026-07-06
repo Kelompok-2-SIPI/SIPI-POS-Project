@@ -65,11 +65,8 @@ export default function LoginPage() {
             {/* ── Brand Header ──────────────────────────────────────────────── */}
             <header className="login-brand">
               <div className="brand-logo-row">
-                {/* Storefront icon — SVG inline agar tidak butuh external icon font */}
                 <div className="brand-icon" aria-hidden="true">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" width="28" height="28">
-                    <path d="M160-720v-80h640v80H160Zm0 560v-240h-40v-80l40-200h640l40 200v80h-40v240h-80v-240H560v240H160Zm80-80h240v-160H240v160Z"/>
-                  </svg>
+                  <img src="/icons/brand-icon.png" alt="SIPI" />
                 </div>
                 <h1 className="brand-name">SIPI</h1>
               </div>
@@ -274,14 +271,19 @@ export default function LoginPage() {
         .brand-icon {
           width: 52px;
           height: 52px;
-          background-color: var(--color-primary);
-          color: #fff;
           border-radius: var(--radius-md); /* 16px */
           display: flex;
           align-items: center;
           justify-content: center;
+          overflow: hidden;
           box-shadow: 0 4px 16px rgba(0, 100, 224, 0.3);
           flex-shrink: 0;
+        }
+        .brand-icon img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
         }
         .brand-name {
           font-family: var(--font-jakarta);
