@@ -1,0 +1,5 @@
+# File upload (jangan commit file hasil upload user, cuma struktur foldernya)
+uploads/*
+!uploads/menus
+uploads/menus/*
+!uploads/menus/.gitkeep

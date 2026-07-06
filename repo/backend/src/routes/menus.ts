@@ -1,8 +1,49 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
+import path from 'path';
+import crypto from 'crypto';
 import { prisma } from '../lib/db';
 import { getMenusWithAvailability, recalculateMenuHpp } from '../lib/inventory-helpers';
 
 const router = Router();
+
+// ── Upload gambar menu (disk storage, nama file unik, validasi tipe & ukuran) ──
+const UPLOAD_DIR = path.join(__dirname, '../../uploads/menus');
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${crypto.randomUUID()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(new Error('Format gambar tidak didukung. Gunakan JPEG, PNG, atau WebP.'));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+// Menerima `recipe` sebagai JSON string (multipart/form-data) maupun array (JSON body biasa)
+function parseRecipeField(raw: any): any[] | null {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
@@ -10,13 +51,26 @@ router.get('/', async (_req: Request, res: Response) => {
   } catch (e: any) { return res.status(500).json({ error: 'Gagal mengambil data menu.' }); }
 });
 
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', upload.single('image'), async (req: Request, res: Response) => {
   try {
-    const { name, category, sellingPrice, recipe } = req.body;
+    const { name, category, sellingPrice } = req.body;
     if (!name || !category || sellingPrice === undefined)
       return res.status(400).json({ error: 'Nama, kategori, dan harga jual wajib diisi.' });
-    const menu = await prisma.menu.create({ data: { name, category, sellingPrice: Number(sellingPrice), hpp: 0 } });
-    if (recipe && Array.isArray(recipe)) {
+
+    const imageUrl = req.file ? `/uploads/menus/${req.file.filename}` : undefined;
+
+    const menu = await prisma.menu.create({
+      data: {
+        name,
+        category,
+        sellingPrice: Number(sellingPrice),
+        hpp: 0,
+        ...(imageUrl ? { imageUrl } : {}),
+      },
+    });
+
+    const recipe = parseRecipeField(req.body.recipe);
+    if (recipe) {
       for (const r of recipe) {
         if (!r.ingredientId || !r.qtyUsed) continue;
         await prisma.recipeItem.create({ data: { menuId: menu.id, ingredientId: r.ingredientId, qtyUsed: Number(r.qtyUsed) } });
@@ -27,12 +81,23 @@ router.post('/', async (req: Request, res: Response) => {
   } catch (e: any) { return res.status(500).json({ error: 'Gagal membuat menu baru.' }); }
 });
 
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', upload.single('image'), async (req: Request, res: Response) => {
   try {
     const { name, category, sellingPrice } = req.body;
     if (!name || !category || sellingPrice === undefined)
       return res.status(400).json({ error: 'Nama, kategori, dan harga jual wajib diisi.' });
-    const updated = await prisma.menu.update({ where: { id: req.params.id }, data: { name, category, sellingPrice: Number(sellingPrice) } });
+
+    const data: { name: string; category: string; sellingPrice: number; imageUrl?: string } = {
+      name,
+      category,
+      sellingPrice: Number(sellingPrice),
+    };
+    // Kalau tidak ada file baru diupload, imageUrl lama TIDAK disentuh/dihapus.
+    if (req.file) {
+      data.imageUrl = `/uploads/menus/${req.file.filename}`;
+    }
+
+    const updated = await prisma.menu.update({ where: { id: req.params.id }, data });
     const hpp = await recalculateMenuHpp(req.params.id);
     return res.json({ success: true, menu: { ...updated, hpp } });
   } catch (e: any) { return res.status(500).json({ error: 'Gagal memperbarui menu.' }); }

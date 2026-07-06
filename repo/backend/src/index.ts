@@ -17,6 +17,9 @@ app.use(cors({
   credentials: true,
 }));
 
+// Serve file upload (gambar menu, dll) sebagai static asset
+app.use('/uploads', express.static('uploads'));
+
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/v1/auth', authRouter);
