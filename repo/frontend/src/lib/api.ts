@@ -1,18 +1,30 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
-function getHeaders(extra?: HeadersInit): HeadersInit {
+// Base URL tanpa suffix /api/v1 — dipakai untuk resolve asset statis (mis. /uploads/menus/...)
+// yang di-serve backend di luar prefix API.
+const ASSET_BASE_URL = API_URL.replace(/\/api\/v1\/?$/, '');
+
+export function resolveAssetUrl(path?: string | null): string | null {
+  if (!path) return null;
+  return `${ASSET_BASE_URL}${path}`;
+}
+
+function getHeaders(isFormData: boolean, extra?: HeadersInit): HeadersInit {
   const token = typeof window !== 'undefined' ? localStorage.getItem('sipi_token') : null;
   return {
-    'Content-Type': 'application/json',
+    // Saat body-nya FormData, JANGAN set Content-Type manual — browser yang menentukan
+    // boundary multipart-nya sendiri secara otomatis.
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extra,
   };
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: { ...getHeaders(), ...(options.headers as object) },
+    headers: { ...getHeaders(isFormData), ...(options.headers as object) },
   });
 
   // Global 401 handler

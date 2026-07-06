@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, resolveAssetUrl } from '@/lib/api';
 
 interface MenuItem {
   id: string;
@@ -11,6 +11,7 @@ interface MenuItem {
   sellingPrice: number;
   hpp: number;
   isAvailable: boolean;
+  imageUrl?: string | null;
 }
 
 interface CartItem {
@@ -408,9 +409,13 @@ export default function PosPage() {
                 className={`menu-card ${!menu.isAvailable ? 'disabled' : ''}`}
               >
                 <div className="menu-photo">
-                  <svg width="40" height="40" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
-                    <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
-                  </svg>
+                  {menu.imageUrl ? (
+                    <img src={resolveAssetUrl(menu.imageUrl) || ''} alt={menu.name} />
+                  ) : (
+                    <svg width="40" height="40" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                      <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
+                    </svg>
+                  )}
                   {!menu.isAvailable && <span className="sold-out-badge">Habis</span>}
                 </div>
                 <div className="menu-details">
@@ -689,6 +694,13 @@ export default function PosPage() {
           display: flex;
           align-items: center;
           justify-content: center;
+          overflow: hidden;
+        }
+        .menu-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
         }
         .menu-card.disabled .menu-photo {
           background-color: var(--color-outline);

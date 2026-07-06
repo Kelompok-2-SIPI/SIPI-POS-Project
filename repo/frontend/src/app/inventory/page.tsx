@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, resolveAssetUrl } from '@/lib/api';
 import AiChatWidget from '@/components/AiChatWidget';
 
 interface Ingredient {
@@ -20,6 +20,7 @@ interface MenuItem {
   sellingPrice: number;
   hpp: number;
   isAvailable: boolean;
+  imageUrl?: string | null;
 }
 
 interface RestockItem {
@@ -91,6 +92,8 @@ export default function InventoryPage() {
   const [menuName, setMenuName] = useState('');
   const [menuCategory, setMenuCategory] = useState('');
   const [menuSellingPrice, setMenuSellingPrice] = useState('');
+  const [menuImageFile, setMenuImageFile] = useState<File | null>(null);
+  const [menuImagePreview, setMenuImagePreview] = useState<string | null>(null);
   const [recipeLines, setRecipeLines] = useState<RecipeLine[]>([]);
   const [selectedIngredientToAdd, setSelectedIngredientToAdd] = useState('');
   const [qtyToAdd, setQtyToAdd] = useState('1');
@@ -233,6 +236,8 @@ export default function InventoryPage() {
       setMenuName(menu.name);
       setMenuCategory(menu.category);
       setMenuSellingPrice(menu.sellingPrice.toString());
+      setMenuImageFile(null);
+      setMenuImagePreview(resolveAssetUrl(menu.imageUrl));
       setRecipeLines([]);
       setSelectedIngredientToAdd(ingredients[0]?.id || '');
       setQtyToAdd('1');
@@ -242,9 +247,19 @@ export default function InventoryPage() {
       setMenuName('');
       setMenuCategory('Minuman');
       setMenuSellingPrice('');
+      setMenuImageFile(null);
+      setMenuImagePreview(null);
       setRecipeLines([]);
       setSelectedIngredientToAdd(ingredients[0]?.id || '');
       setQtyToAdd('1');
+    }
+  };
+
+  const handleMenuImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setMenuImageFile(file);
+    if (file) {
+      setMenuImagePreview(URL.createObjectURL(file));
     }
   };
 
@@ -437,15 +452,18 @@ export default function InventoryPage() {
     setError('');
 
     try {
+      const formData = new FormData();
+      formData.append('name', menuName);
+      formData.append('category', menuCategory);
+      formData.append('sellingPrice', String(Number(menuSellingPrice)));
+      formData.append('recipe', JSON.stringify(recipeLines));
+      if (menuImageFile) {
+        formData.append('image', menuImageFile);
+      }
+
       const res = await apiFetch('/menus', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: menuName,
-          category: menuCategory,
-          sellingPrice: Number(menuSellingPrice),
-          recipe: recipeLines
-        }),
+        body: formData,
       });
 
       const data = await res.json();
@@ -472,15 +490,18 @@ export default function InventoryPage() {
     setError('');
 
     try {
-      // 1. Update Menu Details
+      // 1. Update Menu Details (+ gambar kalau ada file baru dipilih)
+      const formData = new FormData();
+      formData.append('name', menuName);
+      formData.append('category', menuCategory);
+      formData.append('sellingPrice', String(Number(menuSellingPrice)));
+      if (menuImageFile) {
+        formData.append('image', menuImageFile);
+      }
+
       const resMenu = await apiFetch(`/menus/${activeMenu.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: menuName,
-          category: menuCategory,
-          sellingPrice: Number(menuSellingPrice),
-        }),
+        body: formData,
       });
 
       if (!resMenu.ok) {
@@ -734,9 +755,20 @@ export default function InventoryPage() {
             menus.map((menu) => (
               <div key={menu.id} className="menu-card">
                 <div className="menu-card-header">
-                  <div className="menu-meta">
-                    <h3>{menu.name}</h3>
-                    <span className="badge badge-success">{menu.category}</span>
+                  <div className="menu-meta-group">
+                    <div className="menu-thumb">
+                      {menu.imageUrl ? (
+                        <img src={resolveAssetUrl(menu.imageUrl) || ''} alt={menu.name} />
+                      ) : (
+                        <svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                          <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
+                        </svg>
+                      )}
+                    </div>
+                    <div className="menu-meta">
+                      <h3>{menu.name}</h3>
+                      <span className="badge badge-success">{menu.category}</span>
+                    </div>
                   </div>
                   {!menu.isAvailable && (
                     <span className="badge badge-danger">
@@ -1093,6 +1125,31 @@ export default function InventoryPage() {
             {/* Menu Edit & Recipe mapping form (OQ-4 / Recipe Setter) */}
             {(modalType === 'edit-menu' || modalType === 'create-menu') && (
               <form onSubmit={modalType === 'edit-menu' ? submitEditMenu : submitCreateMenu}>
+                <div className="form-group">
+                  <label className="form-label">Foto Menu</label>
+                  <div className="menu-image-upload">
+                    <div className="menu-image-preview">
+                      {menuImagePreview ? (
+                        <img src={menuImagePreview} alt="Preview menu" />
+                      ) : (
+                        <svg width="28" height="28" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                          <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
+                        </svg>
+                      )}
+                    </div>
+                    <label className="btn btn-secondary menu-image-upload-btn">
+                      {menuImagePreview ? 'Ganti Foto' : 'Pilih Foto'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleMenuImageChange}
+                        disabled={loading}
+                        hidden
+                      />
+                    </label>
+                  </div>
+                </div>
+
                 <div className="form-group">
                   <label className="form-label">Nama Menu</label>
                   <input
@@ -1590,10 +1647,35 @@ export default function InventoryPage() {
           justify-content: space-between;
           align-items: center;
         }
+        .menu-meta-group {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+        }
+        .menu-thumb {
+          width: 56px;
+          height: 56px;
+          flex-shrink: 0;
+          border-radius: var(--radius-md);
+          background-color: var(--color-surface-soft);
+          color: var(--text-tertiary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        .menu-thumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
         .menu-meta {
           display: flex;
           align-items: center;
           gap: 8px;
+          min-width: 0;
         }
         .menu-prices-row {
           display: grid;
@@ -1740,6 +1822,35 @@ export default function InventoryPage() {
           text-align: center;
           color: var(--text-secondary);
           margin: 30px 0;
+        }
+
+        /* Upload Foto Menu */
+        .menu-image-upload {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+        .menu-image-preview {
+          width: 72px;
+          height: 72px;
+          flex-shrink: 0;
+          border-radius: var(--radius-md);
+          background-color: var(--color-surface-soft);
+          color: var(--text-tertiary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          border: 1px solid var(--color-outline);
+        }
+        .menu-image-preview img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+        .menu-image-upload-btn {
+          cursor: pointer;
         }
 
         /* Recipe Builder specifics */
