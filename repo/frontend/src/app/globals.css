@@ -454,6 +454,19 @@ button, .btn {
 .affected-list { list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 4px; }
 .affected-list li { font-size: 12px; color: var(--text-secondary); }
 
+.price-trend-chart {
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 500 / 170; /* harus sama persis dengan viewBox SimpleLineChart */
+  margin: 0 auto;
+}
+.monthly-sales-chart {
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 500 / 240; /* harus sama persis dengan viewBox MonthlySalesChart */
+  margin: 0 auto;
+}
+
 .critical-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
 @media (min-width: 480px) { .critical-grid { grid-template-columns: repeat(2, 1fr); } }
 .critical-card { display: flex; flex-direction: column; gap: 10px; }

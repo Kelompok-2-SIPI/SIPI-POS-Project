@@ -120,7 +120,7 @@ function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baseli
   const shadowId = `chart-tooltip-shadow-${uid}`;
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: '420px', margin: '0 auto', overflowX: 'auto' }}>
+    <div className="price-trend-chart" style={{ position: 'relative', width: '100%' }}>
       <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '280px', overflow: 'visible' }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -225,7 +225,7 @@ function MonthlySalesChart({ data }: { data: MonthlySales[] }) {
   const fmtShort = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}jt` : n >= 1_000 ? `${Math.round(n / 1000)}rb` : `${n}`);
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: '420px', margin: '0 auto', overflowX: 'auto' }}>
+    <div className="monthly-sales-chart" style={{ position: 'relative', width: '100%' }}>
       <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '280px', overflow: 'visible' }}>
         {/* Y Axis */}
         <line x1={paddingLeft} y1={paddingTop} x2={paddingLeft} y2={paddingTop + innerHeight} stroke="var(--color-outline)" strokeWidth="1" />
