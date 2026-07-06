@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/db';
 import { TypeMovement, TransactionStatus, Ingredient } from '@prisma/client';
 import { recalculateAllHppsForIngredient } from '../lib/inventory-helpers';
+import { getMonthlySales, getVisitPatternByDay, getVisitPatternByHour } from '../lib/dashboard-insights';
 import { generateResponse } from '../lib/gemini';
 
 interface ParsedItem {
@@ -93,6 +94,31 @@ export async function handleChat(req: Request, res: Response) {
       .join('\n');
     const criticalMarginText = criticalMarginList || 'Tidak ada';
 
+    // 7b. Reuse service yang sama dipakai dashboard (MonthlySalesChart, Pola Pengunjung Mingguan, Jam Tersibuk)
+    const fmtRp = new Intl.NumberFormat('id-ID');
+    const [monthlySales, visitByDay, visitByHour] = await Promise.all([
+      getMonthlySales(6),
+      getVisitPatternByDay(4),
+      getVisitPatternByHour(4),
+    ]);
+
+    const monthlySalesText = monthlySales
+      .map(m => `- ${m.label}: Rp ${fmtRp.format(m.totalRevenue)} (${m.transactionsCount} transaksi)`)
+      .join('\n');
+    const busiestMonth = monthlySales.reduce((max, m) => (m.totalRevenue > max.totalRevenue ? m : max), monthlySales[0]);
+    const monthlySalesSummary = monthlySales.length > 0
+      ? `Bulan paling tinggi pendapatannya: ${busiestMonth.label} (Rp ${fmtRp.format(busiestMonth.totalRevenue)}).`
+      : 'Belum ada data.';
+
+    const visitByDayText = visitByDay.data
+      .map(d => `- ${d.day}: rata-rata ${d.avgTransactions} transaksi/hari`)
+      .join('\n');
+
+    const visitByHourActive = visitByHour.data.filter(h => h.totalTransactions > 0);
+    const visitByHourText = visitByHourActive
+      .map(h => `- Jam ${String(h.hour).padStart(2, '0')}:00: ${h.totalTransactions} transaksi`)
+      .join('\n');
+
     // 8. Susun system prompt
     const systemPrompt = `Kamu adalah asisten bisnis SIPI untuk UMKM F&B ini.
 Kamu punya DUA kemampuan:
@@ -111,6 +137,18 @@ ${criticalStockText}
 
 === MENU MARGIN KRITIS ===
 ${criticalMarginText}
+
+=== TREN PENJUALAN 6 BULAN TERAKHIR ===
+${monthlySalesText}
+${monthlySalesSummary}
+
+=== POLA PENGUNJUNG MINGGUAN (rata-rata 4 minggu terakhir, proxy jumlah transaksi selesai) ===
+${visitByDayText}
+Hari paling ramai: ${visitByDay.busiestDay.day} (rata-rata ${visitByDay.busiestDay.avgTransactions} transaksi/hari).
+
+=== JAM TERSIBUK (total 4 minggu terakhir, jam operasional saja, proxy jumlah transaksi selesai) ===
+${visitByHourText}
+Jam paling sibuk: ${String(visitByHour.busiestHour.hour).padStart(2, '0')}:00 WIB (${visitByHour.busiestHour.totalTransactions} transaksi).
 
 FORMAT OUTPUT — selalu kembalikan JSON valid:
 {

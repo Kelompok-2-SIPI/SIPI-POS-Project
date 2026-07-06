@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/db';
 import { TransactionStatus } from '@prisma/client';
+import { getMonthlySales, getVisitPatternByDay, getVisitPatternByHour } from '../lib/dashboard-insights';
 
 const router = Router();
 
@@ -31,33 +32,8 @@ router.get('/summary', async (req: Request, res: Response) => {
 // Tren penjualan bulanan (N bulan terakhir, default 6) — untuk grafik "bulan mana yang ramai" di dashboard
 router.get('/monthly-sales', async (req: Request, res: Response) => {
   try {
-    const months = Math.min(Math.max(parseInt((req.query.months as string) || '6', 10), 1), 24);
-    const now = new Date();
-    const gmt7 = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60 * 1000);
-
-    const results = [];
-    for (let i = months - 1; i >= 0; i--) {
-      const firstDay = new Date(Date.UTC(gmt7.getUTCFullYear(), gmt7.getUTCMonth() - i, 1));
-      const lastDay = new Date(Date.UTC(gmt7.getUTCFullYear(), gmt7.getUTCMonth() - i + 1, 0));
-      const startStr = `${firstDay.getUTCFullYear()}-${String(firstDay.getUTCMonth() + 1).padStart(2, '0')}-01`;
-      const endStr = `${lastDay.getUTCFullYear()}-${String(lastDay.getUTCMonth() + 1).padStart(2, '0')}-${String(lastDay.getUTCDate()).padStart(2, '0')}`;
-      const start = new Date(`${startStr}T00:00:00+07:00`);
-      const end = new Date(`${endStr}T23:59:59.999+07:00`);
-
-      const agg = await prisma.transaction.aggregate({
-        where: { status: TransactionStatus.completed, completedAt: { gte: start, lte: end } },
-        _sum: { totalPrice: true },
-        _count: true,
-      });
-
-      results.push({
-        month: `${firstDay.getUTCFullYear()}-${String(firstDay.getUTCMonth() + 1).padStart(2, '0')}`,
-        label: firstDay.toLocaleDateString('id-ID', { month: 'short', year: 'numeric', timeZone: 'UTC' }),
-        totalRevenue: Number(agg._sum.totalPrice || 0),
-        transactionsCount: agg._count,
-      });
-    }
-
+    const months = parseInt((req.query.months as string) || '6', 10);
+    const results = await getMonthlySales(months);
     return res.json(results);
   } catch (e: any) {
     console.error('[monthly-sales]', e);
@@ -65,49 +41,11 @@ router.get('/monthly-sales', async (req: Request, res: Response) => {
   }
 });
 
-// Helper: geser instant UTC transaksi ke "jam dinding" Asia/Jakarta (UTC+7), dibaca lewat getUTC*
-function toJakartaWallClock(date: Date): Date {
-  return new Date(date.getTime() + 7 * 60 * 60 * 1000);
-}
-
-const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-
 // Pola kunjungan per hari (Senin-Minggu), rata-rata dari 4 minggu terakhir — proxy pakai jumlah transaksi selesai
 router.get('/visit-pattern-by-day', async (_req: Request, res: Response) => {
   try {
-    const weeks = 4;
-    const now = new Date();
-    const nowJakarta = toJakartaWallClock(now);
-    // Akhir periode: akhir hari ini (waktu Jakarta), awal: 28 hari sebelumnya jam 00:00 Jakarta
-    const endJakartaMidnight = Date.UTC(nowJakarta.getUTCFullYear(), nowJakarta.getUTCMonth(), nowJakarta.getUTCDate() + 1); // esok 00:00 Jakarta (exclusive)
-    const startJakartaMidnight = endJakartaMidnight - weeks * 7 * 24 * 60 * 60 * 1000;
-    const start = new Date(startJakartaMidnight - 7 * 60 * 60 * 1000); // balik ke UTC instant
-    const end = new Date(endJakartaMidnight - 7 * 60 * 60 * 1000);
-
-    const txs = await prisma.transaction.findMany({
-      where: { status: TransactionStatus.completed, completedAt: { gte: start, lt: end } },
-      select: { completedAt: true },
-    });
-
-    const countByDay = [0, 0, 0, 0, 0, 0, 0]; // index 0 = Senin ... 6 = Minggu
-    for (const tx of txs) {
-      if (!tx.completedAt) continue;
-      const jakarta = toJakartaWallClock(tx.completedAt);
-      const jsDay = jakarta.getUTCDay(); // 0 = Minggu
-      const idx = (jsDay + 6) % 7; // 0 = Senin ... 6 = Minggu
-      countByDay[idx]++;
-    }
-
-    const result = DAY_NAMES.map((day, idx) => ({
-      day,
-      totalTransactions: countByDay[idx],
-      avgTransactions: Math.round((countByDay[idx] / weeks) * 100) / 100,
-    }));
-
-    let busiestDay = result[0];
-    for (const r of result) if (r.avgTransactions > busiestDay.avgTransactions) busiestDay = r;
-
-    return res.json({ weeksAnalyzed: weeks, startDate: start.toISOString(), endDate: end.toISOString(), data: result, busiestDay: { day: busiestDay.day, avgTransactions: busiestDay.avgTransactions } });
+    const result = await getVisitPatternByDay(4);
+    return res.json(result);
   } catch (e: any) {
     console.error('[visit-pattern-by-day]', e);
     return res.status(500).json({ error: 'Gagal mengambil pola kunjungan per hari.' });
@@ -117,32 +55,8 @@ router.get('/visit-pattern-by-day', async (_req: Request, res: Response) => {
 // Pola kunjungan per jam (0-23), total dari 4 minggu terakhir — proxy pakai jumlah transaksi selesai
 router.get('/visit-pattern-by-hour', async (_req: Request, res: Response) => {
   try {
-    const weeks = 4;
-    const now = new Date();
-    const nowJakarta = toJakartaWallClock(now);
-    const endJakartaMidnight = Date.UTC(nowJakarta.getUTCFullYear(), nowJakarta.getUTCMonth(), nowJakarta.getUTCDate() + 1);
-    const startJakartaMidnight = endJakartaMidnight - weeks * 7 * 24 * 60 * 60 * 1000;
-    const start = new Date(startJakartaMidnight - 7 * 60 * 60 * 1000);
-    const end = new Date(endJakartaMidnight - 7 * 60 * 60 * 1000);
-
-    const txs = await prisma.transaction.findMany({
-      where: { status: TransactionStatus.completed, completedAt: { gte: start, lt: end } },
-      select: { completedAt: true },
-    });
-
-    const countByHour = new Array(24).fill(0);
-    for (const tx of txs) {
-      if (!tx.completedAt) continue;
-      const jakarta = toJakartaWallClock(tx.completedAt);
-      countByHour[jakarta.getUTCHours()]++;
-    }
-
-    const result = countByHour.map((count, hour) => ({ hour, totalTransactions: count }));
-
-    let busiestHour = result[0];
-    for (const r of result) if (r.totalTransactions > busiestHour.totalTransactions) busiestHour = r;
-
-    return res.json({ weeksAnalyzed: weeks, startDate: start.toISOString(), endDate: end.toISOString(), data: result, busiestHour: { hour: busiestHour.hour, totalTransactions: busiestHour.totalTransactions } });
+    const result = await getVisitPatternByHour(4);
+    return res.json(result);
   } catch (e: any) {
     console.error('[visit-pattern-by-hour]', e);
     return res.status(500).json({ error: 'Gagal mengambil pola kunjungan per jam.' });
