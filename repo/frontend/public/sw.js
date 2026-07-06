@@ -3,7 +3,6 @@ const ASSETS_TO_CACHE = [
   '/login',
   '/pos',
   '/inventory',
-  '/restock',
   '/dashboard',
   '/manifest.json',
   '/icons/icon-192x192.png',
