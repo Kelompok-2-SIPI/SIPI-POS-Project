@@ -38,13 +38,13 @@ router.get('/top-menus', async (req: Request, res: Response) => {
       dateStr = gmt7.toISOString().split('T')[0];
     }
     const start = new Date(`${dateStr}T00:00:00+07:00`), end = new Date(`${dateStr}T23:59:59.999+07:00`);
-    const items = await prisma.transactionItem.findMany({ where: { transaction: { status: TransactionStatus.completed, completedAt: { gte: start, lte: end } } }, select: { menuId: true, menuName: true, qty: true, unitPrice: true } });
-    const agg: Record<string, { menuName: string; qty: number; totalSales: number }> = {};
+    const items = await prisma.transactionItem.findMany({ where: { transaction: { status: TransactionStatus.completed, completedAt: { gte: start, lte: end } } }, select: { menuId: true, menuName: true, qty: true, unitPrice: true, menu: { select: { imageUrl: true } } } });
+    const agg: Record<string, { menuName: string; qty: number; totalSales: number; imageUrl: string | null }> = {};
     for (const item of items) {
-      if (!agg[item.menuId]) agg[item.menuId] = { menuName: item.menuName, qty: 0, totalSales: 0 };
+      if (!agg[item.menuId]) agg[item.menuId] = { menuName: item.menuName, qty: 0, totalSales: 0, imageUrl: item.menu?.imageUrl ?? null };
       agg[item.menuId].qty += item.qty; agg[item.menuId].totalSales += Number(item.unitPrice) * item.qty;
     }
-    return res.json(Object.entries(agg).map(([id, d]) => ({ id, name: d.menuName, quantitySold: d.qty, totalSales: d.totalSales })).sort((a, b) => b.quantitySold - a.quantitySold).slice(0, limit));
+    return res.json(Object.entries(agg).map(([id, d]) => ({ id, name: d.menuName, quantitySold: d.qty, totalSales: d.totalSales, imageUrl: d.imageUrl })).sort((a, b) => b.quantitySold - a.quantitySold).slice(0, limit));
   } catch (e: any) { return res.status(500).json({ error: 'Gagal mengambil menu terlaris.' }); }
 });
 

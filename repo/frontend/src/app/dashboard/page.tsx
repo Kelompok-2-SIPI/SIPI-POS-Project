@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useId } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, resolveAssetUrl } from '@/lib/api';
 import AiChatWidget from '@/components/AiChatWidget';
 import LaporanRangeSection from '@/components/LaporanRangeSection';
 
@@ -19,6 +19,7 @@ interface TopMenu {
   name: string;
   quantitySold: number;
   totalSales: number;
+  imageUrl?: string | null;
 }
 
 interface CriticalMenu {
@@ -583,9 +584,13 @@ export default function DashboardPage() {
                 <div key={menu.id} className="top-menu-row">
                   <div className="top-menu-left">
                     <div className="top-menu-photo">
-                      <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
-                        <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
-                      </svg>
+                      {menu.imageUrl ? (
+                        <img src={resolveAssetUrl(menu.imageUrl) || ''} alt={menu.name} />
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                          <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
+                        </svg>
+                      )}
                       <span className="top-rank">{idx + 1}</span>
                     </div>
                     <div className="top-menu-info">
@@ -671,6 +676,13 @@ export default function DashboardPage() {
           display: flex;
           align-items: center;
           justify-content: center;
+          overflow: hidden;
+        }
+        .top-menu-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
         }
         .top-menu-photo .top-rank {
           position: absolute;
