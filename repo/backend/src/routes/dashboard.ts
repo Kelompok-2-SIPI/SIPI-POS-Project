@@ -67,7 +67,7 @@ router.get('/price-alerts', async (_req: Request, res: Response) => {
       if (!baseline) continue;
       const baselinePrice = Number(baseline.price); if (baselinePrice <= 0) continue;
       const increaseRatio = (currentPrice - baselinePrice) / baselinePrice;
-      if (increaseRatio > 0.20) alerts.push({ ingredientId: ing.id, ingredientName: ing.name, baselinePrice, currentPrice, increasePercent: increaseRatio * 100, affectedMenus: ing.recipes.map(r => ({ menuId: r.menu.id, menuName: r.menu.name, currentHpp: Number(r.menu.hpp) })) });
+      if (increaseRatio > 0.20) alerts.push({ ingredientId: ing.id, ingredientName: ing.name, baselinePrice, currentPrice, increasePercent: increaseRatio * 100, affectedMenus: ing.recipes.map(r => ({ menuId: r.menu.id, menuName: r.menu.name, currentHpp: Number(r.menu.hpp), sellingPrice: Number(r.menu.sellingPrice) })) });
     }
     return res.json(alerts);
   } catch (e: any) { return res.status(500).json({ error: 'Gagal mengambil data peringatan harga.' }); }

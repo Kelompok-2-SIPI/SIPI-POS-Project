@@ -36,7 +36,7 @@ interface PriceAlert {
   baselinePrice: number;
   currentPrice: number;
   increasePercent: number;
-  affectedMenus: { menuId: string; menuName: string; currentHpp: number }[];
+  affectedMenus: { menuId: string; menuName: string; currentHpp: number; sellingPrice: number }[];
 }
 
 interface PriceHistory {
@@ -196,7 +196,7 @@ function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baseli
   );
 }
 
-function PriceAlertItem({ alert }: { alert: PriceAlert }) {
+function PriceAlertItem({ alert, targetHpp }: { alert: PriceAlert; targetHpp: number }) {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -252,13 +252,27 @@ function PriceAlertItem({ alert }: { alert: PriceAlert }) {
       </p>
       {alert.affectedMenus.length > 0 && (
         <div className="affected-menus">
-          <span className="sub-label">Menu Terdampak:</span>
+          <span className="sub-label">Menu Terdampak &amp; Rekomendasi Harga:</span>
           <ul className="affected-list">
-            {alert.affectedMenus.map((menu, mIdx) => (
-              <li key={mIdx}>
-                {menu.menuName} (HPP baru: Rp {menu.currentHpp.toLocaleString('id-ID')})
-              </li>
-            ))}
+            {alert.affectedMenus.map((menu, mIdx) => {
+              const recPrice = targetHpp > 0
+                ? Math.ceil((menu.currentHpp / (targetHpp / 100)) / 1000) * 1000
+                : 0;
+              return (
+                <li key={mIdx}>
+                  <div className="affected-menu-row">
+                    <span>{menu.menuName}</span>
+                    <span>HPP baru: Rp {menu.currentHpp.toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="affected-menu-rec">
+                    Rekomendasi harga baru: <strong>Rp {recPrice.toLocaleString('id-ID')}</strong>
+                    {menu.sellingPrice > 0 && (
+                      <span className="affected-menu-rec-note"> (saat ini Rp {menu.sellingPrice.toLocaleString('id-ID')}, target HPP {targetHpp}%)</span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -305,6 +319,23 @@ function PriceAlertItem({ alert }: { alert: PriceAlert }) {
           display: inline-flex;
           align-items: center;
           gap: 4px;
+        }
+        .affected-list li {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .affected-menu-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .affected-menu-rec {
+          color: var(--color-success);
+        }
+        .affected-menu-rec-note {
+          color: var(--text-tertiary);
+          font-weight: 400;
         }
         .alert-history-chart {
           margin-top: 12px;
@@ -525,7 +556,7 @@ export default function DashboardPage() {
           <h2>⚠️ Kenaikan Harga Bahan Baku ({priceAlerts.length})</h2>
           <div className="alerts-list">
             {priceAlerts.map((alert, idx) => (
-              <PriceAlertItem key={idx} alert={alert} />
+              <PriceAlertItem key={idx} alert={alert} targetHpp={targetHpp} />
             ))}
           </div>
         </div>
