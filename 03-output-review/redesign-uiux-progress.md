@@ -3,7 +3,7 @@
 **Pemilik branch:** Janu (jaenu-dev)
 **Periode pengerjaan:** 5–6 Juli 2026
 **Basis desain:** `repo/DESIGN.md` (SIPI Modern Merchant) + `repo/AGENTS-UIUX.md` (guardrail eksekusi) + mockup Stitch di `02-design/stitch-janu/`
-**Total commit di branch ini:** 22 commit sejak diverge dari `main` (19 di antaranya redesign UI/UX oleh Janu, 3 commit `feat`/`fix` AI Chatbot & dashboard chart dari rekan tim — `FiveUII` — hasil merge `origin/main`).
+**Total commit di branch ini:** 26 commit sejak diverge dari `main` (23 di antaranya redesign UI/UX + fitur baru oleh Janu, 3 commit `feat`/`fix` AI Chatbot & dashboard chart dari rekan tim — `FiveUII` — hasil merge `origin/main`).
 
 Dokumen ini merangkum seluruh pekerjaan redesign yang sudah dilakukan di branch ini, tahap per tahap, supaya mudah direview atau dilanjutkan.
 
@@ -27,6 +27,10 @@ Dokumen ini merangkum seluruh pekerjaan redesign yang sudah dilakukan di branch 
 | — | Brand & PWA | `ae6fd95` | `login`, `Sidebar`, `layout.tsx`, `manifest.json` | Ganti logo, fix `theme_color` stale + bug `themeColor`/`viewport` Next.js metadata |
 | — | Upload Gambar Menu (Backend) | `399fe8b` | `backend/routes/menus.ts`, `index.ts` | Endpoint multipart upload gambar menu via `multer` |
 | — | Upload Gambar Menu (Frontend) | `a18bdec` | `inventory/page.tsx`, `pos/page.tsx`, `lib/api.ts` | Form upload + preview, tampilkan gambar asli di grid POS & Menu/Resep |
+| — | Fix Gambar Menu Terlaris | `a028a3a` | `backend/routes/dashboard.ts`, `dashboard/page.tsx` | `/top-menus` tidak pernah join ke tabel Menu — `imageUrl` tidak sampai ke frontend padahal sudah tampil di POS/Menu-Resep |
+| — | Rekomendasi Harga di Price Alert | `ff7107d` | `backend/routes/dashboard.ts`, `dashboard/page.tsx` | `/price-alerts` kirim `sellingPrice`, frontend hitung rekomendasi harga baru per menu terdampak (rumus sama seperti Margin Kritis) |
+| — | Grafik Tren Penjualan Bulanan | `6f33d35` | `backend/routes/dashboard.ts`, `dashboard/page.tsx` | Endpoint `/monthly-sales` baru + bar chart SVG custom, highlight bulan tertinggi, hover tooltip |
+| — | Fix Ukuran Chart Dashboard | *(belum di-commit)* | `dashboard/page.tsx`, `globals.css` | Perbaikan berlapis ukuran `SimpleLineChart` & `MonthlySalesChart` di desktop — lihat detail di bawah |
 
 ---
 
@@ -91,6 +95,24 @@ Ganti logo di Login & Sidebar dari SVG storefront generik ke `brand-icon.png` (a
 - Grid POS & Menu/Resep: tampilkan `<img>` asli kalau `menu.imageUrl` ada, fallback ke placeholder ikon garpu-pisau kalau tidak. (Card Menu/Resep sebelumnya tidak punya elemen foto sama sekali — jadi ditambahkan baru, bukan sekadar diganti.)
 - Diuji end-to-end: edit menu asli → upload gambar → preview tampil sebelum submit → submit → gambar muncul benar di grid POS **dan** Menu/Resep, menu lain tanpa gambar tetap fallback.
 
+### Fix Gambar Menu Terlaris (`a028a3a`)
+Setelah fitur upload gambar menu selesai, gambar sudah muncul benar di grid POS & Menu/Resep tapi **tetap placeholder** di "Menu Terlaris Hari Ini" (Dashboard). Root cause: endpoint `/dashboard/top-menus` menghitung ranking murni dari agregasi `TransactionItem` (qty, harga), **tidak pernah join ke tabel `Menu`**, jadi `imageUrl` memang tidak pernah dikirim ke frontend. Fix: tambah `select: { menu: { select: { imageUrl: true } } }` di query, teruskan ke response. Kalkulasi ranking/qty/totalSales tidak diubah.
+
+### Rekomendasi Harga di Price Alert (`ff7107d`)
+Card "Kenaikan Harga Bahan Baku" awalnya cuma menampilkan HPP baru per menu terdampak, tanpa rekomendasi harga jual baru (padahal section Margin Kritis sudah punya fitur ini). Backend `/price-alerts` ditambah `sellingPrice` per menu terdampak; frontend hitung rekomendasi pakai **rumus yang sama persis** dengan Margin Kritis (`Math.ceil((hpp / (targetHpp/100)) / 1000) * 1000`), supaya konsisten satu aplikasi.
+
+### Grafik Tren Penjualan Bulanan (`6f33d35`)
+Fitur baru: bar chart SVG custom (`MonthlySalesChart`, konsisten gaya dengan `SimpleLineChart`) menampilkan pendapatan 6 bulan terakhir dari data transaksi asli (9.134 transaksi historis Jan–Jul 2026 di database), bulan dengan pendapatan tertinggi di-highlight hijau + label "Tertinggi", hover tooltip menampilkan revenue & jumlah transaksi asli. Endpoint baru `GET /dashboard/monthly-sales?months=N` (default 6) agregasi `prisma.transaction.aggregate` per bulan, pakai konvensi timezone GMT+7 yang sama seperti endpoint lain di file ini.
+
+### Fix Ukuran Chart Dashboard (belum di-commit)
+Setelah chart bulanan ditambahkan, muncul masalah ukuran berlapis di kedua chart SVG (`SimpleLineChart` "Tren Harga" dan `MonthlySalesChart` "Tren Penjualan Bulanan") — diselesaikan lewat beberapa iterasi:
+1. **Bar chart kepotong/gepeng:** tinggi area & padding-top diperbesar supaya tooltip hover dan label "Tertinggi" tidak lagi tabrakan/kepotong di ujung atas chart.
+2. **Chart melebar/meninggi berlebihan di desktop:** div pembungkus tadinya `width/height="100%"` tanpa batas, jadi tinggi ikut membesar proporsional mengikuti lebar card yang bisa >1000px di desktop. Diperbaiki dengan `className` (`price-trend-chart` / `monthly-sales-chart`) + CSS `aspect-ratio` yang match persis rasio `viewBox` masing-masing (500:170 dan 500:240), supaya rasio tampilan selalu konsisten di semua lebar layar, bukan tebak-tebak `min-height` px yang sempat salah (tidak match rasio asli, tetap menyebabkan letterbox).
+3. **Bug tersembunyi #1 — CSS stale di dev server:** setelah rule `aspect-ratio` ditambah/diubah beberapa kali, Turbopack **tidak selalu meng-compile ulang `globals.css`** — CSS baru sempat hilang total dari bundle yang ter-serve ke browser (dikonfirmasi lewat inspeksi langsung file CSS terserve, bukan cuma baca source). Sama seperti bug caching metadata Next.js sebelumnya, solusinya `docker restart sipi_frontend`.
+4. **Bug tersembunyi #2 — inline style menang atas CSS class:** div pembungkus `SimpleLineChart` masih punya inline `style={{ maxWidth: '100%' }}` sisa dari instruksi sebelumnya. Inline style **selalu menang** atas `max-width` di CSS class manapun (spesifisitas inline > stylesheet), jadi walau CSS sudah benar, chart tetap melebar penuh. Fix: hapus inline `maxWidth` supaya CSS class (`max-width: 640px`, disamakan dengan chart penjualan bulanan) yang berlaku.
+
+Kedua chart sekarang: `max-width: 640px`, `aspect-ratio` sesuai `viewBox` asli masing-masing, sejajar & seukuran di semua breakpoint. Logic perhitungan data (`getX`, `getY`, `chartPoints`, `buildSmoothLinePath`, agregasi bar) tidak disentuh sama sekali di seluruh proses ini — murni CSS/JSX presentasional.
+
 ---
 
 ## Bug Lama yang Ditemukan & Diperbaiki Sepanjang Proses
@@ -103,6 +125,9 @@ Beberapa pola bug berulang ditemukan di banyak tahap berbeda (sisa dari tema lam
 4. **Blok `<style>` mati** — di `pos/page.tsx`, seluruh CSS custom sempat dibungkus `{false && <style>...}` sehingga styling aktual diam-diam bergantung pada `globals.css` versi lama.
 5. **`themeColor`/`viewport` salah tempat** — di `layout.tsx`, tidak pernah benar-benar ter-render sebagai meta tag karena diletakkan di `metadata` bukan `viewport` (API Next.js versi terbaru).
 6. **Tab content bocor** — grid bahan baku sempat tidak ter-scope ke kondisi tab yang benar di Inventaris.
+7. **Endpoint agregasi tidak join ke tabel Menu** — `/dashboard/top-menus` melewatkan `imageUrl` karena cuma agregasi `TransactionItem`, tidak pernah `include`/`select` relasi `Menu`.
+8. **Dev server (Turbopack) CSS stale** — perubahan `globals.css` kadang tidak ter-compile ulang ke bundle yang diserve, butuh restart container penuh untuk memastikan CSS baru benar-benar berlaku (bukan cuma cek source file).
+9. **Inline style mengalahkan CSS class** — `style={{ maxWidth: ... }}` inline pada elemen JSX selalu menang atas rule `max-width` di stylesheet manapun (spesifisitas inline lebih tinggi), gampang lupa saat sebelumnya sempat diminta "lepas batasan lebar" lalu belakangan mau dibatasi lagi lewat CSS class.
 
 ---
 
