@@ -14,12 +14,27 @@ interface ParsedItem {
   new_price?: number;
 }
 
+// Bentuk resep yang dikembalikan aiController.ts untuk action_type "recipe" — field-nya
+// beda dari ParsedItem (restock): ingredientName/qtyUsed, bukan name/qty.
+interface ParsedRecipeIngredient {
+  ingredientId: string;
+  ingredientName: string;
+  qtyUsed: number;
+  unit: string;
+}
+
+interface ParsedRecipe {
+  menu_name: string;
+  ingredients: ParsedRecipeIngredient[];
+}
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'ai' | 'system';
   text: string;
   type?: 'answer' | 'confirmation';
   parsed_items?: ParsedItem[];
+  parsed_recipe?: ParsedRecipe;
   actionConfirmed?: boolean | null;
 }
 
@@ -102,6 +117,7 @@ export default function AiChatWidget() {
         text: data.message,
         type: data.type,
         parsed_items: data.parsed_items,
+        parsed_recipe: data.parsed_recipe,
         actionConfirmed: null,
       };
 
@@ -143,13 +159,20 @@ export default function AiChatWidget() {
       }
 
       if (confirmed && data.success) {
-        const updatedList = data.updated?.map((item: any) => 
-          `✅ ${item.name}: +${item.qty_added} | harga baru Rp ${item.new_price}`
-        ).join('\n') || '✅ Aksi berhasil dieksekusi.';
+        // Bentuk response beda per action_type: restock -> data.updated, recipe -> data.recipe/menu/hpp
+        let resultText = '✅ Aksi berhasil dieksekusi.';
+        if (data.updated) {
+          resultText = data.updated.map((item: any) =>
+            `✅ ${item.name}: +${item.qty_added} | harga baru Rp ${item.new_price}`
+          ).join('\n');
+        } else if (data.recipe) {
+          const recipeList = data.recipe.map((item: any) => `${item.qty}${item.unit} ${item.name}`).join(', ');
+          resultText = `✅ Resep menu "${data.menu}" berhasil diperbarui: ${recipeList}. HPP baru: Rp ${Number(data.hpp).toLocaleString('id-ID')}`;
+        }
 
         setMessages((prev) => [
           ...prev,
-          { id: Date.now().toString(), role: 'system', text: updatedList }
+          { id: Date.now().toString(), role: 'system', text: resultText }
         ]);
 
         // Beritahu seluruh halaman (Inventory, Dashboard, POS) untuk refresh data mereka
@@ -270,17 +293,22 @@ export default function AiChatWidget() {
                     <p style={{ margin: 0 }}>{msg.text}</p>
                   )}
 
-                  {msg.type === 'confirmation' && msg.parsed_items && (
+                  {msg.type === 'confirmation' && (msg.parsed_items || msg.parsed_recipe) && (
                     <div style={{ marginTop: '10px', padding: '12px', backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.05)' }}>
                       <p style={{ margin: '0 0 8px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--text-primary, #333)' }}>Detail Eksekusi:</p>
                       <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.85rem', color: 'var(--text-primary, #333)' }}>
-                        {msg.parsed_items.map((item, idx) => (
+                        {msg.parsed_items && msg.parsed_items.map((item, idx) => (
                           <li key={idx}>
                             {item.name} - {item.qty || item.qty_added}{item.unit} @ Rp {item.price_per_unit || item.new_price}/{item.unit}
                           </li>
                         ))}
+                        {msg.parsed_recipe && msg.parsed_recipe.ingredients.map((item, idx) => (
+                          <li key={idx}>
+                            {item.qtyUsed}{item.unit} {item.ingredientName}
+                          </li>
+                        ))}
                       </ul>
-                      
+
                       {msg.actionConfirmed === null && (
                         <div style={{ display: 'flex', gap: '8px', marginTop: '15px' }}>
                           <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => confirmAction(msg.id, true)} disabled={isLoading}>Ya, Lanjutkan</button>
