@@ -110,28 +110,17 @@ function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baseli
   const getX = (t: number) => paddingLeft + ((t - timeStart) / timeRange) * innerWidth;
   const getY = (p: number) => paddingTop + innerHeight - (((p - displayMin) / displayRange) * innerHeight);
 
-  // Titik layar (px) dari chartPoints — dipakai untuk menggambar kurva halus, bukan garis lurus.
+  // Titik layar (px) dari chartPoints — dipakai untuk menggambar garis lurus antar titik.
   const screenPoints = chartPoints.map(d => ({ x: getX(d.time), y: getY(d.price) }));
 
-  // Kurva halus lewat tiap titik data (quadratic bezier via titik tengah antar titik) — murni presentasi,
-  // tidak mengubah perhitungan getX/getY/data asli sama sekali.
-  const buildSmoothLinePath = (pts: { x: number; y: number }[]) => {
+  // Garis lurus segmen-per-segmen (polyline) — setiap titik data selalu pas persis di
+  // garis, tidak ada overshoot di puncak/lembah seperti pendekatan kurva halus sebelumnya.
+  const buildStraightLinePath = (pts: { x: number; y: number }[]) => {
     if (pts.length === 0) return '';
-    if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
-    let d = `M ${pts[0].x} ${pts[0].y}`;
-    for (let i = 1; i < pts.length; i++) {
-      const prev = pts[i - 1];
-      const curr = pts[i];
-      const midX = (prev.x + curr.x) / 2;
-      const midY = (prev.y + curr.y) / 2;
-      d += ` Q ${prev.x} ${prev.y} ${midX} ${midY}`;
-    }
-    const last = pts[pts.length - 1];
-    d += ` L ${last.x} ${last.y}`;
-    return d;
+    return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
   };
 
-  const linePath = buildSmoothLinePath(screenPoints);
+  const linePath = buildStraightLinePath(screenPoints);
   const bottomY = paddingTop + innerHeight;
   const firstX = screenPoints[0]?.x ?? paddingLeft;
   const lastX = screenPoints[screenPoints.length - 1]?.x ?? paddingLeft;
@@ -175,7 +164,7 @@ function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baseli
         {/* Gradient fill tipis di bawah kurva */}
         <path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
 
-        {/* Kurva harga (smooth, bukan garis lurus) */}
+        {/* Garis harga (lurus antar titik data, bukan kurva halus) */}
         <path
           d={linePath}
           fill="none"
