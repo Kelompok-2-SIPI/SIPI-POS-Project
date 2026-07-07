@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
@@ -10,8 +10,19 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Pesan sukses dari halaman registrasi (dititipkan lewat sessionStorage, bukan
+  // auto-login) — dibaca sekali lalu dihapus supaya tidak muncul lagi di kunjungan berikutnya.
+  useEffect(() => {
+    const registeredBusiness = sessionStorage.getItem('sipi_register_success');
+    if (registeredBusiness) {
+      setSuccessMessage(`Akun & bisnis "${registeredBusiness}" berhasil dibuat! Silakan login untuk melanjutkan. Data masih kosong — lengkapi Bahan Baku dan Menu & Resep dulu di Inventaris sebelum memakai Kasir (POS).`);
+      sessionStorage.removeItem('sipi_register_success');
+    }
+  }, []);
 
   // ── Logic TIDAK berubah ─────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,14 +48,7 @@ export default function LoginPage() {
         setError(data.error || 'Login gagal. Silakan coba lagi.');
       }
     } catch (err) {
-      // Offline fallback: check hardcoded credentials
-      if (name === 'admin' && password === 'sipi123') {
-        localStorage.setItem('sipi_logged_in', 'true');
-        localStorage.setItem('sipi_user', JSON.stringify({ name: 'admin', role: 'owner' }));
-        router.replace('/pos');
-      } else {
-        setError('Login offline gagal. Pastikan username/password benar.');
-      }
+      setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
     } finally {
       setLoading(false);
     }
@@ -73,6 +77,16 @@ export default function LoginPage() {
               </div>
               <p className="brand-tagline">Sistem Informasi POS &amp; Inventaris F&amp;B</p>
             </header>
+
+            {/* ── Success Alert (dari halaman registrasi) ─────────────────────── */}
+            {successMessage && (
+              <div className="success-alert" role="status">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" width="16" height="16" aria-hidden="true" className="alert-icon">
+                  <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" />
+                </svg>
+                <span>{successMessage}</span>
+              </div>
+            )}
 
             {/* ── Error Alert ───────────────────────────────────────────────── */}
             {error && (
@@ -176,14 +190,6 @@ export default function LoginPage() {
 
             {/* ── Footer ────────────────────────────────────────────────────── */}
             <footer className="login-footer">
-              <div className="divider-row">
-                <span className="divider-line" />
-                <span className="divider-label">Mode offline tersedia</span>
-                <span className="divider-line" />
-              </div>
-              <p className="footer-hint">
-                Gunakan username <strong>admin</strong> / password <strong>sipi123</strong> saat tidak ada koneksi.
-              </p>
               <p className="footer-hint">
                 Bisnis baru? <Link href="/register" className="footer-link">Daftar di sini</Link>
               </p>
@@ -322,6 +328,20 @@ export default function LoginPage() {
           font-weight: 500;
           line-height: 1.4;
           animation: shake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+        .success-alert {
+          width: 100%;
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          background-color: var(--color-success-light);
+          color: var(--color-success);
+          border: 1px solid rgba(49, 162, 76, 0.25);
+          border-radius: var(--radius-sm); /* 8px */
+          padding: 12px 14px;
+          font-size: var(--font-size-body-sm); /* 14px */
+          font-weight: 500;
+          line-height: 1.4;
         }
         .alert-icon {
           flex-shrink: 0;
@@ -484,21 +504,6 @@ export default function LoginPage() {
           display: flex;
           flex-direction: column;
           gap: 10px;
-        }
-        .divider-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        .divider-line {
-          flex: 1;
-          height: 1px;
-          background-color: var(--color-outline);
-        }
-        .divider-label {
-          font-size: 11px;
-          color: var(--text-tertiary);
-          white-space: nowrap;
         }
         .footer-hint {
           font-size: 12px;
