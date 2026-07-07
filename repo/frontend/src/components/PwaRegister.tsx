@@ -3,10 +3,23 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 
+interface SyncConflictIngredient {
+  ingredientId: string;
+  ingredientName: string;
+  totalNeeded: number;
+  txCount: number;
+}
+
+interface SyncConflictInfo {
+  conflictedCount: number;
+  ingredients: SyncConflictIngredient[];
+}
+
 export default function PwaRegister() {
   const [isOffline, setIsOffline] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
+  const [conflictInfo, setConflictInfo] = useState<SyncConflictInfo | null>(null);
 
   useEffect(() => {
     // 1. Register Service Worker
@@ -71,7 +84,7 @@ export default function PwaRegister() {
       if (data.success) {
         localStorage.removeItem('sipi_offline_transactions');
         setSyncMessage(`Sukses! ${data.syncedCount} transaksi offline tersinkronisasi.`);
-        
+
         // Dispatch custom event to refresh sales data in views
         window.dispatchEvent(new Event('sipi_sync_completed'));
 
@@ -79,6 +92,34 @@ export default function PwaRegister() {
           setSyncMessage('');
           setSyncing(false);
         }, 4000);
+
+        // Konflik stok (butuh review manual Owner) TIDAK dimasukkan ke sync-banner yang
+        // auto-dismiss di atas — dipisah ke modal sendiri yang cuma bisa ditutup manual,
+        // supaya tidak gampang terlewat begitu saja.
+        if (data.hasConflicts) {
+          const conflictedResults = (data.syncedResults || []).filter((r: any) => r.hasConflict);
+          const byIngredient = new Map<string, SyncConflictIngredient>();
+          for (const result of conflictedResults) {
+            for (const c of result.conflicts || []) {
+              const existing = byIngredient.get(c.ingredientId);
+              if (existing) {
+                existing.totalNeeded += c.needed;
+                existing.txCount += 1;
+              } else {
+                byIngredient.set(c.ingredientId, {
+                  ingredientId: c.ingredientId,
+                  ingredientName: c.ingredientName,
+                  totalNeeded: c.needed,
+                  txCount: 1,
+                });
+              }
+            }
+          }
+          setConflictInfo({
+            conflictedCount: data.conflictedCount || conflictedResults.length,
+            ingredients: Array.from(byIngredient.values()),
+          });
+        }
       } else {
         throw new Error(data.error || 'Sinkronisasi gagal');
       }
@@ -103,6 +144,33 @@ export default function PwaRegister() {
         <div className="sync-banner">
           <span className="sync-spinner"></span>
           {syncMessage}
+        </div>
+      )}
+      {conflictInfo && (
+        <div className="bottom-sheet-backdrop sync-conflict-backdrop">
+          <div className="bottom-sheet sync-conflict-sheet">
+            <div className="bottom-sheet-handle"></div>
+            <div className="sync-conflict-header">
+              <span className="sync-conflict-icon">⚠️</span>
+              <h2>Konflik Stok Saat Sinkronisasi</h2>
+            </div>
+            <p className="sync-conflict-desc">
+              {conflictInfo.conflictedCount} transaksi offline tetap tercatat (uang sudah diterima), tapi stok bahan baku berikut sudah tidak cukup saat disinkronkan dan di-set ke 0. Mohon cek &amp; sesuaikan stok bahan baku ini secara manual:
+            </p>
+            <ul className="sync-conflict-list">
+              {conflictInfo.ingredients.map((ing) => (
+                <li key={ing.ingredientId} className="sync-conflict-item">
+                  <span className="sync-conflict-name">{ing.ingredientName}</span>
+                  <span className="sync-conflict-meta">
+                    Kurang {ing.totalNeeded.toFixed(2)} (di {ing.txCount} transaksi)
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <button onClick={() => setConflictInfo(null)} className="btn btn-primary w-full mt-6">
+              Mengerti, saya akan cek stok
+            </button>
+          </div>
         </div>
       )}
       <style jsx global>{`
@@ -165,6 +233,59 @@ export default function PwaRegister() {
         }
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+        .sync-conflict-backdrop {
+          z-index: 10000;
+        }
+        .sync-conflict-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 8px;
+        }
+        .sync-conflict-icon {
+          font-size: 22px;
+          line-height: 1;
+        }
+        .sync-conflict-header h2 {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--color-danger, var(--danger-color, #E41E3F));
+          margin: 0;
+        }
+        .sync-conflict-desc {
+          font-size: 14px;
+          line-height: 1.5;
+          color: var(--text-secondary, #555);
+          margin: 0 0 16px 0;
+        }
+        .sync-conflict-list {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-height: 240px;
+          overflow-y: auto;
+        }
+        .sync-conflict-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 12px;
+          border-radius: var(--radius-sm, 8px);
+          background-color: var(--color-danger-light, var(--danger-light, #FFF0F2));
+        }
+        .sync-conflict-name {
+          font-weight: 600;
+          color: var(--text-primary, #1a1a1a);
+        }
+        .sync-conflict-meta {
+          font-size: 13px;
+          color: var(--color-danger, var(--danger-color, #E41E3F));
+          white-space: nowrap;
         }
       `}</style>
     </>
