@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/db';
 import { TransactionStatus, PaymentMethod, TypeMovement } from '@prisma/client';
 import { completeTransactionInTx } from '../lib/transaction-helpers';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+router.use(authenticate);
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
@@ -76,6 +78,10 @@ router.post('/sync', async (req: Request, res: Response) => {
       try {
         const { items, paymentMethod, createdAt, id: offlineId } = offlineTx;
         if (!items || items.length === 0 || !paymentMethod) throw new Error('Data transaksi tidak lengkap.');
+        // Konflik stok (bahan sudah kepakai transaksi lain selagi perangkat ini offline)
+        // dikumpulkan di sini, di-reset tiap offlineTx — dipakai buat flag ke Owner setelah commit.
+        const conflicts: { ingredientId: string; ingredientName: string; needed: number; availableAtSync: number }[] = [];
+
         const result = await prisma.$transaction(async (tx) => {
           const menus = await tx.menu.findMany({ where: { id: { in: items.map((i: any) => i.menuId) } } });
           let totalPrice = 0, totalHpp = 0;
@@ -90,20 +96,63 @@ router.post('/sync', async (req: Request, res: Response) => {
           }
           const txDate = createdAt ? new Date(createdAt) : new Date();
           const transaction = await tx.transaction.create({ data: { status: TransactionStatus.completed, paymentMethod: paymentMethod as PaymentMethod, totalPrice, totalHpp, cashierId: defaultUser.id, createdAt: txDate, completedAt: txDate, items: { create: itemDataList } }, include: { items: true } });
+
+          // Agregasi kebutuhan per bahan baku dulu (bukan per-recipe), biar 1 bahan baku yang
+          // dipakai >1 menu dalam transaksi yang sama cuma dikurangi sekali secara atomik.
+          const usage: Record<string, { name: string; qty: number }> = {};
           for (const item of transaction.items) {
             const recipes = await tx.recipeItem.findMany({ where: { menuId: item.menuId }, include: { ingredient: true } });
             for (const recipe of recipes) {
               const needed = Number(recipe.qtyUsed) * item.qty;
-              await tx.ingredient.update({ where: { id: recipe.ingredientId }, data: { stockQty: Number(recipe.ingredient.stockQty) - needed } });
-              await tx.stockMovement.create({ data: { ingredientId: recipe.ingredientId, type: TypeMovement.usage, qtyChange: -needed, note: `Transaksi offline #${transaction.id.slice(0, 8)}`, createdBy: defaultUser.id, createdAt: txDate } });
+              if (!usage[recipe.ingredientId]) usage[recipe.ingredientId] = { name: recipe.ingredient.name, qty: 0 };
+              usage[recipe.ingredientId].qty += needed;
             }
           }
+
+          for (const ingredientId in usage) {
+            const need = usage[ingredientId];
+            // Kurangi stok secara ATOMIK (guard `stockQty >= need.qty` di WHERE) — sama seperti
+            // completeTransactionInTx, mencegah race condition antar transaksi/sync bersamaan.
+            const updateResult = await tx.ingredient.updateMany({
+              where: { id: ingredientId, stockQty: { gte: need.qty } },
+              data: { stockQty: { decrement: need.qty } },
+            });
+
+            if (updateResult.count === 0) {
+              // KONFLIK: transaksi offline ini sudah benar-benar terjadi di dunia nyata (uang
+              // sudah diterima Kasir saat itu), jadi TETAP dicatat — tapi stok tidak dipaksa
+              // negatif diam-diam. Stok bahan ini di-floor ke 0, dan ditandai butuh review
+              // manual Owner (lewat response API + StockMovement beranotasi jelas di histori).
+              const current = await tx.ingredient.findUnique({ where: { id: ingredientId } });
+              const availableAtSync = current ? Number(current.stockQty) : 0;
+              if (availableAtSync > 0) {
+                await tx.ingredient.update({ where: { id: ingredientId }, data: { stockQty: 0 } });
+              }
+              await tx.stockMovement.create({
+                data: {
+                  ingredientId,
+                  type: TypeMovement.adjustment,
+                  qtyChange: -availableAtSync,
+                  note: `⚠️ KONFLIK SYNC OFFLINE (transaksi #${transaction.id.slice(0, 8)}): butuh ${need.qty.toFixed(2)} ${need.name}, stok cuma tersisa ${availableAtSync.toFixed(2)} saat sinkron — PERLU REVIEW MANUAL OWNER.`,
+                  createdBy: defaultUser.id,
+                  createdAt: txDate,
+                },
+              });
+              conflicts.push({ ingredientId, ingredientName: need.name, needed: need.qty, availableAtSync });
+            } else {
+              await tx.stockMovement.create({
+                data: { ingredientId, type: TypeMovement.usage, qtyChange: -need.qty, note: `Transaksi offline #${transaction.id.slice(0, 8)}`, createdBy: defaultUser.id, createdAt: txDate },
+              });
+            }
+          }
+
           return transaction;
         });
-        syncedResults.push({ offlineId, onlineId: result.id, success: true });
+        syncedResults.push({ offlineId, onlineId: result.id, success: true, hasConflict: conflicts.length > 0, conflicts });
       } catch (err: any) { errors.push({ offlineId: offlineTx.id, error: err.message || 'Gagal sinkronisasi.' }); }
     }
-    return res.json({ success: true, syncedCount: syncedResults.length, syncedResults, errors });
+    const conflictedResults = syncedResults.filter((r) => r.hasConflict);
+    return res.json({ success: true, syncedCount: syncedResults.length, syncedResults, errors, hasConflicts: conflictedResults.length > 0, conflictedCount: conflictedResults.length });
   } catch (e: any) { return res.status(500).json({ error: 'Terjadi kesalahan saat memproses sinkronisasi.' }); }
 });
 

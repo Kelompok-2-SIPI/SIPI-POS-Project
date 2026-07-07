@@ -1,8 +1,8 @@
 # Ringkasan Perubahan — Branch `redesign/uiux-stitch-janu`
 
 **Base branch:** `main`
-**Commit di branch ini:** 30 commit sejak diverge dari `main`
-**Untuk reviewer:** dokumen ini merangkum SEMUA perbedaan branch ini vs `main` — baik redesign UI/UX, fitur backend baru, maupun perbaikan bug — supaya bisa direview tanpa harus membaca 30 commit satu-satu. Detail teknis tahap-per-tahap redesign UI/UX (dengan commit hash per tahap) sudah ada duluan di [`03-output-review/redesign-uiux-progress.md`](../03-output-review/redesign-uiux-progress.md); dokumen ini melengkapinya dengan pekerjaan sesudahnya (analitik dashboard baru, perluasan AI chatbot, rombak data dummy, cleanup navigasi) plus rangkuman level-tinggi untuk reviewer yang tidak familiar detail per tahap.
+**Commit di branch ini:** 33 commit sejak diverge dari `main`
+**Untuk reviewer:** dokumen ini merangkum SEMUA perbedaan branch ini vs `main` — baik redesign UI/UX, fitur backend baru, maupun perbaikan bug — supaya bisa direview tanpa harus membaca 33 commit satu-satu. Detail teknis tahap-per-tahap redesign UI/UX (dengan commit hash per tahap) sudah ada duluan di [`03-output-review/redesign-uiux-progress.md`](../03-output-review/redesign-uiux-progress.md); dokumen ini melengkapinya dengan pekerjaan sesudahnya (analitik dashboard baru, perluasan AI chatbot, rombak data dummy, cleanup navigasi) plus rangkuman level-tinggi untuk reviewer yang tidak familiar detail per tahap.
 
 > Dibuat via `git log`/`git diff origin/main..HEAD` yang dijalankan langsung — bukan dari ingatan percakapan sebelumnya, supaya akurat.
 
@@ -13,7 +13,7 @@
 Branch ini punya dua gelombang pekerjaan:
 
 1. **Redesign UI/UX total** ("SIPI Modern Merchant") — ganti tema visual dari "Premium Warm Bistro" (oranye/cream) ke tema cobalt biru, redesign semua halaman (Login, POS, Inventaris, Dashboard), tambah shell navigasi desktop (sidebar 280px, sebelumnya cuma ada bottom nav mobile), dan fitur upload gambar menu. **Tidak ada logic bisnis, endpoint API, atau skema database yang diubah** di gelombang ini — murni presentasional kecuali penambahan aditif (upload gambar).
-2. **Fitur analitik & AI baru + data demo realistis** — dashboard dapat 3 insight baru (tren 6 bulan, pola pengunjung mingguan, jam tersibuk), AI chatbot diperluas supaya bisa menjawab pertanyaan soal data historis itu DAN mengatur resep menu lewat percakapan (bukan cuma restock seperti sebelumnya), serta data dummy database di-generate ulang total jadi simulasi 6 bulan yang realistis (bukan random flat) untuk keperluan demo.
+2. **Fitur analitik & AI baru + data demo realistis** — dashboard dapat 3 insight baru (tren 6 bulan, pola pengunjung mingguan, jam tersibuk) plus **1 baris insight/rekomendasi teks dinamis di bawah tiap chart** (bukan cuma angka mentah — kasih tahu Owner "jadi aku harus ngapain"), AI chatbot diperluas supaya bisa menjawab pertanyaan soal data historis itu DAN mengatur resep menu lewat percakapan (bukan cuma restock seperti sebelumnya) DAN sekarang **merender balasannya sebagai Markdown asli** (bold/list, bukan teks mentah dengan tanda bintang), serta data dummy database di-generate ulang total jadi simulasi 6 bulan yang realistis (bukan random flat) untuk keperluan demo.
 
 ---
 
@@ -54,6 +54,31 @@ Data dummy sebelumnya random flat (jumlah transaksi rata-rata sepanjang waktu, t
 
 File yang terdampak: `backend/prisma/seed.ts` (menu & bahan baku dasar diganti total sesuai konsep Ayam Geprek Bu Yuli) dan `backend/prisma/seed-dummy.ts` (simulasi historis ditulis ulang total).
 
+### 2.5 Insight/Rekomendasi Dinamis di Tiap Chart Dashboard
+Owner yang awam data harus bisa langsung paham "jadi aku harus ngapain" tanpa perlu menafsirkan grafik sendiri. Sekarang tiap chart di Dashboard punya 1 baris insight/rekomendasi teks di bawahnya, 100% dinamis (reuse nilai yang sudah dihitung komponen masing-masing, bukan teks statis):
+- **Tren Penjualan Bulanan** — bandingkan bulan terbaru vs sebelumnya, sebut juga bulan mana yang tertinggi.
+- **Pola Pengunjung Mingguan** — reuse `busiestDay` yang sudah ada: *"[Hari] paling ramai (rata-rata N transaksi) — siapkan karyawan & stok bahan baku ekstra di hari ini."*
+- **Jam Tersibuk** — reuse `busiestHour`: *"Jam [X] paling sibuk — pastikan bahan sudah disiapkan dan karyawan standby sebelum jam ini."*
+- **Kenaikan Harga Bahan Baku** — sebut bahan baku dengan `increasePercent` tertinggi, dorong aksi cepat sebelum margin makin tergerus.
+
+**Fix penting pada insight Tren Penjualan Bulanan — hindari perbandingan menyesatkan:** perbandingan naif "bulan ini vs bulan lalu" memakai TOTAL mentah akan selalu kelihatan "anjlok drastis" kalau bulan berjalan belum genap sebulan (misal baru tanggal 7, dibandingkan ke bulan lalu yang sudah penuh 30 hari) — padahal itu cuma karena datanya belum lengkap, bukan indikasi bisnis memburuk. Diperbaiki dengan mendeteksi apakah bulan terakhir di data adalah bulan yang SEDANG BERJALAN (cocokkan `month` dengan bulan-tahun hari ini):
+- Kalau sudah berjalan **≤3 hari** — insight netral tanpa klaim naik/turun sama sekali (belum cukup data bahkan buat rata-rata harian sekalipun): *"[Bulan] baru berjalan N hari, terlalu dini untuk dibandingkan — pantau terus di sini."*
+- Kalau **>3 hari** — bandingkan **rata-rata pendapatan PER HARI** (total bulan berjalan ÷ hari yang sudah lewat) vs rata-rata harian bulan sebelumnya (total ÷ jumlah hari penuh di bulan itu) — apple-to-apple, bukan total vs total.
+- Kalau bulan terakhir di data **sudah genap sebulan penuh**, perbandingan total mentah seperti biasa tetap dipakai (tidak perlu disesuaikan).
+
+File yang terdampak: `frontend/src/app/dashboard/page.tsx` (fungsi `buildMonthlySalesInsight`, `buildWeeklyPatternInsight`, `buildHourlyPatternInsight`, `buildPriceAlertInsight`, komponen `InsightNote`).
+
+### 2.6 Markdown Rendering di Balasan AI Chatbot
+Gemini API sering mengembalikan jawaban berformat Markdown (`**bold**`, list bernomor/bullet), tapi sebelumnya `AiChatWidget` merender `{msg.text}` mentah — tanda bintang dan simbol list muncul apa adanya, bukan diformat. Sekarang balasan dengan `role === 'ai'` dirender lewat **`react-markdown`** (v10.1.0, dependency baru — lihat bagian 5), sedangkan pesan user & system tetap teks polos seperti semula (tidak perlu markdown, dan menghindari efek samping kalau user kebetulan mengetik karakter `*`/`#`).
+
+**Kenapa `react-markdown`, bukan `marked`+`dangerouslySetInnerHTML`:** react-markdown mem-parsing Markdown lalu merender langsung ke elemen React (`createElement`), bukan ke string HTML yang perlu di-`dangerouslySetInnerHTML`. Karena itu **aman dari XSS by default** — teks HTML mentah di dalam respons AI (misal ada yang menyerupai tag) hanya diperlakukan sebagai teks biasa, tidak pernah diparse jadi elemen sungguhan, kecuali sengaja diaktifkan lewat plugin `rehype-raw` (yang **tidak** dipasang di sini). Ini menghindari seluruh kelas bug sanitasi HTML yang biasa jadi sumber celah XSS kalau pakai pendekatan render-HTML-string.
+
+Styling disesuaikan lewat class `.ai-markdown` (heading di-cap ke ukuran teks normal + bold, bukan H1/H2 raksasa bawaan browser yang tidak proporsional untuk bubble chat kecil; warna & ukuran font `inherit` dari bubble AI yang sudah ada, bukan warna/ukuran baru).
+
+File yang terdampak: `frontend/src/components/AiChatWidget.tsx`, `frontend/package.json`, `frontend/package-lock.json`.
+
+**Keterbatasan yang disadari:** tidak memasang plugin `remark-gfm`, jadi kalau suatu saat Gemini merespons dengan tabel Markdown (fitur GFM, bukan CommonMark dasar), tabel itu belum akan dirender sebagai tabel asli — cuma teks biasa. Belum ditemukan jadi masalah nyata di pengujian (respons yang diuji selalu list/paragraf/bold), dicatat untuk referensi kalau nanti dibutuhkan.
+
 ---
 
 ## 3. Perubahan Signifikan (masalah → solusi → file)
@@ -72,6 +97,9 @@ File yang terdampak: `backend/prisma/seed.ts` (menu & bahan baku dasar diganti t
 | 10 | Ikon PWA hilang/salah nama, `manifest.json` 404 | Rename file (`git mv`) kembali ke nama persis yang direferensikan manifest | `frontend/public/icons/icon-192x192.png`, `icon-512x512.png` |
 | 11 | Service worker precache `/restock` (route sudah dihapus) bikin `install` SW berpotensi gagal total | Hapus `/restock` dari `ASSETS_TO_CACHE` | `frontend/public/sw.js` |
 | 12 | `backend/Dockerfile` selalu mode dev (`tsx watch`), tidak siap production | Ubah jadi multi-stage (`dev`/`build`/`production`), `docker-compose.yml` dipin ke `target: dev` supaya dev workflow tidak berubah | `backend/Dockerfile`, `docker-compose.yml` |
+| 13 | Owner awam data susah menafsirkan chart sendiri, tidak tahu "harus ngapain" | Tambah 1 baris insight/rekomendasi dinamis di bawah tiap chart (reuse nilai yang sudah dihitung: bulan/hari/jam tertinggi, bahan naik paling tajam) | `frontend/src/app/dashboard/page.tsx` |
+| 14 | Perbandingan "bulan ini vs bulan lalu" menyesatkan kalau bulan berjalan belum genap (total mentah pasti kelihatan anjlok) | Deteksi bulan yang sedang berjalan, bandingkan rata-rata pendapatan PER HARI (bukan total mentah), fallback netral tanpa klaim kalau baru ≤3 hari | `frontend/src/app/dashboard/page.tsx` |
+| 15 | Balasan AI chatbot tampil sebagai teks mentah (`**bold**` literal, bukan tebal; list tidak terformat) | Render balasan AI (khusus `role === 'ai'`) lewat `react-markdown`; pesan user/system tetap teks polos | `frontend/src/components/AiChatWidget.tsx`, `frontend/package.json` |
 
 Untuk perubahan redesign visual murni (Login, POS, Inventaris, shell navigasi, dashboard styling) — lihat tabel tahapan lengkap di [`03-output-review/redesign-uiux-progress.md`](../03-output-review/redesign-uiux-progress.md#ringkasan-tahapan).
 
@@ -87,6 +115,11 @@ Penting buat reviewer supaya paham konteks kenapa beberapa perubahan "kecil" ada
 4. **Endpoint agregasi tidak join ke tabel Menu** — `/dashboard/top-menus` melewatkan `imageUrl` karena cuma agregasi `TransactionItem`, tidak pernah `include`/`select` relasi `Menu`.
 5. **`themeColor`/`viewport` Next.js salah tempat** — di `layout.tsx`, meta tag `theme-color` tidak pernah benar-benar ter-render karena diletakkan di `metadata` bukan export `viewport` terpisah (API Next.js versi ini sudah pindah).
 6. Bug-bug redesign lain (font reference stale, SVG icon tanpa `flex-shrink`, badge tanpa ikon WCAG, blok `<style>` mati, tab content bocor) — didokumentasikan lengkap di [progress doc](../03-output-review/redesign-uiux-progress.md#bug-lama-yang-ditemukan--diperbaiki-sepanjang-proses).
+7. **Bug scoping styled-jsx: style tidak ke-apply sama sekali padahal sudah ditulis benar** (ditemukan 2 kali — pola ini kemungkinan besar akan ketemu lagi oleh developer lain, penting dipahami). `<style jsx>` (scoped) di styled-jsx **hanya menyuntik hash-class scoping ke elemen yang ditulis literal di dalam function React yang SAMA dengan tag `<style jsx>`-nya**. Kalau elemen yang mau distyle sebenarnya dirender oleh komponen ANAK (function React lain) atau oleh library eksternal, elemen itu tidak pernah dapat hash-class-nya — jadi seluruh rule CSS di situ diam-diam gagal **total** (bukan cuma sebagian: font-size, padding, background, radius, semuanya balik ke default browser), bukan sekadar keliru salah satu properti. Ini beda dari bug "inline style menimpa CSS" (#2 di atas) — di situ rule-nya sempat jalan tapi kalah prioritas; di sini rule-nya tidak pernah match elemen manapun sama sekali. Ditemukan di 2 tempat:
+   - **`InsightNote`** (komponen card insight baru, lihat 2.5) — CSS-nya sempat ditulis di `<style jsx>` milik `DashboardPage` (parent), padahal elemen `<p>`/`<div>`-nya dirender oleh `InsightNote` (komponen anak terpisah). Fix: pindahkan `<style jsx>` ke dalam function `InsightNote` itu sendiri — pola yang sama seperti `PriceAlertItem` di file yang sama, yang dari awal sudah benar melakukan ini.
+   - **Markdown balasan AI chatbot** (lihat 2.6) — elemen `<p>`/`<ul>`/`<strong>` dirender oleh `react-markdown` (library eksternal), sama sekali bukan JSX literal di `AiChatWidget`. Fix: pakai `<style jsx global>` (bukan scoped) khusus untuk class `.ai-markdown`, supaya rule-nya tidak bergantung pencocokan hash-class apa pun.
+
+   **Cara mendeteksi bug ini kalau ketemu lagi:** kalau CSS sudah ditulis dengan selector yang benar tapi elemen di browser sama sekali tidak menunjukkan efeknya (bukan "keliru salah satu properti", tapi SEMUA properti dalam rule itu tidak berpengaruh) — cek dulu apakah elemen itu dirender oleh komponen/library LAIN, bukan JSX literal di komponen yang sama dengan `<style jsx>`-nya. Cara verifikasi tercepat: buka DevTools, inspect elemen itu, cek apakah dia punya class `jsx-xxxxxxxx` — kalau tidak ada, itu tandanya scoping gagal match dan rule-nya tidak akan pernah berlaku.
 
 ---
 
@@ -99,6 +132,7 @@ Penting buat reviewer supaya paham konteks kenapa beberapa perubahan "kecil" ada
 - **✅ Service worker precache `/restock` — FIXED.** `frontend/public/sw.js` masih mem-precache route `/restock` yang sudah dihapus sejak redesign navigasi 3-tab (`CHANGELOG.md` v2.0.0). Ini bukan cuma satu entry cache yang gagal diam-diam — `cache.addAll()` di Cache API **gagal total (reject) kalau ADA SATU SAJA** URL yang responsnya bukan `2xx`, jadi seluruh proses precache/`install` service worker berpotensi gagal gara-gara satu route mati ini. Diperbaiki dengan menghapus `/restock` dari `ASSETS_TO_CACHE`; sisa 7 URL yang di-precache sudah diverifikasi satu-satu mengembalikan `200 OK`.
 - **✅ `backend/Dockerfile` masih mode dev — FIXED.** Sebelumnya cuma satu stage, `CMD` selalu `npm run dev` (`tsx watch`, live file-watcher) — cocok untuk dev tapi tidak untuk production (tidak ada compiled output, overhead watcher, source TS ikut ke image). Diperbaiki jadi **multi-stage** dengan 3 target: `dev` (perilaku identik seperti sebelumnya, dipakai `docker-compose.yml` lewat `target: dev` — **dev workflow existing tidak berubah sama sekali**, sudah diverifikasi ulang jalan normal), `build` (compile TypeScript via `tsc`), dan `production` (target default kalau `docker build` dijalankan tanpa `--target` eksplisit — menjalankan `node dist/index.js` yang sudah dikompilasi, bukan `tsx watch`). Target `production` sudah dibuild & dijalankan sungguhan sebagai container terpisah (bukan cuma baca Dockerfile) — terbukti boot normal dan endpoint API (`/health`, `/api/v1/dashboard/monthly-sales`) merespons `200 OK`.
   - **Catatan:** `frontend/Dockerfile` punya masalah yang sama persis (single-stage, selalu `npm run dev`) tapi **belum disentuh** — di luar scope perbaikan yang diminta kali ini, dicatat di bagian Known Issues di bawah.
+- **`frontend/package.json`/`package-lock.json` berubah** — dependency baru `react-markdown` (^10.1.0) untuk render Markdown balasan AI chatbot (lihat 2.6). Reviewer/tim lain **wajib jalankan `npm install` ulang** di folder `frontend/` setelah pull branch ini. Kalau pakai Docker, image frontend juga perlu di-rebuild — lihat catatan troubleshooting volume anonim di bagian 7 sebelum rebuild, supaya dependency barunya benar-benar kepakai.
 
 ---
 
@@ -108,14 +142,25 @@ Penting buat reviewer supaya paham konteks kenapa beberapa perubahan "kecil" ada
 - File upload gambar menu belum ada mekanisme hapus otomatis saat menu dihapus (`DELETE /menus/:id`) — file lama jadi orphan di `uploads/menus/`.
 - Belum semua halaman diverifikasi ulang untuk print stylesheet (`@media print`) pasca redesign Dashboard.
 - Catatan di `03-output-review/redesign-uiux-progress.md` baris terakhir masih menyebut placeholder "Lainnya" sebagai item yang "menunggu keputusan fitur" — **sudah usang**, karena placeholder itu sudah dihapus di commit `8bd7605`. Perlu update baris itu kalau dokumen tersebut mau tetap akurat.
+- Markdown balasan AI chatbot (2.6) belum pakai `remark-gfm`, jadi tabel Markdown (kalau suatu saat direspons Gemini) belum dirender sebagai tabel asli. Belum jadi masalah nyata sejauh ini.
 
 ---
 
-## 7. Catatan Verifikasi
+## 7. Troubleshooting / Catatan Operasional (penting untuk developer lain)
+
+- **`docker compose up --build` tidak selalu memakai dependency baru** (`npm install`/`package.json` berubah, misal saat menambah `react-markdown` untuk 2.6). Volume anonim `/app/node_modules` (dideklarasikan di `docker-compose.yml` sebagai `- /app/node_modules`, tanpa nama volume) **tidak otomatis di-refresh** oleh Docker Compose saat image di-rebuild — Compose bisa tetap memakai data volume lama dari container sebelumnya alih-alih `node_modules` baru hasil `npm ci` di image. Gejalanya: log Next.js bilang `Module not found: Can't resolve 'xxx'` walau `package.json` dan image sudah benar berisi dependency itu (sempat terjadi persis begini saat verifikasi 2.6).
+  - **Solusi:** jalankan `docker compose up -d --build --force-recreate -V <nama-service>` — flag `-V` (alias `--renew-anon-volumes`) memaksa Compose membuang volume anonim lama dan memakai isi image yang baru saja di-build.
+  - Berlaku juga untuk perubahan dependency backend (`backend/package.json`) di masa depan, bukan cuma frontend.
+
+---
+
+## 8. Catatan Verifikasi
 
 - Perubahan chart, dashboard, AI chatbot (recipe-setting), dan navigasi masing-masing sudah diuji manual end-to-end (screenshot browser untuk UI, request langsung ke endpoint asli untuk backend/AI — bukan mock) sepanjang proses pengerjaan.
 - `npx tsc --noEmit` bersih di backend maupun frontend per titik pengecekan terakhir.
 - Ikon PWA: diverifikasi lewat `file` command (dimensi & validitas PNG), `curl` (HTTP 200 + content-type + ukuran byte persis), dan Chrome DevTools Protocol `Page.getAppManifest` langsung di browser asli (bukan cuma baca source) — nol error.
 - Service worker: dicek satu-satu tiap URL di `ASSETS_TO_CACHE` yang tersisa mengembalikan `200 OK`.
+- Insight dashboard (2.5): dicek computed style di browser asli (bukan cuma baca source) untuk membuktikan bug scoping styled-jsx-nya nyata — sebelum fix, `.insight-note` computed `font-size: 16px`/`padding: 0px`/`background: transparent` (rule tidak pernah match); sesudah fix, `font-size: 14px`/`padding: 10px 14px`/`background` sesuai tone. Insight "bulan berjalan" dicek dengan data asli (Juli baru berjalan beberapa hari) — hasilnya perbandingan rata-rata harian, bukan klaim "turun 69%" yang menyesatkan dari perbandingan total mentah sebelumnya.
+- Markdown chatbot (2.6): diuji dengan 2 pertanyaan nyata ke Gemini API (bukan mock) — dikonfirmasi lewat `element.innerHTML`/`getComputedStyle` di browser asli bahwa `<ul><li>` dan `<strong>` (dengan `font-weight: 700` computed) benar-benar ter-render, `textContent` tidak lagi mengandung tanda `**` mentah.
 - `backend/Dockerfile`: target `dev` di-rebuild & di-restart di container yang sedang jalan, dikonfirmasi masih `tsx watch` seperti semula (dev workflow tidak berubah). Target `production` di-build & dijalankan sebagai container terpisah yang benar-benar tersambung ke database yang sama, dikonfirmasi boot sukses dan endpoint API merespons normal — bukan cuma diasumsikan dari isi Dockerfile.
 - Tidak ada test otomatis (unit/integration) yang ditambahkan di branch ini untuk fitur-fitur baru — verifikasi murni manual.

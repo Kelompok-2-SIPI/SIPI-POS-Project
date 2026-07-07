@@ -42,7 +42,6 @@ export async function completeTransactionInTx(transactionId: string, tx: any) {
   const ingredientUsage: Record<string, {
     ingredientName: string;
     qtyToDeduct: number;
-    currentStock: number;
   }> = {};
 
   for (const item of transaction.items) {
@@ -54,31 +53,31 @@ export async function completeTransactionInTx(transactionId: string, tx: any) {
         ingredientUsage[ingredientId] = {
           ingredientName: recipe.ingredient.name,
           qtyToDeduct: 0,
-          currentStock: Number(recipe.ingredient.stockQty),
         };
       }
       ingredientUsage[ingredientId].qtyToDeduct += needed;
     }
   }
 
-  // 3. Verify stock availability
+  // 3+4. Kurangi stok secara ATOMIK per bahan baku: `updateMany` dengan guard
+  // `stockQty >= qtyToDeduct` di WHERE membuat database sendiri yang menjamin
+  // cek-lalu-kurangi terjadi dalam satu statement (row lock Postgres), bukan
+  // read-then-write di level aplikasi yang rentan lost update saat 2 transaksi
+  // menyelesaikan bahan baku yang sama secara bersamaan.
   for (const ingredientId in ingredientUsage) {
     const usage = ingredientUsage[ingredientId];
-    if (usage.currentStock < usage.qtyToDeduct) {
-      throw new Error(`Stok bahan baku '${usage.ingredientName}' tidak mencukupi. Dibutuhkan: ${usage.qtyToDeduct.toFixed(2)}, Tersedia: ${usage.currentStock.toFixed(2)}`);
-    }
-  }
 
-  // 4. Deduct stock and record stock movements
-  for (const ingredientId in ingredientUsage) {
-    const usage = ingredientUsage[ingredientId];
-    const newStock = usage.currentStock - usage.qtyToDeduct;
-
-    // Update stockQty
-    await tx.ingredient.update({
-      where: { id: ingredientId },
-      data: { stockQty: newStock },
+    const result = await tx.ingredient.updateMany({
+      where: { id: ingredientId, stockQty: { gte: usage.qtyToDeduct } },
+      data: { stockQty: { decrement: usage.qtyToDeduct } },
     });
+
+    if (result.count === 0) {
+      // Re-fetch buat pesan error yang informatif (stok terkini, bukan nilai basi)
+      const current = await tx.ingredient.findUnique({ where: { id: ingredientId } });
+      const available = current ? Number(current.stockQty) : 0;
+      throw new Error(`Stok bahan baku '${usage.ingredientName}' tidak mencukupi. Dibutuhkan: ${usage.qtyToDeduct.toFixed(2)}, Tersedia: ${available.toFixed(2)}`);
+    }
 
     // Create StockMovement
     await tx.stockMovement.create({

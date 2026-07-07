@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/db';
 import { TransactionStatus } from '@prisma/client';
 import { getMonthlySales, getVisitPatternByDay, getVisitPatternByHour } from '../lib/dashboard-insights';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+router.use(authenticate);
 
 router.get('/summary', async (req: Request, res: Response) => {
   try {

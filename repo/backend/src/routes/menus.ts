@@ -4,8 +4,10 @@ import path from 'path';
 import crypto from 'crypto';
 import { prisma } from '../lib/db';
 import { getMenusWithAvailability, recalculateMenuHpp } from '../lib/inventory-helpers';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+router.use(authenticate);
 
 // ── Upload gambar menu (disk storage, nama file unik, validasi tipe & ukuran) ──
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/menus');

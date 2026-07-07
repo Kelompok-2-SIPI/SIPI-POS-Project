@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/db';
 import { recalculateAllHppsForIngredient } from '../lib/inventory-helpers';
 import { TypeMovement } from '@prisma/client';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+router.use(authenticate);
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
