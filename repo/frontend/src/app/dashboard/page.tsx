@@ -466,6 +466,104 @@ function HourlyPatternChart({ data, busiestHour }: { data: VisitHourData[]; busi
   );
 }
 
+// Kotak insight kecil di bawah tiap chart — 1 baris teks aksi konkret, warnanya menyesuaikan
+// urgensi (info = rekomendasi operasional netral, success = tren positif, warning/danger =
+// perlu perhatian/tindakan). Pola tint-background + teks default sama seperti .summary-banner.
+function InsightNote({ tone, children }: { tone: 'success' | 'info' | 'warning' | 'danger'; children: React.ReactNode }) {
+  return (
+    <p className={`insight-note insight-${tone}`}>{children}</p>
+  );
+}
+
+function daysInMonth(year: number, monthIndex0: number): number {
+  return new Date(year, monthIndex0 + 1, 0).getDate();
+}
+
+// Bandingkan bulan terbaru vs bulan sebelumnya, dan cek apakah bulan terbaru itu juga yang
+// tertinggi (reuse logic yang sama dgn highlight "Tertinggi" di MonthlySalesChart).
+//
+// Kalau bulan terakhir di data adalah bulan yang SEDANG BERJALAN (belum genap sebulan),
+// total mentahnya TIDAK dibandingkan langsung ke bulan penuh sebelumnya (pasti kelihatan
+// "anjlok" padahal cuma karena datanya belum lengkap) — dibandingkan rata-rata PER HARI
+// supaya apple-to-apple. Kalau baru 1-3 hari berjalan, rata-rata harian pun belum cukup
+// stabil untuk dipercaya, jadi insight-nya netral tanpa klaim naik/turun sama sekali.
+function buildMonthlySalesInsight(data: MonthlySales[]): { tone: 'success' | 'info' | 'warning'; text: string } | null {
+  if (data.length === 0) return null;
+  const monthLabel = (m: MonthlySales) => m.label.split(' ')[0];
+
+  const maxIndex = data.reduce((maxI, d, i, arr) => (d.totalRevenue > arr[maxI].totalRevenue ? i : maxI), 0);
+  const highest = data[maxIndex];
+  const latest = data[data.length - 1];
+  const prev = data.length >= 2 ? data[data.length - 2] : null;
+  const isLatestHighest = maxIndex === data.length - 1;
+
+  if (!prev || prev.totalRevenue <= 0) {
+    return { tone: 'info', text: `📈 ${monthLabel(highest)} jadi bulan dengan pendapatan tertinggi sejauh ini.` };
+  }
+
+  const today = new Date();
+  const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const isLatestInProgress = latest.month === currentMonthKey;
+  const daysElapsed = today.getDate();
+
+  if (isLatestInProgress && daysElapsed <= 3) {
+    return { tone: 'info', text: `📊 ${monthLabel(latest)} baru berjalan ${daysElapsed} hari, terlalu dini untuk dibandingkan dengan bulan penuh sebelumnya — pantau terus di sini.` };
+  }
+
+  if (isLatestInProgress) {
+    const [prevYear, prevMonthNum] = prev.month.split('-').map(Number);
+    const prevDays = daysInMonth(prevYear, prevMonthNum - 1);
+    const latestPerDay = latest.totalRevenue / daysElapsed;
+    const prevPerDay = prev.totalRevenue / prevDays;
+    const pct = prevPerDay > 0 ? Math.round(((latestPerDay - prevPerDay) / prevPerDay) * 100) : null;
+
+    if (pct === null) {
+      return { tone: 'info', text: `📊 ${monthLabel(latest)} baru berjalan ${daysElapsed} hari — pantau terus di sini.` };
+    }
+    if (pct > 5) {
+      return { tone: 'success', text: `📊 ${monthLabel(latest)} baru berjalan ${daysElapsed} hari, tapi rata-rata pendapatan hariannya naik ${pct}% dibanding rata-rata harian ${monthLabel(prev)}.` };
+    }
+    if (pct < -5) {
+      return { tone: 'warning', text: `📊 ${monthLabel(latest)} baru berjalan ${daysElapsed} hari, rata-rata pendapatan hariannya turun ${Math.abs(pct)}% dibanding rata-rata harian ${monthLabel(prev)} — perlu dipantau.` };
+    }
+    return { tone: 'info', text: `📊 ${monthLabel(latest)} baru berjalan ${daysElapsed} hari, rata-rata pendapatan hariannya relatif stabil dibanding ${monthLabel(prev)} (${pct >= 0 ? '+' : ''}${pct}%).` };
+  }
+
+  // Bulan terakhir sudah genap sebulan penuh — perbandingan total apa adanya, tidak perlu disesuaikan.
+  const pct = Math.round(((latest.totalRevenue - prev.totalRevenue) / prev.totalRevenue) * 100);
+
+  if (isLatestHighest) {
+    return pct > 0
+      ? { tone: 'success', text: `📈 ${monthLabel(latest)} jadi bulan paling tinggi — naik ${pct}% dibanding bulan sebelumnya. Pertahankan momentum ini!` }
+      : { tone: 'success', text: `📈 ${monthLabel(latest)} jadi bulan dengan pendapatan tertinggi sejauh ini.` };
+  }
+  if (pct > 5) {
+    return { tone: 'success', text: `📈 ${monthLabel(latest)} naik ${pct}% dibanding bulan sebelumnya, tapi masih di bawah performa tertinggi di ${monthLabel(highest)}.` };
+  }
+  if (pct < -5) {
+    return { tone: 'warning', text: `📉 ${monthLabel(latest)} turun ${Math.abs(pct)}% dibanding bulan sebelumnya. Performa tertinggi masih di ${monthLabel(highest)} — coba evaluasi apa yang berubah.` };
+  }
+  return { tone: 'info', text: `🔄 Performa ${monthLabel(latest)} relatif stabil dibanding bulan sebelumnya (${pct >= 0 ? '+' : ''}${pct}%).` };
+}
+
+function buildWeeklyPatternInsight(visitByDay: VisitDayResponse): string {
+  return `💡 ${visitByDay.busiestDay.day} paling ramai (rata-rata ${visitByDay.busiestDay.avgTransactions} transaksi) — siapkan karyawan & stok bahan baku ekstra di hari ini.`;
+}
+
+function buildHourlyPatternInsight(visitByHour: VisitHourResponse): string {
+  const hour = String(visitByHour.busiestHour.hour).padStart(2, '0');
+  return `💡 Jam ${hour}:00 paling sibuk (${visitByHour.busiestHour.totalTransactions} transaksi) — pastikan bahan sudah disiapkan dan karyawan standby sebelum jam ini.`;
+}
+
+function buildPriceAlertInsight(alerts: PriceAlert[]): string | null {
+  if (alerts.length === 0) return null;
+  const worst = alerts.reduce((max, a) => (a.increasePercent > max.increasePercent ? a : max), alerts[0]);
+  const pct = worst.increasePercent.toFixed(0);
+  return alerts.length === 1
+    ? `⚡ ${worst.ingredientName} naik ${pct}% — segera sesuaikan harga menu terdampak sebelum margin makin tergerus.`
+    : `⚡ Dari ${alerts.length} bahan baku yang naik tajam, ${worst.ingredientName} paling parah (+${pct}%) — segera sesuaikan harga menu terdampak sebelum margin makin tergerus.`;
+}
+
 function PriceAlertItem({ alert, targetHpp }: { alert: PriceAlert; targetHpp: number }) {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -852,6 +950,10 @@ export default function DashboardPage() {
             <p className="section-desc">Pendapatan per bulan (6 bulan terakhir) — bandingkan bulan mana yang paling ramai.</p>
           </div>
           <MonthlySalesChart data={monthlySales} />
+          {(() => {
+            const insight = buildMonthlySalesInsight(monthlySales);
+            return insight ? <InsightNote tone={insight.tone}>{insight.text}</InsightNote> : null;
+          })()}
         </div>
       )}
 
@@ -863,6 +965,7 @@ export default function DashboardPage() {
             <p className="section-desc">Rata-rata transaksi per hari (4 minggu terakhir) — {visitByDay.busiestDay.day} paling ramai.</p>
           </div>
           <WeeklyPatternChart data={visitByDay.data} busiestDay={visitByDay.busiestDay.day} />
+          <InsightNote tone="info">{buildWeeklyPatternInsight(visitByDay)}</InsightNote>
         </div>
       )}
 
@@ -876,6 +979,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <HourlyPatternChart data={trimToActiveHourRange(visitByHour.data)} busiestHour={visitByHour.busiestHour.hour} />
+          <InsightNote tone="info">{buildHourlyPatternInsight(visitByHour)}</InsightNote>
         </div>
       )}
 
@@ -883,6 +987,10 @@ export default function DashboardPage() {
       {priceAlerts.length > 0 && (
         <div className="price-alerts-section">
           <h2>⚠️ Kenaikan Harga Bahan Baku ({priceAlerts.length})</h2>
+          {(() => {
+            const insight = buildPriceAlertInsight(priceAlerts);
+            return insight ? <InsightNote tone="danger">{insight}</InsightNote> : null;
+          })()}
           <div className="alerts-list">
             {priceAlerts.map((alert, idx) => (
               <PriceAlertItem key={idx} alert={alert} targetHpp={targetHpp} />
@@ -1007,6 +1115,27 @@ export default function DashboardPage() {
         }
         .monthly-sales-header .section-desc {
           margin: 0;
+        }
+        .insight-note {
+          margin-top: 10px;
+          padding: 10px 14px;
+          border-radius: var(--radius-sm);
+          font-size: 13px;
+          line-height: 1.5;
+          color: var(--text-primary);
+        }
+        .insight-success {
+          background-color: var(--color-success-light);
+        }
+        .insight-info {
+          background-color: var(--color-info-light);
+        }
+        .insight-warning {
+          background-color: var(--color-warning-light);
+        }
+        .insight-danger {
+          background-color: var(--color-danger-light);
+          margin-bottom: 4px;
         }
         .stat-card {
           position: relative;
