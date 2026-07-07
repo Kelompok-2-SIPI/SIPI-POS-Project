@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { apiFetch, resolveAssetUrl } from '@/lib/api';
 
 interface MenuItem {
@@ -127,7 +126,6 @@ function CartPanelContent({
 }
 
 export default function PosPage() {
-  const router = useRouter();
   const [menus, setMenus] = useState<MenuItem[]>([]);
   const [filteredMenus, setFilteredMenus] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<string[]>(['Semua']);
@@ -254,17 +252,6 @@ export default function PosPage() {
     setIsCartOpen(false);
   };
 
-  // 8. Logout helper
-  const handleLogout = async () => {
-    if (confirm('Apakah Anda yakin ingin keluar?')) {
-      await apiFetch('/auth/logout', { method: 'POST' });
-      localStorage.removeItem('sipi_token');
-      localStorage.removeItem('sipi_logged_in');
-      localStorage.removeItem('sipi_user');
-      router.replace('/login');
-    }
-  };
-
   // 9. Checkout / Bayar (FR-02, FR-03, FR-04)
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -354,12 +341,6 @@ export default function PosPage() {
           <h1>Kasir POS</h1>
           <p>Kelola pesanan pelanggan dengan cepat</p>
         </div>
-        <button onClick={handleLogout} className="btn-logout" title="Keluar">
-          <svg viewBox="0 0 24 24" width="16" height="16" style={{flexShrink: 0}}>
-            <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-          </svg>
-          Keluar
-        </button>
       </header>
 
       {/* Search & Categories */}

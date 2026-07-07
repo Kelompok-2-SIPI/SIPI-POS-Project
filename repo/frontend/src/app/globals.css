@@ -157,7 +157,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 24px);
-  max-width: 340px;
+  max-width: 456px;
   height: 64px;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(16px) saturate(180%);
@@ -166,7 +166,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   align-items: center;
   justify-items: center;
   z-index: 900;
@@ -175,7 +175,7 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (min-width: 768px) {
   .bottom-nav {
-    max-width: 480px;
+    max-width: 640px;
   }
 }
 

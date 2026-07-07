@@ -1,0 +1,142 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api';
+
+interface StoredUser {
+  name: string;
+  role: string;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  kasir: 'Kasir',
+  admin_gudang: 'Admin Gudang',
+  owner: 'Owner',
+};
+
+export default function AccountPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<StoredUser | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('sipi_user');
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored));
+      } catch {
+        setUser(null);
+      }
+    }
+  }, []);
+
+  const handleLogout = async () => {
+    if (confirm('Apakah Anda yakin ingin keluar?')) {
+      await apiFetch('/auth/logout', { method: 'POST' });
+      localStorage.removeItem('sipi_token');
+      localStorage.removeItem('sipi_logged_in');
+      localStorage.removeItem('sipi_user');
+      router.replace('/login');
+    }
+  };
+
+  return (
+    <div className="account-layout">
+      <header className="account-header">
+        <div>
+          <h1>Akun</h1>
+          <p>Informasi akun yang sedang masuk</p>
+        </div>
+      </header>
+
+      <div className="card account-card">
+        <div className="account-avatar" aria-hidden="true">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/>
+          </svg>
+        </div>
+
+        <div className="account-info-row">
+          <span className="account-info-label">Nama</span>
+          <span className="account-info-value">{user?.name || '-'}</span>
+        </div>
+        <div className="account-info-row">
+          <span className="account-info-label">Peran</span>
+          <span className="account-info-value">{user ? (ROLE_LABELS[user.role] || user.role) : '-'}</span>
+        </div>
+
+        <button onClick={handleLogout} className="btn-logout account-logout-btn" title="Keluar">
+          <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0 }}>
+            <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+          </svg>
+          Keluar
+        </button>
+      </div>
+
+      <style jsx>{`
+        .account-layout {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .account-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid var(--border-color);
+          padding-bottom: 12px;
+        }
+        .account-header h1 {
+          font-size: 24px;
+        }
+        .account-header p {
+          font-size: 13px;
+          color: var(--text-secondary);
+        }
+        .account-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          padding: 32px 24px;
+          max-width: 420px;
+        }
+        .account-avatar {
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          background-color: var(--color-surface-soft, var(--card-bg));
+          color: var(--text-secondary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 12px;
+        }
+        .account-info-row {
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          padding: 12px 0;
+          border-bottom: 1px solid var(--border-color);
+          font-size: 14px;
+        }
+        .account-info-row:last-of-type {
+          border-bottom: none;
+        }
+        .account-info-label {
+          color: var(--text-secondary);
+        }
+        .account-info-value {
+          font-weight: 600;
+        }
+        .account-logout-btn {
+          margin-top: 24px;
+          width: 100%;
+          justify-content: center;
+          padding: 12px;
+          font-size: 14px;
+        }
+      `}</style>
+    </div>
+  );
+}
