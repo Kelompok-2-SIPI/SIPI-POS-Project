@@ -355,7 +355,7 @@ function WeeklyPatternChart({ data, busiestDay }: { data: VisitDayData[]; busies
           <g transform={`translate(${hovered.x}, ${hovered.y - 12})`} style={{ pointerEvents: 'none' }}>
             <rect x="-64" y="-40" width="128" height="34" rx="10" fill="var(--color-ink-deep)" />
             <text x="0" y="-22" fontSize="12" fill="var(--color-canvas)" textAnchor="middle" fontWeight="bold">
-              {hovered.item.avgTransactions} transaksi/hari
+              {Math.round(hovered.item.avgTransactions)} transaksi/hari
             </text>
             <text x="0" y="-9" fontSize="10" fill="rgba(255,255,255,0.7)" textAnchor="middle">
               {hovered.item.day} (rata-rata 4 minggu)
@@ -569,7 +569,9 @@ function buildMonthlySalesInsight(data: MonthlySales[]): { tone: 'success' | 'in
 }
 
 function buildWeeklyPatternInsight(visitByDay: VisitDayResponse): string {
-  return `💡 ${visitByDay.busiestDay.day} paling ramai (rata-rata ${visitByDay.busiestDay.avgTransactions} transaksi) — siapkan karyawan & stok bahan baku ekstra di hari ini.`;
+  // Dibulatkan cuma untuk tampilan (Math.round) — perhitungan rata-rata di baliknya
+  // tetap presisi, tidak diubah, sama seperti pola pembulatan stok bahan baku diskrit.
+  return `💡 ${visitByDay.busiestDay.day} paling ramai (rata-rata ${Math.round(visitByDay.busiestDay.avgTransactions)} transaksi) — siapkan karyawan & stok bahan baku ekstra di hari ini.`;
 }
 
 function buildHourlyPatternInsight(visitByHour: VisitHourResponse): string {
