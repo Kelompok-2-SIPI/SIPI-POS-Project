@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
 import { apiFetch } from '@/lib/api';
 
 interface ParsedItem {
@@ -257,8 +258,18 @@ export default function AiChatWidget() {
                   whiteSpace: 'pre-wrap'
                 }}>
                   {/* TODO(Raihan): Polish transisi animasi bubble chat */}
-                  <p style={{ margin: 0 }}>{msg.text}</p>
-                  
+                  {msg.role === 'ai' ? (
+                    // Balasan LLM sering berformat Markdown (**bold**, list, dst) — react-markdown
+                    // merender ke elemen React asli (bukan dangerouslySetInnerHTML), jadi aman dari
+                    // XSS by default: teks HTML mentah di respons AI diperlakukan sebagai teks biasa,
+                    // bukan di-parse jadi tag sungguhan, kecuali sengaja diaktifkan (tidak dipakai di sini).
+                    <div className="ai-markdown">
+                      <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0 }}>{msg.text}</p>
+                  )}
+
                   {msg.type === 'confirmation' && msg.parsed_items && (
                     <div style={{ marginTop: '10px', padding: '12px', backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.05)' }}>
                       <p style={{ margin: '0 0 8px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--text-primary, #333)' }}>Detail Eksekusi:</p>
@@ -302,6 +313,86 @@ export default function AiChatWidget() {
               </button>
             </form>
           </div>
+
+          {/* Typografi Markdown balasan AI — <style jsx global> karena elemen p/ul/strong/dst
+              di sini dirender oleh react-markdown (komponen lain), bukan literal JSX di file
+              ini, jadi scoping <style jsx> biasa tidak akan pernah kena ke elemen-elemen itu. */}
+          <style jsx global>{`
+            .ai-markdown {
+              color: inherit;
+              font-size: inherit;
+              line-height: 1.5;
+            }
+            .ai-markdown p {
+              margin: 0 0 8px;
+            }
+            .ai-markdown p:last-child {
+              margin-bottom: 0;
+            }
+            .ai-markdown ul,
+            .ai-markdown ol {
+              margin: 4px 0 8px;
+              padding-left: 20px;
+            }
+            .ai-markdown ul:last-child,
+            .ai-markdown ol:last-child {
+              margin-bottom: 0;
+            }
+            .ai-markdown li {
+              margin-bottom: 2px;
+            }
+            .ai-markdown li > p {
+              margin: 0;
+            }
+            .ai-markdown strong {
+              font-weight: 700;
+            }
+            .ai-markdown em {
+              font-style: italic;
+            }
+            .ai-markdown h1,
+            .ai-markdown h2,
+            .ai-markdown h3,
+            .ai-markdown h4 {
+              font-size: 1em;
+              font-weight: 700;
+              margin: 8px 0 4px;
+            }
+            .ai-markdown h1:first-child,
+            .ai-markdown h2:first-child,
+            .ai-markdown h3:first-child,
+            .ai-markdown h4:first-child {
+              margin-top: 0;
+            }
+            .ai-markdown code {
+              background: rgba(0, 0, 0, 0.08);
+              padding: 1px 5px;
+              border-radius: 4px;
+              font-size: 0.85em;
+              font-family: monospace;
+            }
+            .ai-markdown pre {
+              background: rgba(0, 0, 0, 0.08);
+              padding: 8px;
+              border-radius: 8px;
+              overflow-x: auto;
+              margin: 4px 0 8px;
+            }
+            .ai-markdown pre code {
+              background: none;
+              padding: 0;
+            }
+            .ai-markdown a {
+              color: inherit;
+              text-decoration: underline;
+            }
+            .ai-markdown blockquote {
+              margin: 4px 0 8px;
+              padding-left: 10px;
+              border-left: 3px solid rgba(0, 0, 0, 0.15);
+              opacity: 0.85;
+            }
+          `}</style>
         </div>
       )}
     </>

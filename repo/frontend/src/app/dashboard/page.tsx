@@ -469,9 +469,42 @@ function HourlyPatternChart({ data, busiestHour }: { data: VisitHourData[]; busi
 // Kotak insight kecil di bawah tiap chart — 1 baris teks aksi konkret, warnanya menyesuaikan
 // urgensi (info = rekomendasi operasional netral, success = tren positif, warning/danger =
 // perlu perhatian/tindakan). Pola tint-background + teks default sama seperti .summary-banner.
+//
+// <style jsx> ditaruh di komponen ini sendiri (bukan di style block DashboardPage) karena
+// styled-jsx cuma nyuntik scoping class ke elemen yang ditulis literal di function yang sama
+// dengan tag <style jsx>-nya — taruh di parent tidak akan pernah kena ke elemen komponen anak
+// (persis pola yang sudah benar dipakai PriceAlertItem di file ini).
 function InsightNote({ tone, children }: { tone: 'success' | 'info' | 'warning' | 'danger'; children: React.ReactNode }) {
   return (
-    <p className={`insight-note insight-${tone}`}>{children}</p>
+    <div className={`insight-note insight-${tone}`}>
+      <p>{children}</p>
+      <style jsx>{`
+        .insight-note {
+          margin-top: 10px;
+          padding: 10px 14px;
+          border-radius: var(--radius-sm);
+          font-size: 14px;
+          line-height: 1.5;
+          color: var(--text-primary);
+        }
+        .insight-note p {
+          margin: 0;
+        }
+        .insight-success {
+          background-color: var(--color-success-light);
+        }
+        .insight-info {
+          background-color: var(--color-info-light);
+        }
+        .insight-warning {
+          background-color: var(--color-warning-light);
+        }
+        .insight-danger {
+          background-color: var(--color-danger-light);
+          margin-bottom: 4px;
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -1115,27 +1148,6 @@ export default function DashboardPage() {
         }
         .monthly-sales-header .section-desc {
           margin: 0;
-        }
-        .insight-note {
-          margin-top: 10px;
-          padding: 10px 14px;
-          border-radius: var(--radius-sm);
-          font-size: 13px;
-          line-height: 1.5;
-          color: var(--text-primary);
-        }
-        .insight-success {
-          background-color: var(--color-success-light);
-        }
-        .insight-info {
-          background-color: var(--color-info-light);
-        }
-        .insight-warning {
-          background-color: var(--color-warning-light);
-        }
-        .insight-danger {
-          background-color: var(--color-danger-light);
-          margin-bottom: 4px;
         }
         .stat-card {
           position: relative;
