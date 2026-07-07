@@ -113,6 +113,14 @@ const DURABLE = new Set(['Tepung Terigu', 'Minyak Goreng', 'Beras Putih']);
 function restockCycleDays(name: string) {
   return PERISHABLE.has(name) ? 2 : (DURABLE.has(name) ? 10 : 5);
 }
+
+// Satuan hitungan diskrit (tidak bisa pecahan secara fisik, mis. "0.64 potong ayam"
+// tidak masuk akal) — beda dengan gram/ml yang wajar desimal. Sinkronkan manual dengan
+// DISCRETE_UNITS di frontend/src/lib/format.ts kalau ada satuan baru ditambahkan.
+const DISCRETE_UNITS = new Set(['potong', 'pcs', 'butir', 'buah', 'lembar', 'ekor', 'biji']);
+function roundToUnit(qty: number, unit: string): number {
+  return DISCRETE_UNITS.has(unit.trim().toLowerCase()) ? Math.round(qty) : Math.round(qty * 100) / 100;
+}
 // Skenario stok kritis yang sengaja "diskenariokan": cabai jelang Lebaran (historis) + cabai
 // jelang tanggal presentasi (supaya live di /restock-recommendations), dan ayam pertengahan Juni
 // (keterlambatan suplier biasa, tidak terkait momen kalender apa pun).
@@ -348,7 +356,7 @@ async function main() {
           ? avgUsage * cycle * (prng.nextRange(90, 130) / 100)
           : Number(ing.minStockQty) * (prng.nextRange(100, 150) / 100);
         orderQty *= restockMultiplier(ing.name, dstr);
-        orderQty = Math.round(orderQty * 100) / 100;
+        orderQty = roundToUnit(orderQty, ing.unit);
 
         if (orderQty > 0) {
           const limited = restockMultiplier(ing.name, dstr) < 1;

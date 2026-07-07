@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch, resolveAssetUrl } from '@/lib/api';
+import { formatStockQty, isDiscreteUnit } from '@/lib/format';
 import AiChatWidget from '@/components/AiChatWidget';
 
 interface Ingredient {
@@ -612,31 +613,30 @@ export default function InventoryPage() {
 
                 return (
                   <div key={ing.id} className="inv-card group">
-                    <div className="inv-card-badge">
-                      {isLowStock ? (
-                        <span className="inv-badge inv-badge-critical">
-                          <svg width="14" height="14" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
-                            <path d="M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm-40-160h80v-240h-80v240Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
-                          </svg>
-                          Stok Kritis: {ing.stockQty} {ing.unit}
-                        </span>
-                      ) : (
-                        <span className="inv-badge inv-badge-normal">
-                          Stok: {ing.stockQty} {ing.unit}
-                        </span>
-                      )}
-                    </div>
-                    
                     <div className="inv-card-body">
                       <div className="inv-card-icon">
                         <svg width="32" height="32" viewBox="0 -960 960 960" fill="currentColor">
                           <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
                         </svg>
                       </div>
-                      
+
                       <div className="inv-card-info">
-                        <h3 className="inv-card-title">{ing.name}</h3>
-                        <p className="inv-card-subtitle">Min. Stok: {ing.minStockQty} {ing.unit}</p>
+                        <div className="inv-card-header">
+                          <h3 className="inv-card-title">{ing.name}</h3>
+                          {isLowStock ? (
+                            <span className="inv-badge inv-badge-critical">
+                              <svg width="14" height="14" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                                <path d="M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm-40-160h80v-240h-80v240Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
+                              </svg>
+                              Stok Kritis: {formatStockQty(ing.stockQty, ing.unit)} {ing.unit}
+                            </span>
+                          ) : (
+                            <span className="inv-badge inv-badge-normal">
+                              Stok: {formatStockQty(ing.stockQty, ing.unit)} {ing.unit}
+                            </span>
+                          )}
+                        </div>
+                        <p className="inv-card-subtitle">Min. Stok: {formatStockQty(ing.minStockQty, ing.unit)} {ing.unit}</p>
                         
                         <div className="inv-card-bottom">
                           <div className="inv-price-col">
@@ -729,7 +729,7 @@ export default function InventoryPage() {
                     <div className="rec-stats">
                       <div className="rec-stat">
                         <span className="label">Stok Saat Ini</span>
-                        <span className="val">{item.stockQty} {item.unit}</span>
+                        <span className="val">{formatStockQty(item.stockQty, item.unit)} {item.unit}</span>
                       </div>
                       <div className="rec-stat">
                         <span className="label">Rata-rata Harian</span>
@@ -855,7 +855,7 @@ export default function InventoryPage() {
                   <label className="form-label">Jumlah Masuk ({activeIngredient?.unit})</label>
                   <input
                     type="number"
-                    step="any"
+                    step={isDiscreteUnit(activeIngredient?.unit || '') ? '1' : 'any'}
                     className="input-field"
                     placeholder="Contoh: 1000"
                     value={restockQty}
@@ -989,7 +989,7 @@ export default function InventoryPage() {
                   <label className="form-label">Stok Saat Ini (Sisa Stok)</label>
                   <input
                     type="number"
-                    step="any"
+                    step={isDiscreteUnit(editUnit) ? '1' : 'any'}
                     className="input-field"
                     value={editStock}
                     onChange={(e) => setEditStock(e.target.value)}
@@ -1001,7 +1001,7 @@ export default function InventoryPage() {
                   <label className="form-label">Stok Minimal Pemicu Peringatan</label>
                   <input
                     type="number"
-                    step="any"
+                    step={isDiscreteUnit(editUnit) ? '1' : 'any'}
                     className="input-field"
                     value={editMinStock}
                     onChange={(e) => setEditMinStock(e.target.value)}
@@ -1046,7 +1046,7 @@ export default function InventoryPage() {
                   <label className="form-label">Stok Awal</label>
                   <input
                     type="number"
-                    step="any"
+                    step={isDiscreteUnit(createUnit) ? '1' : 'any'}
                     className="input-field"
                     placeholder="Contoh: 5000"
                     value={createStock}
@@ -1059,7 +1059,7 @@ export default function InventoryPage() {
                   <label className="form-label">Batas Minimal Stok</label>
                   <input
                     type="number"
-                    step="any"
+                    step={isDiscreteUnit(createUnit) ? '1' : 'any'}
                     className="input-field"
                     placeholder="Contoh: 1000"
                     value={createMinStock}
@@ -1374,18 +1374,12 @@ export default function InventoryPage() {
           transform: translateY(-2px);
           box-shadow: var(--shadow-md);
         }
-        .inv-card-badge {
-          position: absolute;
-          top: 0;
-          right: 0;
-          padding: 12px;
-        }
-        @media (max-width: 767px) {
-          /* Jaga jarak dari FAB chat AI yang fixed di kanan-bawah (bottom:90px, right:20px, 56px)
-             agar badge Stok Kritis tidak pernah tertutup FAB, di posisi scroll manapun. */
-          .inv-card-badge {
-            right: 56px;
-          }
+        .inv-card-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 8px;
+          flex-wrap: wrap;
         }
         .inv-badge {
           display: flex;
@@ -1395,6 +1389,8 @@ export default function InventoryPage() {
           border-radius: var(--radius-pill);
           font-size: 11px;
           font-weight: 700;
+          white-space: nowrap;
+          flex-shrink: 0;
         }
         .inv-badge-critical {
           background-color: var(--color-danger);
@@ -1434,6 +1430,8 @@ export default function InventoryPage() {
           color: var(--text-primary);
           margin: 0;
           line-height: 1.2;
+          flex: 1;
+          min-width: 120px;
         }
         .inv-card-subtitle {
           font-size: 12px;
