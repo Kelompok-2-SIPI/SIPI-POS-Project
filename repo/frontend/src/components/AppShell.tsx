@@ -7,8 +7,8 @@ import BottomNav from './BottomNav';
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // Hide shell on login page
-  if (pathname === '/login') {
+  // Hide shell on auth pages (login, register) — full-page flows tanpa nav
+  if (pathname === '/login' || pathname === '/register') {
     return (
       <div className="main-wrapper">
         {children}

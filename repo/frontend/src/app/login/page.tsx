@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 
 export default function LoginPage() {
@@ -182,6 +183,9 @@ export default function LoginPage() {
               </div>
               <p className="footer-hint">
                 Gunakan username <strong>admin</strong> / password <strong>sipi123</strong> saat tidak ada koneksi.
+              </p>
+              <p className="footer-hint">
+                Bisnis baru? <Link href="/register" className="footer-link">Daftar di sini</Link>
               </p>
             </footer>
           </div>
@@ -505,6 +509,14 @@ export default function LoginPage() {
         .footer-hint strong {
           color: var(--text-secondary);
           font-weight: 600;
+        }
+        .footer-link {
+          color: var(--color-primary);
+          font-weight: 600;
+          text-decoration: none;
+        }
+        .footer-link:hover {
+          text-decoration: underline;
         }
 
         /* ── Responsivitas ── */

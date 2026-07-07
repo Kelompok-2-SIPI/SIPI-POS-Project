@@ -8,6 +8,8 @@
 
 > **📌 Update pasca-merge (2026-07-07):** Branch `redesign/uiux-stitch-janu` sudah di-*review* dan **di-merge ke `main` lewat PR #2** (merge commit `958b32f`, disetujui reviewer `FiveUII`/Favian). Sejak titik itu, pengembangan berlanjut **langsung di `main`** — repo ini sekarang berada di branch `main`, bukan lagi branch redesign terpisah. Bagian 1–8 di bawah tetap dibiarkan sebagai snapshot isi PR #2 apa adanya (tidak ditulis ulang retroaktif). Perubahan **setelah** merge itu didokumentasikan terpisah di **bagian 9**, dengan base perbandingan `958b32f..HEAD` — bukan lagi `main..redesign/uiux-stitch-janu`.
 
+> **📌 Update multi-tenant (2026-07-07):** Konversi single-tenant → multi-tenant dikerjakan di branch terpisah `feature/multi-tenant-registration` (bercabang dari `main` di commit `acd0f60`, commit yang sama yang mendokumentasikan §9.5 di bawah — lihat **bagian 11** untuk detail lengkap kenapa keputusan "DITOLAK" itu direvisi ulang hari yang sama). **Berisi breaking change skema database** — lihat §11.6 sebelum pull branch ini ke database dev manapun.
+
 ---
 
 ## 1. Ringkasan Tingkat Tinggi
@@ -268,3 +270,104 @@ Dicatat di sini supaya keputusan ini (dan alasannya) tetap terdokumentasi — ka
 - **9.4 (pembulatan transaksi/hari):** dikonfirmasi lewat `innerText()` tooltip & insight-note di browser asli menampilkan "87" (dibulatkan dari 86.75 via API `visit-pattern-by-day`), dan `visit-pattern-by-hour` dikonfirmasi sudah selalu integer dari respons API langsung.
 - `npx tsc --noEmit` bersih di backend & frontend untuk semua 4 commit di bagian ini.
 - Tidak ada test otomatis ditambahkan — verifikasi murni manual (curl/Playwright/query database langsung).
+
+---
+
+## 11. Konversi Single-Tenant → Multi-Tenant (Branch `feature/multi-tenant-registration`)
+
+Base perbandingan bagian ini: `acd0f60` (commit yang sama dengan §9.5 di atas) → `HEAD` di branch `feature/multi-tenant-registration`. Dikerjakan dalam 4 tahap terpisah, masing-masing direview manual sebelum lanjut ke tahap berikutnya. **Belum di-merge ke `main`** — menunggu review akhir sebelum PR dibuka.
+
+### 11.0 Keputusan yang Direvisi: Kenapa §9.5 ("DITOLAK") Dibalik Hari yang Sama
+
+§9.5 di atas mendokumentasikan keputusan **menolak** permintaan multi-tenant, dengan alasan: scope skema besar, risiko kebocoran data antar tenant kalau ada query yang terlewat saat audit, dan timing H-1 presentasi yang membuat risiko regresi tidak sepadan.
+
+Beberapa jam setelah commit itu dibuat, permintaan yang sama diajukan ulang di hari yang sama, dengan konteks yang berbeda dari saat penolakan pertama (mis. urgensi H-1 presentasi sudah tidak berlaku). Sebelum mulai, kontradiksi ini di-flag eksplisit ke pemberi tugas dan dikonfirmasi dua hal: (1) keputusan untuk tetap lanjut meski berlawanan dengan §9.5, dan (2) persetujuan Favian untuk perubahan `schema.prisma` — sesuai aturan `AGENTS.md` yang melarang perubahan skema tanpa konfirmasi beliau. Kedua konfirmasi ini didapat sebelum baris kode pertama ditulis.
+
+Risiko yang disebut dalam §9.5 (query yang terlewat saat audit → kebocoran data antar tenant) ditangani langsung lewat proses audit sistematis per-file di Tahap 2 (lihat §11.3) plus 6 skenario serangan nyata (§11.4) — bukan diabaikan.
+
+### 11.1 Tahap 1 — Skema Database & Migrasi Data
+
+Model `Business` baru ditambahkan (`id`, `name`, `createdAt`, map ke tabel `businesses`). Kolom `businessId` (FK ke `Business`, + index) ditambahkan ke **9 tabel**: `users`, `menus`, `ingredients`, `recipe_items`, `ingredient_price_history`, `stock_movements`, `transactions`, `transaction_items`, `menu_hpp_history` — mencakup seluruh tabel bisnis di skema, termasuk tabel relasi tidak-langsung (`recipe_items`, `transaction_items`) yang sebelumnya cuma terhubung ke tenant lewat parent-nya; sekarang punya `businessId` sendiri supaya bisa difilter langsung tanpa join.
+
+Migration `20260707111043_multi_tenant_add_business` ditulis manual (bukan hasil `prisma migrate dev` otomatis, yang menolak generate `ALTER ... SET NOT NULL` untuk tabel yang sudah berisi data) dengan urutan: buat tabel `businesses` → seed 1 row `Business` "Ayam Geprek Bu Yuli" (id `9f1e47fa-f91a-4155-8f29-c62c75fa2324`, fixed UUID) → tambah kolom `business_id` nullable ke 9 tabel → backfill SEMUA baris existing dengan id Business itu → `ALTER COLUMN SET NOT NULL` → index → foreign key.
+
+**Verifikasi:** count baris di ke-9 tabel dicek sebelum & sesudah migration (identik), plus query eksplisit `count(*) FILTER (WHERE business_id IS NULL)` dan `count(*) FILTER (WHERE business_id <> '<demo-id>')` di semua 9 tabel — hasilnya 0 di semua tabel, 0 baris yatim piatu, semua menunjuk ke Business "Ayam Geprek Bu Yuli" yang baru dibuat.
+
+### 11.2 Tahap 2 — Registrasi, JWT, dan Isolasi Query
+
+**Endpoint baru:** `POST /auth/register` (`routes/auth.ts`) — terima `name`, `password`, `businessName`; buat 1 `Business` + 1 `User` (role `owner`) dalam satu `$transaction`. Tenant baru **sengaja mulai kosong** (tanpa menu/bahan baku dummy). `name` divalidasi unik **global** (bukan per-tenant) — keputusan desain karena `POST /login` mencari user lewat `name` saja tanpa konteks bisnis; kalau dua tenant boleh pakai `name` yang sama, login jadi ambigu (`findFirst` akan selalu match baris pertama, membuat tenant kedua tidak pernah bisa login dengan nama yang mereka pilih sendiri saat registrasi).
+
+**JWT & middleware:** `middleware/auth.ts` — payload JWT dan `req.businessId` (diset middleware, sumbernya HARUS dari token terverifikasi, bukan dari body/params/query client manapun).
+
+**Audit isolasi — semua file route & lib diperiksa satu per satu**, setiap `findMany`/`findFirst`/`findUnique`/`update`/`updateMany`/`delete`/`create` diberi filter/isi `businessId`:
+- `middleware/auth.ts`, `routes/auth.ts` (login + register)
+- `lib/inventory-helpers.ts` (`recalculateMenuHpp`, `recalculateAllHppsForIngredient`, `isMenuAvailable`, `getMenusWithAvailability` — semua kini terima param `businessId`)
+- `lib/transaction-helpers.ts` (`completeTransactionInTx`)
+- `lib/dashboard-insights.ts` (`getMonthlySales`, `getVisitPatternByDay`, `getVisitPatternByHour`)
+- `routes/menus.ts` — seluruh 6 endpoint; `ingredientId` yang datang dari body (payload resep) divalidasi kepemilikan (`ingredient.findFirst({id, businessId})`) sebelum dipakai — mencegah referensi bahan baku tenant lain lewat body request
+- `routes/ingredients.ts` — seluruh 6 endpoint; pola lama `prisma.user.findFirst()` (dipakai isi `recordedBy`/`createdBy`) **diganti `req.user!.id`** — dengan multi-tenant, `findFirst()` tanpa filter bisa menempelkan user tenant lain sebagai pencatat aksi tenant ini
+- `routes/transactions.ts` — seluruh 5 endpoint termasuk `/sync`; `menuId` dari body (`items[]`) difilter `businessId` sebelum dipakai hitung total/buat `TransactionItem`
+- `routes/dashboard.ts` — seluruh 12 endpoint
+- `controllers/aiController.ts` — `handleChat` (semua query yang membentuk konteks system prompt Gemini) & `confirmAction` (eksekusi restock/resep via chat)
+- `prisma/seed.ts`, `prisma/seed-dummy.ts` — di luar cakupan awal tapi wajib diubah (kalau tidak, `tsc` gagal karena `businessId` sekarang required); kedua script resolve Business "Ayam Geprek Bu Yuli" di awal, semua create/find di-scope ke situ
+
+**3 bug status-code lama ditemukan & diperbaiki** (500 → 404/400) saat menjalankan skenario serangan di bawah — pola `throw new Error(...)` di dalam `$transaction` yang ditangkap `catch` generik ber-status 500, sudah ada sejak sebelum multi-tenant, baru kelihatan sekarang karena baru pertama kali jalur "resource tidak ditemukan/bukan milik tenant ini" benar-benar dilewati oleh test:
+- `PUT /ingredients/:id` & `POST /ingredients/:id/restock` — sekarang 404 kalau id bukan milik tenant
+- `POST /transactions` — sekarang 400 kalau `menuId` di `items[]` tidak valid/bukan milik tenant
+
+### 11.3 Tahap 2 — Isolasi AI Chatbot
+
+Konteks yang dikirim ke Gemini (`handleChat`: transaksi hari ini, daftar bahan baku, daftar menu, tren bulanan, pola kunjungan) semua di-scope `businessId`. **Live-tested** (bukan cuma baca kode) dengan 2 tenant baru masing-masing punya data unik ("Bahan/Menu Rahasia A" vs "...B") — chatbot A cuma menyebut data A, chatbot B cuma menyebut data B, 0 kebocoran. 2 request Gemini terpakai untuk test ini.
+
+### 11.4 Tahap 2 — Hasil Test Isolasi (6 Skenario Serangan)
+
+2 tenant baru dibuat lewat `POST /auth/register` (bukan seed): **Test Business A** & **Test Business B**, masing-masing 1 menu + 1 ingredient nama unik.
+
+| # | Skenario | Hasil |
+|---|---|---|
+| 1 | A: `GET /menus`, `/ingredients` | Hanya data A, 0 data B/demo |
+| 2 | B: `GET /menus`, `/ingredients`, `/dashboard/*` | Hanya data B, 0 data A/demo |
+| 3 | **Serangan:** A akses `GET/PUT/DELETE /menus/:id` pakai ID milik B | 404, tidak ada kebocoran/mutasi |
+| 4 | **Serangan:** A akses `GET/PUT/POST-restock /ingredients/:id` pakai ID milik B | 404 (setelah fix status-code di atas) |
+| 5 | **Serangan:** A `POST /transactions` dengan `menuId` milik B disisipkan di `items[]` | 400, transaksi gagal dibuat |
+| 6 | **Serangan:** A `PUT /menus/:id/recipe` menyisipkan `ingredientId` milik B | Item asing di-skip diam-diam, resep A tidak pernah tersambung ke ingredient B |
+
+Data B dicek ulang setelah semua serangan — nama, stok, harga semua utuh. `npx tsc --noEmit`: 0 error.
+
+### 11.5 Tahap 3 — Frontend Halaman Registrasi
+
+Halaman baru `frontend/src/app/register/page.tsx`, mengikuti struktur & token `DESIGN.md` (blob background, card radius 32px, input dengan ikon, tombol pill cobalt) — sama seperti `login/page.tsx`. Form: Nama Usaha, Username, Password, Konfirmasi Password. Validasi frontend disamakan dengan backend (password ≥6 karakter, konfirmasi harus cocok). Setelah sukses: **auto-login** (token dari response register langsung dipakai, tidak perlu login ulang), lalu tampilkan layar sukses dengan penjelasan eksplisit bahwa data masih kosong dan arahan untuk mengisi Bahan Baku + Menu & Resep dulu di Inventaris sebelum POS bisa dipakai, dengan tombol "Lanjut ke Inventaris".
+
+Perubahan pendukung (murni routing publik, bukan redesign): `AuthShield.tsx` & `AppShell.tsx` — `/register` ditambahkan sebagai public route (kalau tidak, halaman ini langsung di-redirect ke `/login` oleh `AuthShield` sebelum sempat dirender) dan disembunyikan dari sidebar/bottom-nav sama seperti `/login`. `login/page.tsx` ditambah link "Bisnis baru? Daftar di sini" (murni penambahan, `handleSubmit` dan logic lain tidak disentuh).
+
+Diverifikasi lewat Playwright asli (screenshot + interaksi nyata, bukan cuma baca kode): render form kosong, submit sukses → auto-login → layar sukses tampil, klik "Lanjut ke Inventaris" → redirect `/inventory` dan terkonfirmasi kosong ("Belum ada bahan baku terdaftar"), validasi password tidak cocok, validasi password <6 karakter, viewport desktop 1440px, link dari halaman login. 0 console/page error di semua test.
+
+### 11.6 Tahap 4 — Regresi Penuh Akun Demo (⚠️ BREAKING CHANGE — Baca Sebelum Pull)
+
+**Siapapun yang pull branch `feature/multi-tenant-registration` WAJIB menjalankan migration baru di database dev masing-masing.** Migration ini mengubah skema (kolom `business_id` baru, required, dengan FK) dan membackfill semua data existing ke 1 Business "Ayam Geprek Bu Yuli" — **kalau database dev kamu punya data lain yang belum pernah di-seed dari `db:seed`/`db:seed-dummy` standar (mis. hasil eksperimen manual), backfill ini akan tetap menempelkan SEMUA baris ke Business itu**, bukan memisahkannya. Cara paling aman:
+
+1. **Backup dulu kalau ada data dev yang penting:** `docker exec sipi_database pg_dump -U sipi_user sipi_db > backup-sebelum-multi-tenant.sql`
+2. Pull branch, lalu jalankan `docker compose up --build` (atau kalau container sudah jalan: `docker exec sipi_backend npx prisma migrate deploy` diikuti `docker exec sipi_backend npx prisma generate` lalu restart container backend — `node_modules` di-mount sebagai volume terpisah jadi Prisma Client lama tidak otomatis ter-regenerate oleh restart biasa)
+3. Kalau ragu, cara paling bersih adalah `docker compose down -v` (hapus volume database) lalu `docker compose up --build` + `db:seed` + `db:seed-dummy` dari nol — migration baru akan otomatis jalan di database kosong tanpa risiko backfill yang tidak diinginkan.
+
+**Regresi fitur existing (akun demo `admin`/`sipi123`, Ayam Geprek Bu Yuli)** — semua dites live lewat Playwright/curl asli terhadap data historis sungguhan, bukan diasumsikan aman:
+
+- **POS:** checkout real (menu "Ayam Geprek Dada", struk tampil benar dengan ID/total/metode bayar), Batal Transaksi (cart kosong, 0 transaksi terbuat — dikonfirmasi via API count), menu greyed-out + badge "HABIS" saat stok bahan bakunya di-nolkan (diuji nyata dengan menonolkan stok "Air Mineral Botol", bukan simulasi)
+- **Inventaris:** restock (+5 pcs, pesan "Berhasil menambah stok"), riwayat harga (modal linimasa tampil data histori asli), Menu & Resep (HPP/margin per menu tampil benar), rekomendasi restock (menampilkan "Cabai Rawit — Sisa Proyeksi: 0.6 Hari", skenario yang memang sengaja dibakukan di data dummy)
+- **Dashboard:** ke-4 insight (Tren Penjualan Bulanan, Pola Pengunjung Mingguan, Jam Tersibuk, Kenaikan Harga Bahan Baku) tampil dengan data asli; Laporan Rentang Waktu (1 Jun–30 Jun 2026: 1.568 transaksi, Rp 95.619.500, cocok persis antara tampilan dashboard dan jawaban AI chatbot — lihat di bawah); tombol Cetak PDF (`window.print()`) tidak crash
+- **AI Chatbot:** tanya data historis ("Pendapatan bulan Juni 2026 adalah Rp 95.619.500" — cocok persis dengan angka di Laporan Rentang Waktu), restock via chat (Cabai Rawit +100gram via "Ya, Lanjutkan", eksekusi berhasil). **Temuan bug (bukan dari multi-tenant, dikonfirmasi lewat `git log` file tidak pernah disentuh sepanjang Tahap 1-4):** tombol "Ya, Lanjutkan"/"Batal" **tidak pernah muncul** untuk aksi set-resep via chat — `AiChatWidget.tsx` cuma baca `data.parsed_items` dari response, sementara `aiController.ts` mengirim `data.parsed_recipe` untuk aksi tipe resep (nama field beda). AI tetap parsing & menyusun pesan konfirmasi dengan benar ("Saya akan MENGGANTI resep menu 'Air Mineral Botol' dari: 1pcs Air Mineral Botol — menjadi: 1pcs Air Mineral Botol. Lanjutkan?"), tapi user tidak pernah bisa klik apa pun untuk menjalankan/membatalkannya. **Belum diperbaiki** — di luar scope multi-tenant, perlu keputusan terpisah kapan mau ditangani.
+- **Akun + logout:** info akun tampil benar (Nama: admin, Peran: Owner), logout (dengan `confirm()` dialog native) → redirect `/login` → `localStorage` (`sipi_token`/`sipi_logged_in`/`sipi_user`) terkonfirmasi terhapus semua
+
+**Data test dibersihkan total:** akibat testing di atas menyentuh data live tenant demo (1 transaksi checkout nyata, penyesuaian stok utk test greyed-out, 1 restock UI, 1 restock+price update via chat yang memicu rekalkulasi HPP di 9 menu), semua efek itu di-reverse secara presisi lewat query langsung (bukan cuma di-estimasi) — setiap baris baru diidentifikasi by-ID, dihapus, dan setiap kolom yang berubah (`stock_qty`, `latest_price`, `menus.hpp`) dikembalikan ke nilai persis sebelum test. Hasil akhir dicek ulang: **9 tabel demo business kembali persis ke baseline Tahap 1/2** — 16 menus, 21 ingredients, 79 recipe_items, 481 ingredient_price_history, 55.716 stock_movements, 404 menu_hpp_history, 6.491 transactions, 16.111 transaction_items, 3 users. 4 tenant test (Test Business A, Test Business B, dan 2 tenant sisa dari Playwright test Tahap 3) dihapus total beserta seluruh data turunannya (users/menus/ingredients/transactions/dst) — hanya tersisa 1 row di tabel `businesses`: "Ayam Geprek Bu Yuli".
+
+`npx tsc --noEmit` final: 0 error di backend maupun frontend.
+
+### 11.7 Catatan Verifikasi — Bagian 11
+
+- **11.1 (migrasi):** count baris + `IS NULL`/`<> demo-id` filter di 9 tabel, sebelum & sesudah — 0 anomali.
+- **11.2–11.4 (isolasi):** diverifikasi lewat 6 skenario serangan nyata (bukan simulasi/asumsi) dengan 2 tenant baru bikinan `POST /auth/register`, plus 2 request Gemini asli untuk isolasi chatbot.
+- **11.5 (halaman registrasi):** Playwright screenshot + interaksi nyata (bukan baca kode) — form, submit, redirect, validasi, viewport desktop, semua dicek langsung di browser.
+- **11.6 (regresi):** semua fitur dites lewat aksi nyata (klik tombol sungguhan via Playwright, bukan cuma panggil API) terhadap data historis asli (6.491 transaksi riil hasil `seed-dummy.ts`, bukan data dummy baru) — termasuk 1 transaksi checkout sungguhan yang sengaja di-generate lalu di-reverse presisi, bukan dihindari.
+- Data test (4 tenant + seluruh efek testing di tenant demo) dibersihkan total dan diverifikasi ulang row-count exact match ke baseline — bukan "kelihatan bersih", tapi dicek angka per tabel.
+- Tidak ada test otomatis ditambahkan — verifikasi murni manual (curl/Playwright/query database langsung), konsisten dengan pola verifikasi di bagian-bagian sebelumnya di dokumen ini.
+- Belum commit — menunggu review sebelum commit final & sebelum PR dibuka ke `main`.

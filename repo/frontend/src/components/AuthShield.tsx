@@ -11,11 +11,12 @@ export default function AuthShield({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('sipi_logged_in') === 'true';
+    const isPublicRoute = pathname === '/login' || pathname === '/register';
 
-    if (!isLoggedIn && pathname !== '/login') {
+    if (!isLoggedIn && !isPublicRoute) {
       setAuthorized(false);
       router.replace('/login');
-    } else if (isLoggedIn && pathname === '/login') {
+    } else if (isLoggedIn && isPublicRoute) {
       setAuthorized(true);
       router.replace('/pos');
     } else {

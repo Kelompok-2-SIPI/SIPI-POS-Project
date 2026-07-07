@@ -6,7 +6,9 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     role: string;
+    businessId: string;
   };
+  businessId?: string;
 }
 
 export function authenticate(req: Request, res: Response, next: NextFunction) {
@@ -17,8 +19,11 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
-    (req as any).user = decoded;
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string; businessId: string };
+    (req as AuthRequest).user = decoded;
+    // businessId HARUS selalu berasal dari token JWT terverifikasi, bukan dari
+    // req.body/req.params/req.query manapun yang bisa dipalsukan client.
+    (req as AuthRequest).businessId = decoded.businessId;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Token tidak valid atau kedaluwarsa.' });

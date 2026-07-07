@@ -30,86 +30,121 @@ enum PaymentMethod {
   non_cash
 }
 
-model User {
-  id           String                   @id @default(uuid())
-  name         String                   @db.VarChar(100)
-  role         Role                     @default(owner)
-  passwordHash String                   @map("password_hash")
-  createdAt    DateTime                 @default(now()) @map("created_at")
-  
-  // Relations
-  transactions           Transaction[]
-  ingredientPrices       IngredientPriceHistory[]
-  stockMovements         StockMovement[]
+model Business {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(150)
+  createdAt DateTime @default(now()) @map("created_at")
 
+  // Relations
+  users                  User[]
+  menus                  Menu[]
+  ingredients            Ingredient[]
+  recipeItems            RecipeItem[]
+  ingredientPriceHistory IngredientPriceHistory[]
+  stockMovements         StockMovement[]
+  transactions           Transaction[]
+  transactionItems       TransactionItem[]
+  menuHppHistory         MenuHppHistory[]
+
+  @@map("businesses")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  businessId   String   @map("business_id")
+  name         String   @db.VarChar(100)
+  role         Role     @default(owner)
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  business         Business                 @relation(fields: [businessId], references: [id])
+  transactions     Transaction[]
+  ingredientPrices IngredientPriceHistory[]
+  stockMovements   StockMovement[]
+
+  @@index([businessId])
   @@map("users")
 }
 
 model Menu {
-  id           String            @id @default(uuid())
-  name         String            @db.VarChar(150)
-  category     String            @db.VarChar(50) // e.g., Makanan, Minuman, Snack
-  sellingPrice Decimal           @map("selling_price") @db.Decimal(12, 2)
-  hpp          Decimal           @default(0) @map("hpp") @db.Decimal(12, 2)
-  isAvailable  Boolean           @default(true) @map("is_available")
-  imageUrl     String?           @map("image_url")
-  createdAt    DateTime          @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  businessId   String   @map("business_id")
+  name         String   @db.VarChar(150)
+  category     String   @db.VarChar(50) // e.g., Makanan, Minuman, Snack
+  sellingPrice Decimal  @map("selling_price") @db.Decimal(12, 2)
+  hpp          Decimal  @default(0) @map("hpp") @db.Decimal(12, 2)
+  isAvailable  Boolean  @default(true) @map("is_available")
+  imageUrl     String?  @map("image_url")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   // Relations
-  recipes      RecipeItem[]
-  transItems   TransactionItem[]
-  hppHistory   MenuHppHistory[]
+  business   Business          @relation(fields: [businessId], references: [id])
+  recipes    RecipeItem[]
+  transItems TransactionItem[]
+  hppHistory MenuHppHistory[]
 
+  @@index([businessId])
   @@map("menus")
 }
 
 model Ingredient {
-  id             String                   @id @default(uuid())
-  name           String                   @db.VarChar(150)
-  unit           String                   @db.VarChar(20) // e.g., gram, ml, pcs
-  stockQty       Decimal                  @map("stock_qty") @db.Decimal(12, 3)
-  minStockQty    Decimal                  @map("min_stock_qty") @db.Decimal(12, 3)
-  latestPrice    Decimal                  @map("latest_price") @db.Decimal(12, 2)
-  createdAt      DateTime                 @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  businessId  String   @map("business_id")
+  name        String   @db.VarChar(150)
+  unit        String   @db.VarChar(20) // e.g., gram, ml, pcs
+  stockQty    Decimal  @map("stock_qty") @db.Decimal(12, 3)
+  minStockQty Decimal  @map("min_stock_qty") @db.Decimal(12, 3)
+  latestPrice Decimal  @map("latest_price") @db.Decimal(12, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
+  business       Business                 @relation(fields: [businessId], references: [id])
   recipes        RecipeItem[]
   priceHistory   IngredientPriceHistory[]
   stockMovements StockMovement[]
 
+  @@index([businessId])
   @@map("ingredients")
 }
 
 model RecipeItem {
-  id           String     @id @default(uuid())
-  menuId       String     @map("menu_id")
-  ingredientId String     @map("ingredient_id")
-  qtyUsed      Decimal    @map("qty_used") @db.Decimal(12, 3)
+  id           String  @id @default(uuid())
+  businessId   String  @map("business_id")
+  menuId       String  @map("menu_id")
+  ingredientId String  @map("ingredient_id")
+  qtyUsed      Decimal @map("qty_used") @db.Decimal(12, 3)
 
   // Relations
-  menu         Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  business   Business   @relation(fields: [businessId], references: [id])
+  menu       Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
 
   @@unique([menuId, ingredientId])
+  @@index([businessId])
   @@map("recipe_items")
 }
 
 model IngredientPriceHistory {
-  id           String     @id @default(uuid())
-  ingredientId String     @map("ingredient_id")
-  price        Decimal    @db.Decimal(12, 2)
-  recordedAt   DateTime   @map("recorded_at") @db.Date
-  recordedBy   String     @map("recorded_by")
+  id           String   @id @default(uuid())
+  businessId   String   @map("business_id")
+  ingredientId String   @map("ingredient_id")
+  price        Decimal  @db.Decimal(12, 2)
+  recordedAt   DateTime @map("recorded_at") @db.Date
+  recordedBy   String   @map("recorded_by")
 
   // Relations
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [recordedBy], references: [id])
+  business   Business   @relation(fields: [businessId], references: [id])
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [recordedBy], references: [id])
 
+  @@index([businessId])
   @@map("ingredient_price_history")
 }
 
 model StockMovement {
   id           String       @id @default(uuid())
+  businessId   String       @map("business_id")
   ingredientId String       @map("ingredient_id")
   type         TypeMovement
   qtyChange    Decimal      @map("qty_change") @db.Decimal(12, 3)
@@ -118,14 +153,17 @@ model StockMovement {
   createdBy    String       @map("created_by")
 
   // Relations
-  ingredient   Ingredient   @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [createdBy], references: [id])
+  business   Business   @relation(fields: [businessId], references: [id])
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [createdBy], references: [id])
 
+  @@index([businessId])
   @@map("stock_movements")
 }
 
 model Transaction {
   id            String            @id @default(uuid())
+  businessId    String            @map("business_id")
   status        TransactionStatus @default(pending)
   paymentMethod PaymentMethod     @map("payment_method")
   totalPrice    Decimal           @map("total_price") @db.Decimal(12, 2)
@@ -135,36 +173,44 @@ model Transaction {
   completedAt   DateTime?         @map("completed_at")
 
   // Relations
-  user          User              @relation(fields: [cashierId], references: [id])
-  items         TransactionItem[]
+  business Business          @relation(fields: [businessId], references: [id])
+  user     User              @relation(fields: [cashierId], references: [id])
+  items    TransactionItem[]
 
+  @@index([businessId])
   @@map("transactions")
 }
 
 model TransactionItem {
-  id            String      @id @default(uuid())
-  transactionId String      @map("transaction_id")
-  menuId        String      @map("menu_id")
-  menuName      String      @map("menu_name") @db.VarChar(150)
+  id            String  @id @default(uuid())
+  businessId    String  @map("business_id")
+  transactionId String  @map("transaction_id")
+  menuId        String  @map("menu_id")
+  menuName      String  @map("menu_name") @db.VarChar(150)
   qty           Int
-  unitPrice     Decimal     @map("unit_price") @db.Decimal(12, 2)
-  unitHpp       Decimal     @map("unit_hpp") @db.Decimal(12, 2)
+  unitPrice     Decimal @map("unit_price") @db.Decimal(12, 2)
+  unitHpp       Decimal @map("unit_hpp") @db.Decimal(12, 2)
 
   // Relations
-  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  menu          Menu        @relation(fields: [menuId], references: [id])
+  business    Business    @relation(fields: [businessId], references: [id])
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  menu        Menu        @relation(fields: [menuId], references: [id])
 
+  @@index([businessId])
   @@map("transaction_items")
 }
 
 model MenuHppHistory {
   id           String   @id @default(uuid())
+  businessId   String   @map("business_id")
   menuId       String   @map("menu_id")
   hpp          Decimal  @db.Decimal(12, 2)
   sellingPrice Decimal  @map("selling_price") @db.Decimal(12, 2)
   recordedAt   DateTime @default(now()) @map("recorded_at")
 
-  menu         Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id])
+  menu     Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
 
+  @@index([businessId])
   @@map("menu_hpp_history")
 }

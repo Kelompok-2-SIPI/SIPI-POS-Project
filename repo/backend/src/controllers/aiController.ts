@@ -1,9 +1,10 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { prisma } from '../lib/db';
 import { TypeMovement, TransactionStatus, Ingredient, Menu } from '@prisma/client';
 import { recalculateAllHppsForIngredient, recalculateMenuHpp } from '../lib/inventory-helpers';
 import { getMonthlySales, getVisitPatternByDay, getVisitPatternByHour } from '../lib/dashboard-insights';
 import { generateResponse } from '../lib/gemini';
+import { AuthRequest } from '../middleware/auth';
 
 interface ParsedItem {
   name: string;
@@ -124,7 +125,7 @@ async function resolveRecipeAction(
   return { ok: true, menu: menuMatch.match, ingredients: resolved };
 }
 
-export async function handleChat(req: Request, res: Response) {
+export async function handleChat(req: AuthRequest, res: Response) {
   if (process.env.ENABLE_AI_CHAT !== 'true') {
     return res.status(503).json({ error: 'Fitur AI tidak aktif' });
   }
@@ -135,8 +136,9 @@ export async function handleChat(req: Request, res: Response) {
   }
 
   // Get current authenticated user
-  const userId = (req as any).user?.id;
-  if (!userId) {
+  const userId = req.user?.id;
+  const businessId = req.businessId;
+  if (!userId || !businessId) {
     return res.status(401).json({ error: 'User tidak terautentikasi' });
   }
 
@@ -149,9 +151,11 @@ export async function handleChat(req: Request, res: Response) {
     const start = new Date(`${dateStr}T00:00:00+07:00`);
     const end = new Date(`${dateStr}T23:59:59.999+07:00`);
 
-    // 2. Query today's completed transactions
+    // 2. Query today's completed transactions (business ini saja — konteks AI TIDAK boleh
+    // membocorkan data bisnis lain dalam jawabannya)
     const txs = await prisma.transaction.findMany({
       where: {
+        businessId,
         status: TransactionStatus.completed,
         completedAt: { gte: start, lte: end }
       }
@@ -168,11 +172,13 @@ export async function handleChat(req: Request, res: Response) {
 
     // 3. Query ingredients
     const ingredients = await prisma.ingredient.findMany({
+      where: { businessId },
       orderBy: { name: 'asc' }
     });
 
     // 4. Query menus for critical margins
     const menus = await prisma.menu.findMany({
+      where: { businessId },
       orderBy: { name: 'asc' }
     });
 
@@ -198,9 +204,9 @@ export async function handleChat(req: Request, res: Response) {
     // 7b. Reuse service yang sama dipakai dashboard (MonthlySalesChart, Pola Pengunjung Mingguan, Jam Tersibuk)
     const fmtRp = new Intl.NumberFormat('id-ID');
     const [monthlySales, visitByDay, visitByHour] = await Promise.all([
-      getMonthlySales(6),
-      getVisitPatternByDay(4),
-      getVisitPatternByHour(4),
+      getMonthlySales(businessId, 6),
+      getVisitPatternByDay(businessId, 4),
+      getVisitPatternByHour(businessId, 4),
     ]);
 
     const monthlySalesText = monthlySales
@@ -315,7 +321,7 @@ ATURAN:
       }
 
       const existingRecipe = await prisma.recipeItem.findMany({
-        where: { menuId: resolution.menu.id },
+        where: { menuId: resolution.menu.id, businessId },
         include: { ingredient: true },
       });
       const oldRecipeText = existingRecipe.length > 0
@@ -364,7 +370,7 @@ ATURAN:
   }
 }
 
-export async function confirmAction(req: Request, res: Response) {
+export async function confirmAction(req: AuthRequest, res: Response) {
   if (process.env.ENABLE_AI_CHAT !== 'true') {
     return res.status(503).json({ error: 'Fitur AI tidak aktif' });
   }
@@ -374,8 +380,9 @@ export async function confirmAction(req: Request, res: Response) {
     return res.status(400).json({ error: 'Parameter confirmed wajib diisi' });
   }
 
-  const userId = (req as any).user?.id;
-  if (!userId) {
+  const userId = req.user?.id;
+  const businessId = req.businessId;
+  if (!userId || !businessId) {
     return res.status(401).json({ error: 'User tidak terautentikasi' });
   }
 
@@ -394,13 +401,13 @@ export async function confirmAction(req: Request, res: Response) {
 
     if (action.type === 'recipe') {
       await prisma.$transaction(async (tx) => {
-        await tx.recipeItem.deleteMany({ where: { menuId: action.menuId } });
+        await tx.recipeItem.deleteMany({ where: { menuId: action.menuId, businessId } });
         for (const ing of action.ingredients) {
-          await tx.recipeItem.create({ data: { menuId: action.menuId, ingredientId: ing.ingredientId, qtyUsed: ing.qtyUsed } });
+          await tx.recipeItem.create({ data: { businessId, menuId: action.menuId, ingredientId: ing.ingredientId, qtyUsed: ing.qtyUsed } });
         }
       });
 
-      const hpp = await recalculateMenuHpp(action.menuId);
+      const hpp = await recalculateMenuHpp(action.menuId, businessId);
       pendingActions.delete(userId);
 
       return res.json({
@@ -415,7 +422,7 @@ export async function confirmAction(req: Request, res: Response) {
     const matchedIngredients: { item: ParsedItem; ing: Ingredient }[] = [];
     for (const item of action.items) {
       const ing = await prisma.ingredient.findFirst({
-        where: { name: { contains: item.name, mode: 'insensitive' } }
+        where: { businessId, name: { contains: item.name, mode: 'insensitive' } }
       });
       if (!ing) {
         return res.status(400).json({ error: `Bahan baku '${item.name}' tidak dikenali` });
@@ -431,7 +438,7 @@ export async function confirmAction(req: Request, res: Response) {
         const newPrice = Number(item.price_per_unit);
 
         await tx.ingredient.update({
-          where: { id: ing.id },
+          where: { id: ing.id, businessId },
           data: {
             stockQty: newStock,
             latestPrice: newPrice
@@ -440,6 +447,7 @@ export async function confirmAction(req: Request, res: Response) {
 
         await tx.stockMovement.create({
           data: {
+            businessId,
             ingredientId: ing.id,
             type: TypeMovement.restock,
             qtyChange: Number(item.qty),
@@ -450,6 +458,7 @@ export async function confirmAction(req: Request, res: Response) {
 
         await tx.ingredientPriceHistory.create({
           data: {
+            businessId,
             ingredientId: ing.id,
             price: newPrice,
             recordedAt: new Date(),
@@ -467,7 +476,7 @@ export async function confirmAction(req: Request, res: Response) {
 
     // Hitung ulang HPP semua menu yang terpengaruh
     for (const { ing } of matchedIngredients) {
-      await recalculateAllHppsForIngredient(ing.id);
+      await recalculateAllHppsForIngredient(ing.id, businessId);
     }
 
     // Hapus cache

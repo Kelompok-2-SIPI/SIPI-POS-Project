@@ -5,7 +5,7 @@ import { TransactionStatus } from '@prisma/client';
  * Tren penjualan bulanan (N bulan terakhir, default 6).
  * Dipakai oleh grafik "Tren Penjualan Bulanan" di dashboard DAN konteks AI chatbot.
  */
-export async function getMonthlySales(months = 6) {
+export async function getMonthlySales(businessId: string, months = 6) {
   const clamped = Math.min(Math.max(months, 1), 24);
   const now = new Date();
   const gmt7 = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60 * 1000);
@@ -20,7 +20,7 @@ export async function getMonthlySales(months = 6) {
     const end = new Date(`${endStr}T23:59:59.999+07:00`);
 
     const agg = await prisma.transaction.aggregate({
-      where: { status: TransactionStatus.completed, completedAt: { gte: start, lte: end } },
+      where: { businessId, status: TransactionStatus.completed, completedAt: { gte: start, lte: end } },
       _sum: { totalPrice: true },
       _count: true,
     });
@@ -48,7 +48,7 @@ const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu
  * — proxy pakai jumlah transaksi selesai. Dipakai oleh card "Pola Pengunjung Mingguan"
  * di dashboard DAN konteks AI chatbot.
  */
-export async function getVisitPatternByDay(weeks = 4) {
+export async function getVisitPatternByDay(businessId: string, weeks = 4) {
   const now = new Date();
   const nowJakarta = toJakartaWallClock(now);
   // Akhir periode: akhir hari ini (waktu Jakarta), awal: N*7 hari sebelumnya jam 00:00 Jakarta
@@ -58,7 +58,7 @@ export async function getVisitPatternByDay(weeks = 4) {
   const end = new Date(endJakartaMidnight - 7 * 60 * 60 * 1000);
 
   const txs = await prisma.transaction.findMany({
-    where: { status: TransactionStatus.completed, completedAt: { gte: start, lt: end } },
+    where: { businessId, status: TransactionStatus.completed, completedAt: { gte: start, lt: end } },
     select: { completedAt: true },
   });
 
@@ -88,7 +88,7 @@ export async function getVisitPatternByDay(weeks = 4) {
  * — proxy pakai jumlah transaksi selesai. Dipakai oleh card "Jam Tersibuk"
  * di dashboard DAN konteks AI chatbot.
  */
-export async function getVisitPatternByHour(weeks = 4) {
+export async function getVisitPatternByHour(businessId: string, weeks = 4) {
   const now = new Date();
   const nowJakarta = toJakartaWallClock(now);
   const endJakartaMidnight = Date.UTC(nowJakarta.getUTCFullYear(), nowJakarta.getUTCMonth(), nowJakarta.getUTCDate() + 1);
@@ -97,7 +97,7 @@ export async function getVisitPatternByHour(weeks = 4) {
   const end = new Date(endJakartaMidnight - 7 * 60 * 60 * 1000);
 
   const txs = await prisma.transaction.findMany({
-    where: { status: TransactionStatus.completed, completedAt: { gte: start, lt: end } },
+    where: { businessId, status: TransactionStatus.completed, completedAt: { gte: start, lt: end } },
     select: { completedAt: true },
   });
 

@@ -151,35 +151,44 @@ function weightedHour(weights: Record<number, number>, prng: PRNG): number {
   return entries[entries.length - 1][0];
 }
 
+const DEMO_BUSINESS_NAME = 'Ayam Geprek Bu Yuli';
+
 async function main() {
   if (process.env.NODE_ENV === 'production') {
     console.error('Cannot run dummy seeder in production!');
     process.exit(1);
   }
 
+  const business = await prisma.business.findFirst({ where: { name: DEMO_BUSINESS_NAME } });
+  if (!business) {
+    console.error(`Business '${DEMO_BUSINESS_NAME}' not found, run db:seed first.`);
+    process.exit(1);
+  }
+  const businessId = business.id;
+
   const args = process.argv.slice(2);
   const reset = args.includes('--reset');
 
   if (reset) {
     console.log('Resetting dummy data...');
-    await prisma.transactionItem.deleteMany({});
-    await prisma.transaction.deleteMany({});
-    await prisma.menuHppHistory.deleteMany({});
+    await prisma.transactionItem.deleteMany({ where: { businessId } });
+    await prisma.transaction.deleteMany({ where: { businessId } });
+    await prisma.menuHppHistory.deleteMany({ where: { businessId } });
 
     // Kita hanya pertahankan StockMovement/IngredientPriceHistory pertama dari seed dasar.
     await prisma.stockMovement.deleteMany({
-      where: { note: { not: 'Initial seed stock' } },
+      where: { businessId, note: { not: 'Initial seed stock' } },
     });
 
-    const ingredientsToReset = await prisma.ingredient.findMany();
+    const ingredientsToReset = await prisma.ingredient.findMany({ where: { businessId } });
     for (const ing of ingredientsToReset) {
       const firstHistory = await prisma.ingredientPriceHistory.findFirst({
-        where: { ingredientId: ing.id },
+        where: { ingredientId: ing.id, businessId },
         orderBy: { recordedAt: 'asc' },
       });
       if (firstHistory) {
         await prisma.ingredientPriceHistory.deleteMany({
-          where: { ingredientId: ing.id, id: { not: firstHistory.id } },
+          where: { ingredientId: ing.id, businessId, id: { not: firstHistory.id } },
         });
       }
     }
@@ -189,7 +198,7 @@ async function main() {
   const prng = new PRNG(12345);
 
   // Users
-  const ownerUser = await prisma.user.findFirst({ where: { role: Role.owner } });
+  const ownerUser = await prisma.user.findFirst({ where: { role: Role.owner, businessId } });
   if (!ownerUser) {
     console.error('Owner user not found, run db:seed first.');
     process.exit(1);
@@ -198,18 +207,18 @@ async function main() {
   const cashierNames = ['kasir1', 'kasir2'];
   const cashiers = [];
   for (const name of cashierNames) {
-    let cashier = await prisma.user.findFirst({ where: { name } });
+    let cashier = await prisma.user.findFirst({ where: { name, businessId } });
     if (!cashier) {
       const passwordHash = await bcrypt.hash('sipi123', 10);
-      cashier = await prisma.user.create({ data: { name, role: Role.kasir, passwordHash } });
+      cashier = await prisma.user.create({ data: { businessId, name, role: Role.kasir, passwordHash } });
     }
     cashiers.push(cashier);
   }
   const allCashiers = [ownerUser, ...cashiers];
 
   // Base Data
-  const ingredients = await prisma.ingredient.findMany();
-  const menus = await prisma.menu.findMany({ include: { recipes: true } });
+  const ingredients = await prisma.ingredient.findMany({ where: { businessId } });
+  const menus = await prisma.menu.findMany({ where: { businessId }, include: { recipes: true } });
 
   if (menus.length === 0 || ingredients.length === 0) {
     console.error('No menus or ingredients found, run db:seed first.');
@@ -305,7 +314,7 @@ async function main() {
         if (Math.abs(newPrice - priceState[ing.id]) > 0.005) {
           priceState[ing.id] = newPrice;
           months[monthKey].priceHistories.push({
-            id: crypto.randomUUID(), ingredientId: ing.id, price: newPrice,
+            id: crypto.randomUUID(), businessId, ingredientId: ing.id, price: newPrice,
             recordedAt: new Date(Date.UTC(y, m, d)), recordedBy: ownerUser.id,
           });
           totalPriceHistories++;
@@ -318,7 +327,7 @@ async function main() {
         menuHppState[menu.id] = newHpp;
 
         months[monthKey].hppHistories.push({
-          id: crypto.randomUUID(), menuId: menu.id, hpp: newHpp,
+          id: crypto.randomUUID(), businessId, menuId: menu.id, hpp: newHpp,
           sellingPrice: sellingPriceState[menu.id], recordedAt: new Date(Date.UTC(y, m, d)),
         });
 
@@ -362,7 +371,7 @@ async function main() {
           const limited = restockMultiplier(ing.name, dstr) < 1;
           stockState[ing.id] += orderQty;
           months[monthKey].stockMovements.push({
-            id: crypto.randomUUID(), ingredientId: ing.id, type: TypeMovement.restock,
+            id: crypto.randomUUID(), businessId, ingredientId: ing.id, type: TypeMovement.restock,
             qtyChange: orderQty, note: limited ? 'Restock terbatas - suplier keteteran' : 'Restock rutin',
             createdAt: new Date(Date.UTC(y, m, d, 2)), createdBy: ownerUser.id,
           });
@@ -428,7 +437,7 @@ async function main() {
         totalHpp += unitHpp * qty;
 
         txItems.push({
-          id: crypto.randomUUID(), transactionId: txId, menuId: menu.id, menuName: menu.name,
+          id: crypto.randomUUID(), businessId, transactionId: txId, menuId: menu.id, menuName: menu.name,
           qty, unitPrice, unitHpp,
         });
 
@@ -445,6 +454,7 @@ async function main() {
 
       months[monthKey].transactions.push({
         id: txId,
+        businessId,
         status: isCancelled ? TransactionStatus.cancelled : TransactionStatus.completed,
         paymentMethod: prng.next() > 0.3 ? PaymentMethod.non_cash : PaymentMethod.cash,
         totalPrice, totalHpp, cashierId: cashier.id,
@@ -463,7 +473,7 @@ async function main() {
           stockState[ingId] -= usedQty;
           dailyUsage[ingId] = (dailyUsage[ingId] || 0) + usedQty;
           months[monthKey].stockMovements.push({
-            id: crypto.randomUUID(), ingredientId: ingId, type: TypeMovement.usage,
+            id: crypto.randomUUID(), businessId, ingredientId: ingId, type: TypeMovement.usage,
             qtyChange: -usedQty, note: `Pemakaian transaksi ${txId.substring(0, 8)}`,
             createdAt: txDate, createdBy: cashier.id,
           });
@@ -497,7 +507,7 @@ async function main() {
   console.log('Updating final stock and price for ingredients...');
   for (const ing of ingredients) {
     await prisma.ingredient.update({
-      where: { id: ing.id },
+      where: { id: ing.id, businessId },
       data: { stockQty: stockState[ing.id], latestPrice: priceState[ing.id] },
     });
   }
@@ -505,7 +515,7 @@ async function main() {
   // Finalize Menu updates (HPP + harga jual, kalau owner sempat menyesuaikan karena margin kritis)
   for (const menu of menus) {
     await prisma.menu.update({
-      where: { id: menu.id },
+      where: { id: menu.id, businessId },
       data: { hpp: menuHppState[menu.id], sellingPrice: sellingPriceState[menu.id] },
     });
   }

@@ -5,12 +5,22 @@ const prisma = new PrismaClient();
 
 // Ayam Geprek Bu Yuli — UMKM F&B Jogja, buka Januari 2026
 
+const DEMO_BUSINESS_NAME = 'Ayam Geprek Bu Yuli';
+
 async function main() {
   console.log('Seeding database...');
 
+  // 0. Resolve (or create) the demo Business — semua data seed ini milik tenant ini.
+  let business = await prisma.business.findFirst({ where: { name: DEMO_BUSINESS_NAME } });
+  if (!business) {
+    business = await prisma.business.create({ data: { name: DEMO_BUSINESS_NAME } });
+    console.log(`Created business '${DEMO_BUSINESS_NAME}' with ID: ${business.id}`);
+  }
+  const businessId = business.id;
+
   // 1. Create Hardcoded User
   const existingUser = await prisma.user.findFirst({
-    where: { name: 'admin' },
+    where: { name: 'admin', businessId },
   });
 
   let userId: string;
@@ -18,6 +28,7 @@ async function main() {
     const passwordHash = await bcrypt.hash('sipi123', 10);
     const user = await prisma.user.create({
       data: {
+        businessId,
         name: 'admin',
         role: Role.owner,
         passwordHash,
@@ -59,12 +70,13 @@ async function main() {
 
   for (const item of ingredientsData) {
     let ing = await prisma.ingredient.findFirst({
-      where: { name: item.name },
+      where: { name: item.name, businessId },
     });
 
     if (!ing) {
       ing = await prisma.ingredient.create({
         data: {
+          businessId,
           name: item.name,
           unit: item.unit,
           stockQty: item.stockQty,
@@ -76,6 +88,7 @@ async function main() {
       // Log initial price history
       await prisma.ingredientPriceHistory.create({
         data: {
+          businessId,
           ingredientId: ing.id,
           price: item.latestPrice,
           recordedAt: new Date(),
@@ -86,6 +99,7 @@ async function main() {
       // Log initial stock movement
       await prisma.stockMovement.create({
         data: {
+          businessId,
           ingredientId: ing.id,
           type: TypeMovement.restock,
           qtyChange: item.stockQty,
@@ -298,7 +312,7 @@ async function main() {
 
   for (const item of menusData) {
     let menu = await prisma.menu.findFirst({
-      where: { name: item.name },
+      where: { name: item.name, businessId },
     });
 
     if (!menu) {
@@ -314,6 +328,7 @@ async function main() {
 
       menu = await prisma.menu.create({
         data: {
+          businessId,
           name: item.name,
           category: item.category,
           sellingPrice: item.sellingPrice,
@@ -326,6 +341,7 @@ async function main() {
       for (const recipeIng of item.recipe) {
         await prisma.recipeItem.create({
           data: {
+            businessId,
             menuId: menu.id,
             ingredientId: ingredientMap[recipeIng.name],
             qtyUsed: recipeIng.qty,

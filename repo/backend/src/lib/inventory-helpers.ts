@@ -4,9 +4,9 @@ import { prisma } from './db';
  * Recalculate HPP for a single menu.
  * HPP = sum(recipeItem.qtyUsed * ingredient.latestPrice)
  */
-export async function recalculateMenuHpp(menuId: string): Promise<number> {
+export async function recalculateMenuHpp(menuId: string, businessId: string): Promise<number> {
   const recipes = await prisma.recipeItem.findMany({
-    where: { menuId },
+    where: { menuId, businessId },
     include: {
       ingredient: true,
     },
@@ -20,12 +20,12 @@ export async function recalculateMenuHpp(menuId: string): Promise<number> {
   }
 
   const updated = await prisma.menu.update({
-    where: { id: menuId },
+    where: { id: menuId, businessId },
     data: { hpp: totalHpp },
   });
 
   await prisma.menuHppHistory.create({
-    data: { menuId, hpp: totalHpp, sellingPrice: updated.sellingPrice },
+    data: { businessId, menuId, hpp: totalHpp, sellingPrice: updated.sellingPrice },
   });
 
   return totalHpp;
@@ -34,16 +34,16 @@ export async function recalculateMenuHpp(menuId: string): Promise<number> {
 /**
  * Recalculate HPP for all menus that use a specific ingredient.
  */
-export async function recalculateAllHppsForIngredient(ingredientId: string): Promise<void> {
+export async function recalculateAllHppsForIngredient(ingredientId: string, businessId: string): Promise<void> {
   const recipes = await prisma.recipeItem.findMany({
-    where: { ingredientId },
+    where: { ingredientId, businessId },
     select: { menuId: true },
   });
 
   const uniqueMenuIds = Array.from(new Set(recipes.map((r) => r.menuId)));
 
   for (const menuId of uniqueMenuIds) {
-    await recalculateMenuHpp(menuId);
+    await recalculateMenuHpp(menuId, businessId);
   }
 }
 
@@ -51,9 +51,9 @@ export async function recalculateAllHppsForIngredient(ingredientId: string): Pro
  * Dynamic calculation of whether a menu is available based on current stock.
  * A menu is available if stockQty >= qtyUsed for all its recipe items.
  */
-export async function isMenuAvailable(menuId: string): Promise<boolean> {
+export async function isMenuAvailable(menuId: string, businessId: string): Promise<boolean> {
   const recipes = await prisma.recipeItem.findMany({
-    where: { menuId },
+    where: { menuId, businessId },
     include: {
       ingredient: true,
     },
@@ -75,8 +75,9 @@ export async function isMenuAvailable(menuId: string): Promise<boolean> {
 /**
  * Fetch all menus with their dynamic availability state computed.
  */
-export async function getMenusWithAvailability() {
+export async function getMenusWithAvailability(businessId: string) {
   const menus = await prisma.menu.findMany({
+    where: { businessId },
     include: {
       recipes: {
         include: {

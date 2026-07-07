@@ -5,10 +5,10 @@ import { TypeMovement, TransactionStatus } from '@prisma/client';
  * Deducts ingredient stocks and completes a transaction.
  * Runs inside a Prisma transaction block.
  */
-export async function completeTransactionInTx(transactionId: string, tx: any) {
+export async function completeTransactionInTx(transactionId: string, tx: any, businessId: string) {
   // 1. Fetch transaction with its items
   const transaction = await tx.transaction.findUnique({
-    where: { id: transactionId },
+    where: { id: transactionId, businessId },
     include: {
       items: {
         include: {
@@ -68,13 +68,13 @@ export async function completeTransactionInTx(transactionId: string, tx: any) {
     const usage = ingredientUsage[ingredientId];
 
     const result = await tx.ingredient.updateMany({
-      where: { id: ingredientId, stockQty: { gte: usage.qtyToDeduct } },
+      where: { id: ingredientId, businessId, stockQty: { gte: usage.qtyToDeduct } },
       data: { stockQty: { decrement: usage.qtyToDeduct } },
     });
 
     if (result.count === 0) {
       // Re-fetch buat pesan error yang informatif (stok terkini, bukan nilai basi)
-      const current = await tx.ingredient.findUnique({ where: { id: ingredientId } });
+      const current = await tx.ingredient.findUnique({ where: { id: ingredientId, businessId } });
       const available = current ? Number(current.stockQty) : 0;
       throw new Error(`Stok bahan baku '${usage.ingredientName}' tidak mencukupi. Dibutuhkan: ${usage.qtyToDeduct.toFixed(2)}, Tersedia: ${available.toFixed(2)}`);
     }
@@ -82,6 +82,7 @@ export async function completeTransactionInTx(transactionId: string, tx: any) {
     // Create StockMovement
     await tx.stockMovement.create({
       data: {
+        businessId,
         ingredientId,
         type: TypeMovement.usage,
         qtyChange: -usage.qtyToDeduct,
@@ -93,7 +94,7 @@ export async function completeTransactionInTx(transactionId: string, tx: any) {
 
   // 5. Update transaction status
   const updatedTransaction = await tx.transaction.update({
-    where: { id: transactionId },
+    where: { id: transactionId, businessId },
     data: {
       status: TransactionStatus.completed,
       completedAt: new Date(),

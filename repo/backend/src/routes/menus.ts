@@ -1,10 +1,10 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import crypto from 'crypto';
 import { prisma } from '../lib/db';
 import { getMenusWithAvailability, recalculateMenuHpp } from '../lib/inventory-helpers';
-import { authenticate } from '../middleware/auth';
+import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 router.use(authenticate);
@@ -47,14 +47,15 @@ function parseRecipeField(raw: any): any[] | null {
   return null;
 }
 
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    return res.json(await getMenusWithAvailability());
+    return res.json(await getMenusWithAvailability(req.businessId!));
   } catch (e: any) { return res.status(500).json({ error: 'Gagal mengambil data menu.' }); }
 });
 
-router.post('/', upload.single('image'), async (req: Request, res: Response) => {
+router.post('/', upload.single('image'), async (req: AuthRequest, res: Response) => {
   try {
+    const businessId = req.businessId!;
     const { name, category, sellingPrice } = req.body;
     if (!name || !category || sellingPrice === undefined)
       return res.status(400).json({ error: 'Nama, kategori, dan harga jual wajib diisi.' });
@@ -63,6 +64,7 @@ router.post('/', upload.single('image'), async (req: Request, res: Response) => 
 
     const menu = await prisma.menu.create({
       data: {
+        businessId,
         name,
         category,
         sellingPrice: Number(sellingPrice),
@@ -75,19 +77,27 @@ router.post('/', upload.single('image'), async (req: Request, res: Response) => 
     if (recipe) {
       for (const r of recipe) {
         if (!r.ingredientId || !r.qtyUsed) continue;
-        await prisma.recipeItem.create({ data: { menuId: menu.id, ingredientId: r.ingredientId, qtyUsed: Number(r.qtyUsed) } });
+        // ingredientId datang dari client — verifikasi dulu bahan baku itu benar milik
+        // business ini sebelum dipakai, supaya tidak bisa mereferensikan bahan baku tenant lain.
+        const ownedIngredient = await prisma.ingredient.findFirst({ where: { id: r.ingredientId, businessId } });
+        if (!ownedIngredient) continue;
+        await prisma.recipeItem.create({ data: { businessId, menuId: menu.id, ingredientId: r.ingredientId, qtyUsed: Number(r.qtyUsed) } });
       }
     }
-    const hpp = await recalculateMenuHpp(menu.id);
+    const hpp = await recalculateMenuHpp(menu.id, businessId);
     return res.status(201).json({ success: true, menu: { ...menu, hpp } });
   } catch (e: any) { return res.status(500).json({ error: 'Gagal membuat menu baru.' }); }
 });
 
-router.put('/:id', upload.single('image'), async (req: Request, res: Response) => {
+router.put('/:id', upload.single('image'), async (req: AuthRequest, res: Response) => {
   try {
+    const businessId = req.businessId!;
     const { name, category, sellingPrice } = req.body;
     if (!name || !category || sellingPrice === undefined)
       return res.status(400).json({ error: 'Nama, kategori, dan harga jual wajib diisi.' });
+
+    const existing = await prisma.menu.findFirst({ where: { id: req.params.id, businessId } });
+    if (!existing) return res.status(404).json({ error: 'Menu tidak ditemukan.' });
 
     const data: { name: string; category: string; sellingPrice: number; imageUrl?: string } = {
       name,
@@ -100,37 +110,52 @@ router.put('/:id', upload.single('image'), async (req: Request, res: Response) =
     }
 
     const updated = await prisma.menu.update({ where: { id: req.params.id }, data });
-    const hpp = await recalculateMenuHpp(req.params.id);
+    const hpp = await recalculateMenuHpp(req.params.id, businessId);
     return res.json({ success: true, menu: { ...updated, hpp } });
   } catch (e: any) { return res.status(500).json({ error: 'Gagal memperbarui menu.' }); }
 });
 
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
+    const businessId = req.businessId!;
+    const existing = await prisma.menu.findFirst({ where: { id: req.params.id, businessId } });
+    if (!existing) return res.status(404).json({ error: 'Menu tidak ditemukan.' });
     await prisma.menu.delete({ where: { id: req.params.id } });
     return res.json({ success: true });
   } catch (e: any) { return res.status(500).json({ error: 'Gagal menghapus menu.' }); }
 });
 
-router.get('/:id/recipe', async (req: Request, res: Response) => {
+router.get('/:id/recipe', async (req: AuthRequest, res: Response) => {
   try {
-    const recipes = await prisma.recipeItem.findMany({ where: { menuId: req.params.id }, include: { ingredient: true } });
+    const businessId = req.businessId!;
+    const menu = await prisma.menu.findFirst({ where: { id: req.params.id, businessId } });
+    if (!menu) return res.status(404).json({ error: 'Menu tidak ditemukan.' });
+    const recipes = await prisma.recipeItem.findMany({ where: { menuId: req.params.id, businessId }, include: { ingredient: true } });
     return res.json(recipes.map(r => ({ id: r.id, ingredientId: r.ingredientId, ingredientName: r.ingredient.name, unit: r.ingredient.unit, qtyUsed: Number(r.qtyUsed) })));
   } catch (e: any) { return res.status(500).json({ error: 'Gagal mengambil resep menu.' }); }
 });
 
-router.put('/:id/recipe', async (req: Request, res: Response) => {
+router.put('/:id/recipe', async (req: AuthRequest, res: Response) => {
   try {
+    const businessId = req.businessId!;
     const { recipe } = req.body;
     if (!recipe || !Array.isArray(recipe)) return res.status(400).json({ error: 'Format resep salah.' });
+
+    const menu = await prisma.menu.findFirst({ where: { id: req.params.id, businessId } });
+    if (!menu) return res.status(404).json({ error: 'Menu tidak ditemukan.' });
+
     await prisma.$transaction(async (tx) => {
-      await tx.recipeItem.deleteMany({ where: { menuId: req.params.id } });
+      await tx.recipeItem.deleteMany({ where: { menuId: req.params.id, businessId } });
       for (const item of recipe) {
         if (!item.ingredientId || item.qtyUsed === undefined || Number(item.qtyUsed) <= 0) continue;
-        await tx.recipeItem.create({ data: { menuId: req.params.id, ingredientId: item.ingredientId, qtyUsed: Number(item.qtyUsed) } });
+        // ingredientId datang dari client — verifikasi dulu bahan baku itu benar milik
+        // business ini sebelum dipakai, supaya tidak bisa mereferensikan bahan baku tenant lain.
+        const ownedIngredient = await tx.ingredient.findFirst({ where: { id: item.ingredientId, businessId } });
+        if (!ownedIngredient) continue;
+        await tx.recipeItem.create({ data: { businessId, menuId: req.params.id, ingredientId: item.ingredientId, qtyUsed: Number(item.qtyUsed) } });
       }
     });
-    const hpp = await recalculateMenuHpp(req.params.id);
+    const hpp = await recalculateMenuHpp(req.params.id, businessId);
     return res.json({ success: true, hpp });
   } catch (e: any) { return res.status(500).json({ error: 'Gagal memperbarui resep menu.' }); }
 });
