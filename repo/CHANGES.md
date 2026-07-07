@@ -6,6 +6,8 @@
 
 > Dibuat via `git log`/`git diff origin/main..HEAD` yang dijalankan langsung — bukan dari ingatan percakapan sebelumnya, supaya akurat.
 
+> **📌 Update pasca-merge (2026-07-07):** Branch `redesign/uiux-stitch-janu` sudah di-*review* dan **di-merge ke `main` lewat PR #2** (merge commit `958b32f`, disetujui reviewer `FiveUII`/Favian). Sejak titik itu, pengembangan berlanjut **langsung di `main`** — repo ini sekarang berada di branch `main`, bukan lagi branch redesign terpisah. Bagian 1–8 di bawah tetap dibiarkan sebagai snapshot isi PR #2 apa adanya (tidak ditulis ulang retroaktif). Perubahan **setelah** merge itu didokumentasikan terpisah di **bagian 9**, dengan base perbandingan `958b32f..HEAD` — bukan lagi `main..redesign/uiux-stitch-janu`.
+
 ---
 
 ## 1. Ringkasan Tingkat Tinggi
@@ -165,6 +167,8 @@ Penting buat reviewer supaya paham konteks kenapa beberapa perubahan "kecil" ada
 - **Kuota gratis Gemini API (free tier) sangat kecil untuk kebutuhan produksi** — 20 request/hari per model (`generate_content_free_tier_requests`). Ditemukan saat regression E2E: 3 pertanyaan berturut-turut ke chatbot AI sempat kena `429 Too Many Requests` dari Gemini (backend menangani dengan benar, balikin `502` + pesan "Layanan AI sementara tidak tersedia" ke frontend — bukan bug, memang graceful degradation yang disengaja di `aiController.ts`). Tapi kuota 20/hari jelas tidak cukup untuk pemakaian nyata sehari-hari sebuah warung — **wajib upgrade ke paid tier Gemini API sebelum deployment produksi**, kalau tidak fitur AI chatbot akan sering mati di jam sibuk.
 - **`POST /transactions` menyimpang dari kontrak API yang didokumentasikan PRD §9 — `/transactions/:id/cancel` jadi praktis tidak pernah terpanggil.** `POST /transactions` saat ini selalu default `status: completed` langsung (checkout 1 langkah), bukan default `pending` seperti yang didokumentasikan di PRD §9. Ini membuat endpoint `POST /transactions/:id/cancel` secara praktis tidak pernah terpanggil dari alur manapun di aplikasi (FR-05 "Batal Transaksi" di UI Kasir bekerja lewat mekanisme lain — clear local state sebelum checkout dipanggil sama sekali, bukan lewat endpoint cancel ini). FR-05 tetap terpenuhi penuh secara fungsional (acceptance criteria §10 lolos), ini murni penyimpangan kontrak API dari dokumentasi PRD, bukan bug. Perlu didiskusikan dengan pemegang keputusan desain apakah checkout 1-langkah ini disengaja dipertahankan (lebih simpel) atau perlu dikembalikan ke alur pending→complete (memberi window "batalkan sebelum stok terpotong" untuk kasus training kasir baru/salah pencet).
 
+> **Dicek ulang pasca commit `958b32f..25d675b` (bagian 9):** tidak ada satu pun item di daftar ini yang terselesaikan oleh 4 commit pasca-merge tersebut — semuanya masih terbuka apa adanya. Item baru dari commit `40f1c91` (stok desimal, badge overlap) sudah langsung diperbaiki di commit yang sama, jadi tidak pernah masuk daftar ini.
+
 ---
 
 ## 7. Troubleshooting / Catatan Operasional (penting untuk developer lain)
@@ -189,3 +193,78 @@ Penting buat reviewer supaya paham konteks kenapa beberapa perubahan "kecil" ada
 - **Banner konflik sync offline (baru, 2.7):** diverifikasi dengan simulasi nyata, bukan cuma inspeksi kode — stok bahan baku "Air Mineral Botol" diturunkan sementara di database (`0.5`, di bawah kebutuhan `3`), sebuah transaksi offline di-inject lewat `localStorage`, halaman di-reload sehingga alur sync otomatis berjalan sungguhan lewat `POST /transactions/sync`. Modal konflik muncul dengan data yang benar (nama bahan, jumlah kekurangan, jumlah transaksi terdampak) dan tidak auto-dismiss. Data simulasi (transaksi test, stock movement konflik, angka stok) dibersihkan kembali dari database sesudahnya.
 - `npx tsc --noEmit` dijalankan ulang di titik pengecekan sesi ini (bukan cuma diasumsikan dari sesi sebelumnya) — bersih di backend maupun frontend, nol error.
 - **Fail-fast `JWT_SECRET` (2.7) — baru diverifikasi lewat baca kode, BELUM lewat live-test.** Percobaan menguji langsung (unset `JWT_SECRET` lalu jalankan container) tidak berhasil memicu kondisi "benar-benar kosong": `backend/src/index.ts` baris pertama `import 'dotenv/config'` memuat ulang `backend/.env` (file secrets asli, ter-mount sebagai volume di container dev) sebelum `requireEnv()` sempat mengecek — jadi nilai asli ke-reload lagi walau sudah di-unset di level shell. Logic `requireEnv()` sendiri sudah benar dari pembacaan kode (`process.exit(1)` kalau `!value`), tapi belum ada observasi langsung container benar-benar keluar dengan pesan `[FATAL]`. Beda dengan 3 fix lain (auth middleware, race condition, konflik sync) yang sudah dikonfirmasi live lewat curl/Playwright sesi ini.
+
+---
+
+## 9. Perubahan Setelah Merge ke `main` (Pasca PR #2)
+
+Base perbandingan bagian ini: `958b32f` (merge commit PR #2) → `25d675b` (`HEAD` saat ditulis). 4 commit baru, seluruhnya langsung di `main`, belum ada PR terpisah dibuka untuk merangkumnya — makanya ditambahkan di sini. Semua sudah `tsc --noEmit` bersih dan diverifikasi manual (curl/Playwright/screenshot), belum ada test otomatis ditambahkan.
+
+### 9.1 Fix Stok Desimal untuk Satuan Diskrit (`potong`/`pcs`) + Fix Overlap Badge Inventaris
+**Commit:** `40f1c91`
+
+Dua bug ditemukan sekaligus di kartu bahan baku halaman Inventaris:
+
+- **Stok tampil desimal untuk satuan hitungan** (mis. "147.64 potong", "237.09 potong") — tidak masuk akal karena "potong"/"pcs" itu hitungan bulat, beda dari gram/ml yang wajar desimal. Akar masalah: `backend/prisma/seed-dummy.ts` membulatkan SEMUA kuantitas restock harian ke 2 desimal secara seragam (`Math.round(orderQty * 100) / 100`), tanpa membedakan satuan diskrit vs kontinu — dan skema database sendiri tidak punya kategorisasi ini (kolom `unit` cuma `VarChar` bebas). Diperbaiki di **3 layer**:
+  1. **Seed generation** — `roundToUnit()` baru + `DISCRETE_UNITS` set di `seed-dummy.ts`, supaya reseed berikutnya otomatis hasilkan bilangan bulat untuk satuan diskrit.
+  2. **Display** — `frontend/src/lib/format.ts` (baru): `isDiscreteUnit()`/`formatStockQty()`, dipakai di semua tempat stok ditampilkan (kartu bahan baku, subtitle Min. Stok, tab Restock) — bukan cuma satu tempat yang kelihatan di laporan awal.
+  3. **Input validation** — `step` pada input angka Restock/Edit/Create Bahan Baku diubah jadi `1` (bukan `any`) kalau satuannya diskrit, supaya entri manual tidak reintroduksi desimal.
+  - **Data lama:** dijalankan `UPDATE ingredients SET stock_qty = ROUND(stock_qty) WHERE unit IN (...)` satu kali di database dev yang sedang berjalan (11 baris, non-destruktif, tidak menyentuh `stock_movements`) — kalau developer lain belum reseed ulang sejak commit ini, data dev mereka mungkin masih punya nilai desimal lama sampai reseed atau dikoreksi manual dengan query yang sama.
+- **Badge "Stok: X" menimpa nama bahan baku panjang** (terlihat di "Ayam Potong (Paha Atas/Bawah/Dada)", "Ayam Fillet (Dada Tanpa Tulang)"). Akar masalah: `.inv-card-badge` pakai `position: absolute; top:0; right:0` tanpa reservasi ruang apa pun di layout — nama panjang yang wrapping tidak punya apa pun yang mendorongnya menjauh dari badge. Diperbaiki dengan memindahkan badge dari absolute-positioned jadi flex item normal dalam row baru `.inv-card-header` (bersama `<h3>` judul, `justify-content: space-between; flex-wrap: wrap`), judul diberi `flex:1; min-width:120px` — badge sekarang selalu punya ruang nyata dan jatuh ke baris sendiri kalau tidak muat, bukan menimpa teks.
+
+Diverifikasi lewat Playwright: circle data-point (tidak relevan di sini, itu untuk 9.3) — untuk fix ini, screenshot kartu "Ayam Fillet (Dada Tanpa Tulang)" (nama terpanjang di data) di viewport 1440px dan 375px, keduanya tidak overlap; nilai stok terkonfirmasi bulat ("142 potong", dst.) lewat `innerText()`, bukan cuma dibaca visual.
+
+File yang terdampak: `backend/prisma/seed-dummy.ts`, `frontend/src/lib/format.ts` (baru), `frontend/src/app/inventory/page.tsx`.
+
+### 9.2 Halaman Akun Baru — Ganti Logout Floating per Halaman
+**Commit:** `778dcb7`
+
+Sebelumnya tombol "Keluar" cuma ada di header halaman POS (`.btn-logout`, tanpa gating responsive apa pun) — tidak muncul sama sekali di Inventaris/Dashboard, jadi Owner harus balik ke POS dulu kalau mau logout dari halaman lain. Ditemukan juga tidak ada versi mobile terpisah (`BottomNav.tsx` tidak punya item logout apa pun) — tombol POS yang sama itu juga yang jadi satu-satunya akses logout di mobile.
+
+Diperbaiki dengan halaman baru `frontend/src/app/account/page.tsx` sebagai satu tempat konsisten untuk info akun (Nama, Peran — dari `localStorage.sipi_user`, field yang memang tersedia dari sistem auth 1-akun-hardcoded ini, tidak mengarang field baru) dan tombol "Keluar" (reuse logic logout yang sudah ada, bukan ditulis ulang). Diakses lewat item nav ke-4 **"Akun"** di `Sidebar.tsx` (desktop, ≥1024px) dan `BottomNav.tsx` (mobile, <1024px, grid dikembalikan ke `repeat(4,1fr)`/`max-width` proporsional — kebalikan persis dari perubahan 3-kolom di commit `8bd7605`). Tombol `.btn-logout` floating di header POS dihapus total, beserta `handleLogout`/`useRouter` yang jadi dead code di file itu.
+
+Diverifikasi: screenshot desktop (1440px) & mobile (375px) di POS/Inventaris/Dashboard/Akun — nol console error di 8 kombinasi halaman×viewport, tidak ada lagi logout floating di manapun selain halaman Akun. Fungsional logout dites end-to-end lewat Playwright (klik "Keluar" → `POST /auth/logout` → `localStorage` `sipi_token`/`sipi_logged_in`/`sipi_user` terkonfirmasi terhapus → redirect ke `/login`), bukan cuma baca kode.
+
+File yang terdampak: `frontend/src/app/account/page.tsx` (baru), `frontend/src/components/Sidebar.tsx`, `frontend/src/components/BottomNav.tsx`, `frontend/src/app/globals.css`, `frontend/src/app/pos/page.tsx`.
+
+### 9.3 Line Chart: Kurva Halus → Garis Lurus (Fix Overshoot di Titik Data)
+**Commit:** `1892f36`
+
+Grafik "Tren Harga (30 Hari Terakhir)" di mini-card alert kenaikan harga (`SimpleLineChart`, `dashboard/page.tsx`) memakai `buildSmoothLinePath` — kurva quadratic Bézier yang ditarik lewat titik TENGAH antar data (`Q prev midX midY`), bukan lewat titik data itu sendiri. Efeknya: garis cuma benar-benar menyentuh titik pertama/terakhir, titik-titik di tengah (yang lingkarannya digambar terpisah persis di koordinat data asli) selalu sedikit meleset dari kurva — kelihatan sebagai "overshoot" di puncak/lembah.
+
+Diperbaiki dengan `buildStraightLinePath` — polyline biasa (`M`/`L` per segmen, garis lurus antar titik), tanpa menyentuh `getX`/`getY`/`chartPoints`/logic data apa pun, murni cara path digambar. Dicek juga apakah ada chart line lain di aplikasi yang pakai smoothing serupa — `SimpleLineChart` ternyata satu-satunya; chart lain (`MonthlySalesChart`, Pola Pengunjung Mingguan, Jam Tersibuk) semuanya bar chart, tidak ada path smoothing.
+
+Diverifikasi bukan cuma visual — lewat `page.evaluate()` di browser asli, dikonfirmasi programatik bahwa koordinat `(cx, cy)` tiap `<circle>` data-point sama persis dengan salah satu vertex di string `d` milik `<path>` (bukan mendekati, tapi sama persis).
+
+File yang terdampak: `frontend/src/app/dashboard/page.tsx`.
+
+### 9.4 Pembulatan Tampilan Rata-rata Transaksi/Hari (Pola Pengunjung Mingguan)
+**Commit:** `25d675b`
+
+Tooltip hover bar chart "Pola Pengunjung Mingguan" dan insight text di bawahnya menampilkan angka rata-rata transaksi/hari apa adanya dari backend (mis. "86.75 transaksi/hari") — desimal ganjil untuk sesuatu yang secara alami dihitung sebagai satuan bulat oleh Owner ("86.75 transaksi" tidak masuk akal, beda dengan stok yang memang bisa desimal untuk satuan berat/volume). Ini **murni perubahan tampilan** — `Math.round()` diterapkan HANYA di titik render (tooltip di komponen chart, teks di `buildWeeklyPatternInsight`), perhitungan rata-rata di backend (`avgTransactions`) tetap presisi seperti semula, tidak diubah sama sekali.
+
+Dicek juga cakupan lain: chart "Jam Tersibuk" (`buildHourlyPatternInsight`, `totalTransactions`) TIDAK perlu pembulatan — nilainya sudah selalu bilangan bulat dari sononya (jumlah total transaksi per jam, bukan rata-rata), dikonfirmasi lewat panggilan langsung ke `GET /dashboard/visit-pattern-by-hour`. Tidak ada tempat lain di dashboard yang menampilkan `avgTransactions` dengan desimal (dicek lewat pencarian semua penggunaan field ini).
+
+File yang terdampak: `frontend/src/app/dashboard/page.tsx`.
+
+### 9.5 Keputusan: Permintaan Fitur Registrasi Multi-Tenant — DITOLAK
+
+Permintaan untuk menambah alur registrasi/multi-tenant (banyak akun/warung terpisah dalam satu instalasi) didiskusikan dan **diputuskan untuk TIDAK dikerjakan**, mempertahankan desain single-tenant/1-akun-hardcoded sesuai PRD (OQ-6, dan Non-Goals yang eksplisit mengecualikan "alur registrasi dan autentikasi multi-user").
+
+**Alasan penolakan:**
+- Mengubah ke multi-tenant butuh redesign skema database besar (`tenant_id` di semua tabel bisnis: `Menu`, `Ingredient`, `Transaction`, dll.) — bukan perubahan aditif kecil.
+- Butuh audit ulang SEMUA query yang ada (setiap query harus di-scope ke tenant yang benar) — berisiko tinggi menimbulkan kebocoran data antar tenant kalau ada satu saja query yang terlewat, apalagi kalau dikerjakan terburu-buru.
+- Timing permintaan ini H-1 presentasi — risiko regresi dari perubahan sebesar ini jauh lebih besar dari manfaatnya untuk kebutuhan demo/MVP saat ini.
+
+Dicatat di sini supaya keputusan ini (dan alasannya) tetap terdokumentasi — kalau permintaan serupa muncul lagi di kemudian hari, konteks penolakannya sudah jelas tanpa perlu didiskusikan ulang dari nol.
+
+---
+
+## 10. Catatan Verifikasi — Bagian 9
+
+- **9.1 (stok desimal):** `stock_qty` untuk 11 bahan baku bersatuan diskrit dicek lewat `psql` sebelum & sesudah `UPDATE`, dikonfirmasi bulat semua sesudahnya. Kartu "Ayam Fillet (Dada Tanpa Tulang)" (nama terpanjang) discreenshot di 1440px & 375px, tidak ada overlap.
+- **9.2 (halaman Akun):** logout end-to-end dites lewat Playwright asli (bukan baca kode) — token/localStorage terhapus, redirect ke `/login` terkonfirmasi. 8 kombinasi halaman×viewport discreenshot, nol console error.
+- **9.3 (line chart):** koordinat tiap `<circle>` dicek programatik cocok persis dengan vertex `<path>` lewat `page.evaluate()`, bukan cuma dilihat visual.
+- **9.4 (pembulatan transaksi/hari):** dikonfirmasi lewat `innerText()` tooltip & insight-note di browser asli menampilkan "87" (dibulatkan dari 86.75 via API `visit-pattern-by-day`), dan `visit-pattern-by-hour` dikonfirmasi sudah selalu integer dari respons API langsung.
+- `npx tsc --noEmit` bersih di backend & frontend untuk semua 4 commit di bagian ini.
+- Tidak ada test otomatis ditambahkan — verifikasi murni manual (curl/Playwright/query database langsung).
