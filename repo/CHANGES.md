@@ -355,7 +355,7 @@ Diverifikasi lewat Playwright asli (screenshot + interaksi nyata, bukan cuma bac
 - **POS:** checkout real (menu "Ayam Geprek Dada", struk tampil benar dengan ID/total/metode bayar), Batal Transaksi (cart kosong, 0 transaksi terbuat — dikonfirmasi via API count), menu greyed-out + badge "HABIS" saat stok bahan bakunya di-nolkan (diuji nyata dengan menonolkan stok "Air Mineral Botol", bukan simulasi)
 - **Inventaris:** restock (+5 pcs, pesan "Berhasil menambah stok"), riwayat harga (modal linimasa tampil data histori asli), Menu & Resep (HPP/margin per menu tampil benar), rekomendasi restock (menampilkan "Cabai Rawit — Sisa Proyeksi: 0.6 Hari", skenario yang memang sengaja dibakukan di data dummy)
 - **Dashboard:** ke-4 insight (Tren Penjualan Bulanan, Pola Pengunjung Mingguan, Jam Tersibuk, Kenaikan Harga Bahan Baku) tampil dengan data asli; Laporan Rentang Waktu (1 Jun–30 Jun 2026: 1.568 transaksi, Rp 95.619.500, cocok persis antara tampilan dashboard dan jawaban AI chatbot — lihat di bawah); tombol Cetak PDF (`window.print()`) tidak crash
-- **AI Chatbot:** tanya data historis ("Pendapatan bulan Juni 2026 adalah Rp 95.619.500" — cocok persis dengan angka di Laporan Rentang Waktu), restock via chat (Cabai Rawit +100gram via "Ya, Lanjutkan", eksekusi berhasil). **Temuan bug (bukan dari multi-tenant, dikonfirmasi lewat `git log` file tidak pernah disentuh sepanjang Tahap 1-4):** tombol "Ya, Lanjutkan"/"Batal" **tidak pernah muncul** untuk aksi set-resep via chat — `AiChatWidget.tsx` cuma baca `data.parsed_items` dari response, sementara `aiController.ts` mengirim `data.parsed_recipe` untuk aksi tipe resep (nama field beda). AI tetap parsing & menyusun pesan konfirmasi dengan benar ("Saya akan MENGGANTI resep menu 'Air Mineral Botol' dari: 1pcs Air Mineral Botol — menjadi: 1pcs Air Mineral Botol. Lanjutkan?"), tapi user tidak pernah bisa klik apa pun untuk menjalankan/membatalkannya. **Belum diperbaiki** — di luar scope multi-tenant, perlu keputusan terpisah kapan mau ditangani.
+- **AI Chatbot:** tanya data historis ("Pendapatan bulan Juni 2026 adalah Rp 95.619.500" — cocok persis dengan angka di Laporan Rentang Waktu), restock via chat (Cabai Rawit +100gram via "Ya, Lanjutkan", eksekusi berhasil). **Temuan bug (bukan dari multi-tenant, dikonfirmasi lewat `git log` file tidak pernah disentuh sepanjang Tahap 1-4):** tombol "Ya, Lanjutkan"/"Batal" **tidak pernah muncul** untuk aksi set-resep via chat — `AiChatWidget.tsx` cuma baca `data.parsed_items` dari response, sementara `aiController.ts` mengirim `data.parsed_recipe` untuk aksi tipe resep (nama field beda). AI tetap parsing & menyusun pesan konfirmasi dengan benar ("Saya akan MENGGANTI resep menu 'Air Mineral Botol' dari: 1pcs Air Mineral Botol — menjadi: 1pcs Air Mineral Botol. Lanjutkan?"), tapi user tidak pernah bisa klik apa pun untuk menjalankan/membatalkannya. **Update:** sudah diperbaiki di commit terpisah setelah bagian 11 ini ditulis — lihat §12.1.
 - **Akun + logout:** info akun tampil benar (Nama: admin, Peran: Owner), logout (dengan `confirm()` dialog native) → redirect `/login` → `localStorage` (`sipi_token`/`sipi_logged_in`/`sipi_user`) terkonfirmasi terhapus semua
 
 **Data test dibersihkan total:** akibat testing di atas menyentuh data live tenant demo (1 transaksi checkout nyata, penyesuaian stok utk test greyed-out, 1 restock UI, 1 restock+price update via chat yang memicu rekalkulasi HPP di 9 menu), semua efek itu di-reverse secara presisi lewat query langsung (bukan cuma di-estimasi) — setiap baris baru diidentifikasi by-ID, dihapus, dan setiap kolom yang berubah (`stock_qty`, `latest_price`, `menus.hpp`) dikembalikan ke nilai persis sebelum test. Hasil akhir dicek ulang: **9 tabel demo business kembali persis ke baseline Tahap 1/2** — 16 menus, 21 ingredients, 79 recipe_items, 481 ingredient_price_history, 55.716 stock_movements, 404 menu_hpp_history, 6.491 transactions, 16.111 transaction_items, 3 users. 4 tenant test (Test Business A, Test Business B, dan 2 tenant sisa dari Playwright test Tahap 3) dihapus total beserta seluruh data turunannya (users/menus/ingredients/transactions/dst) — hanya tersisa 1 row di tabel `businesses`: "Ayam Geprek Bu Yuli".
@@ -371,3 +371,85 @@ Diverifikasi lewat Playwright asli (screenshot + interaksi nyata, bukan cuma bac
 - Data test (4 tenant + seluruh efek testing di tenant demo) dibersihkan total dan diverifikasi ulang row-count exact match ke baseline — bukan "kelihatan bersih", tapi dicek angka per tabel.
 - Tidak ada test otomatis ditambahkan — verifikasi murni manual (curl/Playwright/query database langsung), konsisten dengan pola verifikasi di bagian-bagian sebelumnya di dokumen ini.
 - Belum commit — menunggu review sebelum commit final & sebelum PR dibuka ke `main`.
+
+---
+
+## 12. Perbaikan Pasca-Tahap 4 (3 Commit Terpisah, Branch `feature/multi-tenant-registration`)
+
+Base: `b5a064f` (commit multi-tenant utama, bagian 11) → `HEAD`. 3 commit, masing-masing ditemukan/dikerjakan sebagai tindak lanjut langsung dari regresi Tahap 4 (§11.6), tapi bukan bagian dari scope multi-tenant itu sendiri — dipisah jadi commit sendiri-sendiri.
+
+### 12.1 Fix: Tombol Konfirmasi AI Chatbot untuk Aksi Resep Tidak Pernah Muncul
+**Commit:** `d2a3e19`
+
+Ditemukan saat regresi §11.6: tombol "Ya, Lanjutkan"/"Batal" tidak pernah dirender untuk aksi set-resep via chat, meski AI sudah benar menyusun pesan konfirmasinya. Akar masalah — **field mismatch, bukan bug dari pekerjaan multi-tenant** (dikonfirmasi lewat `git log`, file `AiChatWidget.tsx` tidak pernah disentuh sepanjang Tahap 1–4): `aiController.ts` mengirim `parsed_recipe` untuk `action_type: "recipe"` (bentuknya `{ menu_name, ingredients: [{ ingredientId, ingredientName, qtyUsed, unit }] }`), sementara `AiChatWidget.tsx` cuma pernah membaca field `parsed_items` (bentuk restock: `{ name, qty, unit, price_per_unit }`) — kondisi render tombol (`msg.type === 'confirmation' && msg.parsed_items`) otomatis `false` untuk resep karena `parsed_items` selalu `undefined` di jalur itu.
+
+Diperbaiki dengan: interface `ParsedRecipe`/`ParsedRecipeIngredient` baru, `ChatMessage.parsed_recipe` disimpan dari response, kondisi render tombol diperluas jadi `msg.parsed_items || msg.parsed_recipe`, daftar "Detail Eksekusi" merender bentuk yang sesuai (nama+qty+unit restock, atau qtyUsed+unit+ingredientName resep), dan pesan sukses pasca-konfirmasi dibedakan (`data.updated` restock vs `data.recipe`/`data.menu`/`data.hpp` resep — sebelumnya jalur resep cuma dapat fallback generik "Aksi berhasil dieksekusi").
+
+Diverifikasi live end-to-end (bukan cuma baca kode): minta AI ubah resep menu "Air Mineral Botol" jadi 2pcs (dari 1pcs) via chat, tombol konfirmasi muncul, klik "Ya, Lanjutkan", dikonfirmasi lewat query database langsung `qty_used` berubah 1→2 dan `menus.hpp` 3164,8→6329,6 (persis 2×, sesuai perhitungan resep), lalu direvert presisi ke nilai asli (`qty_used`=1, `hpp`=3164,80, hapus baris `menu_hpp_history` yang baru dibuat).
+
+File yang terdampak: `frontend/src/components/AiChatWidget.tsx`.
+
+### 12.2 Fix Keamanan: Hapus Auth-Bypass Hardcoded di Login + Registrasi Tidak Lagi Auto-Login
+**Commit:** `375c3ca`
+
+**Temuan celah keamanan** (ditemukan lewat investigasi kode, bukan laporan eksternal): `login/page.tsx` punya blok `catch` di `handleSubmit` yang dimaksudkan sebagai fallback offline PWA, tapi implementasinya mengecek kredensial hardcoded literal:
+```js
+catch (err) {
+  if (name === 'admin' && password === 'sipi123') {
+    localStorage.setItem('sipi_logged_in', 'true');
+    localStorage.setItem('sipi_user', JSON.stringify({ name: 'admin', role: 'owner' }));
+    router.replace('/pos');
+  }
+  ...
+}
+```
+Blok ini terpicu kapan pun `fetch()` ke `POST /auth/login` gagal total (bukan saat backend merespons 401 normal — itu jalur lain). Kenapa berbahaya: (1) kredensial `admin`/`sipi123` ter-hardcode literal di bundle JavaScript client — terlihat siapa saja lewat view-source/devtools, tidak pernah melibatkan backend sama sekali; (2) `AuthShield.tsx` cuma memvalidasi `localStorage.getItem('sipi_logged_in') === 'true'` tanpa cek token apa pun, jadi trik ini **berhasil membuka shell aplikasi** (Sidebar/BottomNav/halaman ter-render) sebagai "owner" palsu — tanpa perlu tenant/kredensial valid apa pun, di instalasi multi-tenant manapun. **Batasnya:** karena jalur ini tidak pernah mengisi `sipi_token`, `apiFetch` tidak pernah mengirim header `Authorization` — setiap panggilan API sungguhan langsung `401` dan `apiFetch` punya global-handler yang otomatis `localStorage.clear()` + redirect balik ke `/login`, jadi **tidak ada bypass ke data backend/isolasi tenant** lewat jalur ini, murni bypass ke UI-shell kosong dalam jendela singkat.
+
+**Sebelum menghapus**, ditelusuri dan dikonfirmasi dulu bahwa "Offline Capability" asli (PRD §6/§7 — Kasir yang **sudah login** tetap bisa pakai POS saat koneksi putus di tengah sesi) adalah mekanisme yang **sepenuhnya terpisah**: gate `AuthShield` murni baca `localStorage` (nol ketergantungan jaringan), dan transaksi offline punya jalur sendiri di `pos/page.tsx` (`handleCheckout` catch-block, simpan ke `localStorage['sipi_offline_transactions']`, sync otomatis lewat `POST /transactions/sync` saat online lagi) — keduanya tidak pernah memanggil `handleSubmit` milik halaman login. Aman dihapus tanpa merusak offline capability sesi yang sudah berjalan.
+
+**Diperbaiki dengan:** blok `catch` diganti pesan jujur "Tidak dapat terhubung ke server. Periksa koneksi internet Anda." tanpa memberi akses apa pun; teks UI "Mode offline tersedia" + hint kredensial di footer dihapus total (beserta CSS `.divider-row`/`.divider-line`/`.divider-label` yang jadi tidak terpakai).
+
+**Sekaligus di commit yang sama — alur registrasi diubah:** sebelumnya `POST /auth/register` sukses langsung auto-login (isi `localStorage` dari response register). Sekarang **tidak auto-login** — pesan sukses dititipkan lewat `sessionStorage` (`sipi_register_success`, dibaca sekali oleh halaman login lalu dihapus), redirect ke `/login`, user login manual dengan kredensial yang baru didaftarkan. Layar sukses in-page di `register/page.tsx` (beserta CSS-nya) dihapus total, digantikan banner sukses hijau baru di `login/page.tsx` yang juga membawa reminder "data masih kosong, lengkapi Bahan Baku & Menu Resep dulu" yang sebelumnya ada di layar sukses lama.
+
+**Diverifikasi lewat 5 skenario live (Playwright, screenshot per skenario):**
+- **A** — login normal `admin`/`sipi123`: tetap berhasil seperti biasa
+- **B** — kredensial salah: pesan error normal dari backend ("Password salah.")
+- **C** — koneksi diputus **saat mencoba login**: "Tidak dapat terhubung ke server..." — `sipi_logged_in`/`sipi_token` tetap `null`, tidak ada jalan masuk sama sekali
+- **D** — registrasi akun baru → redirect ke `/login` dengan banner sukses (`sipi_logged_in` null pasca-register, bukan auto-masuk) → login manual dengan kredensial baru berhasil → data kosong terkonfirmasi di Inventaris
+- **E** (**paling kritis**) — sesi **sudah login** (token JWT asli tersimpan), koneksi diputus **di tengah pemakaian** (bukan saat login): halaman POS tetap render & bisa dipakai (banner "Mode Kasir tetap aktif secara lokal"), tambah-ke-keranjang + checkout offline tersimpan lokal (badge "Tersimpan Offline" di struk), begitu koneksi kembali auto-sync jalan sendiri ("Sukses! 1 transaksi offline tersinkronisasi") — offline capability asli **tidak terpengaruh** oleh penghapusan fallback hardcoded
+
+Data yang tersentuh testing E (1 transaksi sync sungguhan + 2 tenant test) dibersihkan presisi sesudahnya, demo business dicek ulang kembali persis ke baseline.
+
+File yang terdampak: `frontend/src/app/login/page.tsx`, `frontend/src/app/register/page.tsx`.
+
+### 12.3 Fix: Tab Restock Salah Tampilkan "Stok Anda Aman!" untuk Akun Tanpa Bahan Baku Sama Sekali
+**Commit:** `21ea058`
+
+Bug "list kosong ditafsirkan sebagai aman": `GET /dashboard/restock-recommendations` mengembalikan array kosong (`[]`) baik untuk kondisi "semua bahan baku aman" **maupun** "belum ada bahan baku sama sekali untuk dievaluasi" — endpoint ini tidak punya field pembeda apa pun antara dua kondisi itu. Akibatnya akun baru (tenant kosong pasca-registrasi, 0 ingredient) salah menampilkan pesan positif "Stok Anda Aman! Semua bahan baku memiliki persediaan yang cukup..." di tab Restock halaman Inventaris — padahal tidak ada satu pun bahan baku untuk dievaluasi.
+
+Tidak perlu ubah backend: `inventory/page.tsx` ternyata sudah fetch daftar ingredient lengkap secara terpisah (`fetchIngredients()` → state `ingredients`, dipakai tab Stok) independen dari endpoint rekomendasi. Diperbaiki dengan menyilangkan `ingredients.length` di frontend — kalau `recommendations.length === 0`: cek dulu `ingredients.length === 0` → tampilkan empty-state yang sama seperti tab Stok ("Belum ada bahan baku terdaftar.") plus tombol "+ Tambah Bahan Baku" yang pindah ke tab Stok (tab Restock sendiri tidak punya tombol header seperti tab Stok/Menu); kalau ada ingredient tapi rekomendasi tetap kosong → tetap "Stok Anda Aman!" seperti sebelumnya (perilaku itu sudah benar untuk kondisi itu).
+
+Diverifikasi 3 kondisi lewat Playwright + screenshot: (1) akun baru 0 ingredient → empty-state + tombol; (2) demo Bu Yuli dengan stok "Cabai Rawit" dinaikkan sementara ke 999.999 (lalu direvert presisi ke 2243,9) → "Stok Anda Aman!" tetap benar; (3) demo Bu Yuli kondisi asli (Cabai Rawit 2243,9 gram) → kartu rekomendasi "Sisa Proyeksi: 0,7 Hari" tampil seperti seharusnya.
+
+File yang terdampak: `frontend/src/app/inventory/page.tsx`.
+
+### 12.4 Status Terkini Data Demo — 2 Contoh Tenant di Database
+
+Database dev sekarang berisi **2 business** untuk keperluan demonstrasi kapabilitas multi-tenant:
+
+| Business | Isi Data | Fungsi |
+|---|---|---|
+| **Ayam Geprek Bu Yuli** | 16 menus, 21 ingredients, 6.491 transactions (histori Jan–Jul 2026 lewat `seed-dummy.ts`) | Demo utama — akun lama `admin`/`sipi123`, dipakai semua regresi Tahap 1–4 |
+| **ES BOBA Mas Bobi** | 0 menus, 0 ingredients, 1 user | Tenant kosong/test tambahan — mendemonstrasikan alur registrasi tenant baru dari nol, bukan dibuat oleh AI agent sepanjang sesi ini |
+
+Kedua business ini terisolasi penuh sesuai audit isolasi §11.3–§11.4 — tidak ada data yang saling terlihat lintas tenant.
+
+### 12.5 Catatan Verifikasi — Bagian 12
+
+- **12.1:** perubahan database dikonfirmasi lewat query langsung sebelum & sesudah konfirmasi chat (`qty_used`, `menus.hpp`), bukan cuma dilihat dari UI — lalu direvert presisi.
+- **12.2:** 5 skenario (A–E) semuanya dites live lewat Playwright dengan screenshot, termasuk skenario paling berisiko (E — kontinuitas sesi offline) yang secara eksplisit membuktikan fix ini TIDAK merusak offline capability asli.
+- **12.3:** 3 kondisi dites live dengan screenshot, termasuk manipulasi stok sementara di database (dinaikkan lalu direvert presisi) untuk memicu kondisi "semua aman" pada akun yang punya data historis banyak transaksi.
+- Semua data test (tenant baru yang dibuat untuk testing di ketiga sub-bagian ini) dihapus, dan setiap mutasi ke data demo `Ayam Geprek Bu Yuli` yang dilakukan murni untuk kebutuhan testing direvert presisi ke nilai asli — dicek ulang row-count & value-level, bukan diasumsikan bersih.
+- `npx tsc --noEmit`: 0 error di frontend untuk ketiga commit (backend tidak disentuh sama sekali di bagian ini).
+- Tidak ada item di bagian 6 (Known Issues asli) yang relevan/berubah status akibat 3 commit ini — ketiganya bug baru yang ditemukan selama regresi Tahap 4, bukan item yang sudah tercatat sebelumnya.
+- Belum commit — menunggu review.
