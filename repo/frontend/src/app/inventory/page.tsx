@@ -697,11 +697,28 @@ export default function InventoryPage() {
       {activeTab === 'restock' && (
         <div className="recommendations-list">
           {recommendations.length === 0 ? (
-            <div className="rec-empty-state">
-              <div className="empty-icon">✓</div>
-              <h3>Stok Anda Aman!</h3>
-              <p>Semua bahan baku memiliki persediaan yang cukup untuk minimal 2 hari ke depan berdasarkan rata-rata penjualan.</p>
-            </div>
+            ingredients.length === 0 ? (
+              // Array rekomendasi kosong bisa berarti "semua aman" ATAU "belum ada bahan
+              // baku sama sekali untuk dievaluasi" — endpoint /dashboard/restock-recommendations
+              // tidak membedakan keduanya, jadi dicek di sini pakai daftar ingredients yang
+              // sudah di-fetch terpisah (fetchIngredients, dipakai juga oleh tab Stok).
+              <div className="empty-state">
+                <p>Belum ada bahan baku terdaftar.</p>
+                <button
+                  onClick={() => setActiveTab('ingredients')}
+                  className="btn btn-primary btn-sm"
+                  style={{ marginTop: '12px' }}
+                >
+                  + Tambah Bahan Baku
+                </button>
+              </div>
+            ) : (
+              <div className="rec-empty-state">
+                <div className="empty-icon">✓</div>
+                <h3>Stok Anda Aman!</h3>
+                <p>Semua bahan baku memiliki persediaan yang cukup untuk minimal 2 hari ke depan berdasarkan rata-rata penjualan.</p>
+              </div>
+            )
           ) : (
             recommendations.map((item) => {
               const roundedDays = item.sisaHari.toFixed(1);
