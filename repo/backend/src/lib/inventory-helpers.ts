@@ -75,9 +75,9 @@ export async function isMenuAvailable(menuId: string, businessId: string): Promi
 /**
  * Fetch all menus with their dynamic availability state computed.
  */
-export async function getMenusWithAvailability(businessId: string) {
+export async function getMenusWithAvailability(businessId: string, includeInactive = false) {
   const menus = await prisma.menu.findMany({
-    where: { businessId },
+    where: { businessId, ...(includeInactive ? {} : { isActive: true }) },
     include: {
       recipes: {
         include: {
@@ -108,6 +108,7 @@ export async function getMenusWithAvailability(businessId: string) {
       hpp: Number(menu.hpp),
       imageUrl: menu.imageUrl,
       isAvailable, // Dynamically computed
+      isActive: menu.isActive,
       createdAt: menu.createdAt,
     };
   });

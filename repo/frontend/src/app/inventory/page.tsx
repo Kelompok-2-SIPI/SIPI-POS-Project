@@ -21,6 +21,7 @@ interface MenuItem {
   sellingPrice: number;
   hpp: number;
   isAvailable: boolean;
+  isActive: boolean;
   imageUrl?: string | null;
 }
 
@@ -160,7 +161,7 @@ export default function InventoryPage() {
 
   const fetchMenus = async () => {
     try {
-      const res = await apiFetch('/menus');
+      const res = await apiFetch('/menus?includeInactive=true');
       if (res.ok) {
         const data = await res.json();
         setMenus(data);
@@ -551,6 +552,46 @@ export default function InventoryPage() {
     }
   };
 
+  const toggleMenuActive = async (menu: MenuItem) => {
+    const nextActive = !menu.isActive;
+    const confirmMsg = nextActive
+      ? `Aktifkan kembali menu "${menu.name}"? Menu akan muncul lagi di POS.`
+      : `Nonaktifkan menu "${menu.name}"? Menu akan disembunyikan dari POS, tapi seluruh riwayat transaksi tetap utuh.`;
+    if (!confirm(confirmMsg)) return;
+    try {
+      const res = await apiFetch(`/menus/${menu.id}/active`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: nextActive }),
+      });
+      if (res.ok) {
+        fetchMenus();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Gagal mengubah status aktif menu.');
+      }
+    } catch (err) {
+      alert('Gagal mengubah status aktif menu.');
+    }
+  };
+
+  const deleteIngredient = async (ingredientId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus bahan baku ini?')) return;
+    try {
+      const res = await apiFetch(`/ingredients/${ingredientId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        fetchIngredients();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Gagal menghapus bahan baku.');
+      }
+    } catch (err) {
+      alert('Gagal menghapus bahan baku.');
+    }
+  };
+
   const defaultCategories = ['Minuman', 'Makanan', 'Snack', 'Paket'];
   const uniqueCategories = Array.from(new Set([...defaultCategories, ...menus.map(m => m.category)]));
 
@@ -684,6 +725,15 @@ export default function InventoryPage() {
                                 <path d="M280-80q-33 0-56.5-23.5T200-160q0-33 23.5-56.5T280-240q33 0 56.5 23.5T360-160q0 33-23.5 56.5T280-80Zm400 0q-33 0-56.5-23.5T600-160q0-33 23.5-56.5T680-240q33 0 56.5 23.5T760-160q0 33-23.5 56.5T680-80ZM40-800v-80h131l170 360h280l156-280h91L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68-39.5t-2-78.5l54-98-144-304H40Zm434 260v-80h-80v80h80ZM374-600v-80h-80v80h80Zm120 0v-80h-80v80h80ZM120 0v-80h-80v80h80ZM494-440v-80h-80v80h80Zm120 0v-80h-80v80h80Z"/>
                               </svg>
                             </button>
+                            <button
+                              className="inv-action-btn danger"
+                              onClick={() => deleteIngredient(ing.id)}
+                              title="Hapus Bahan Baku"
+                            >
+                              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+                              </svg>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -773,7 +823,7 @@ export default function InventoryPage() {
             </div>
           ) : (
             menus.map((menu) => (
-              <div key={menu.id} className="menu-card">
+              <div key={menu.id} className={`menu-card ${!menu.isActive ? 'menu-card-inactive' : ''}`}>
                 <div className="menu-card-header">
                   <div className="menu-meta-group">
                     <div className="menu-thumb">
@@ -790,7 +840,10 @@ export default function InventoryPage() {
                       <span className="badge badge-success">{menu.category}</span>
                     </div>
                   </div>
-                  {!menu.isAvailable && (
+                  {!menu.isActive && (
+                    <span className="badge badge-neutral">Nonaktif</span>
+                  )}
+                  {menu.isActive && !menu.isAvailable && (
                     <span className="badge badge-danger">
                       <svg width="12" height="12" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
                         <path d="M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm-40-160h80v-240h-80v240Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
@@ -831,6 +884,13 @@ export default function InventoryPage() {
                     className="btn btn-secondary flex-1 menu-edit-btn"
                   >
                     Atur Resep &amp; Harga
+                  </button>
+                  <button
+                    onClick={() => toggleMenuActive(menu)}
+                    className={`btn ${menu.isActive ? 'btn-secondary' : 'btn-primary'} menu-toggle-active-btn`}
+                    title={menu.isActive ? 'Nonaktifkan Menu' : 'Aktifkan Menu'}
+                  >
+                    {menu.isActive ? 'Nonaktifkan' : 'Aktifkan'}
                   </button>
                   <button
                     onClick={() => deleteMenu(menu.id)}
@@ -1462,6 +1522,8 @@ export default function InventoryPage() {
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
+          flex-wrap: wrap;
+          row-gap: 8px;
           margin-top: auto;
         }
         .inv-price-col {
@@ -1522,6 +1584,15 @@ export default function InventoryPage() {
           background-color: var(--color-surface-soft);
           transform: scale(0.95);
         }
+        .inv-action-btn.danger {
+          background-color: transparent;
+          color: var(--color-danger, #dc2626);
+          border: 1px solid var(--color-danger, #dc2626);
+        }
+        .inv-action-btn.danger:hover {
+          background-color: rgba(220, 38, 38, 0.08);
+          transform: scale(0.95);
+        }
         .menu-card {
           display: flex;
           flex-direction: column;
@@ -1537,6 +1608,9 @@ export default function InventoryPage() {
           transform: translateY(-2px);
           box-shadow: var(--shadow-md);
         }
+        .menu-card-inactive {
+          opacity: 0.6;
+        }
         .menu-actions {
           display: flex;
           gap: 10px;
@@ -1545,6 +1619,10 @@ export default function InventoryPage() {
         .flex-2 { flex: 2; }
         .menu-edit-btn {
           border-radius: var(--radius-pill);
+        }
+        .menu-toggle-active-btn {
+          border-radius: var(--radius-pill);
+          white-space: nowrap;
         }
         .icon-btn {
           width: 42px;

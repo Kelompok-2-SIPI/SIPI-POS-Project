@@ -384,6 +384,11 @@ button, .btn {
   color: var(--warning-color);
 }
 
+.badge-neutral {
+  background-color: var(--color-surface-soft);
+  color: var(--text-secondary);
+}
+
 /* ===== Dashboard Page Styles ===== */
 .dashboard-layout {
   display: flex;

@@ -91,6 +91,39 @@ router.post('/:id/restock', async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const businessId = req.businessId!;
+    const existing = await prisma.ingredient.findFirst({ where: { id: req.params.id, businessId } });
+    if (!existing) return res.status(404).json({ error: 'Bahan baku tidak ditemukan.' });
+
+    // recipe_items.ingredient sudah di-set onDelete: Cascade di schema — kalau langsung
+    // delete tanpa cek ini, resep menu yang masih pakai bahan baku ini akan senyap
+    // kehilangan salah satu komposisinya. Jadi wajib dicegah di level aplikasi dulu,
+    // bukan mengandalkan FK error seperti pada DELETE /menus/:id (di sana constraint-nya
+    // memang menolak / tidak cascade).
+    const usedIn = await prisma.recipeItem.findMany({
+      where: { ingredientId: req.params.id, businessId },
+      include: { menu: { select: { name: true } } },
+    });
+    if (usedIn.length > 0) {
+      const menuNames = [...new Set(usedIn.map(r => r.menu.name))].join(', ');
+      return res.status(409).json({
+        error: `Bahan baku ini tidak bisa dihapus karena masih digunakan dalam resep menu ${menuNames}. Hapus dulu dari resep menu tersebut.`,
+      });
+    }
+
+    // stock_movements & ingredient_price_history hanya log historis milik bahan baku ini
+    // sendiri (tidak direferensikan entitas lain), jadi aman ikut cascade delete (sudah
+    // diset onDelete: Cascade di schema).
+    await prisma.ingredient.delete({ where: { id: req.params.id } });
+    return res.json({ success: true });
+  } catch (e: any) {
+    console.error('DELETE /ingredients/:id error:', e);
+    return res.status(500).json({ error: 'Gagal menghapus bahan baku.' });
+  }
+});
+
 router.get('/:id/price-history', async (req: AuthRequest, res: Response) => {
   try {
     const businessId = req.businessId!;

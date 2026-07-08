@@ -50,7 +50,8 @@ function parseRecipeField(raw: any): any[] | null {
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    return res.json(await getMenusWithAvailability(req.businessId!));
+    const includeInactive = req.query.includeInactive === 'true';
+    return res.json(await getMenusWithAvailability(req.businessId!, includeInactive));
   } catch (e: any) { return res.status(500).json({ error: 'Gagal mengambil data menu.' }); }
 });
 
@@ -114,6 +115,24 @@ router.put('/:id', upload.single('image'), async (req: AuthRequest, res: Respons
     const hpp = await recalculateMenuHpp(req.params.id, businessId);
     return res.json({ success: true, menu: { ...updated, hpp } });
   } catch (e: any) { return res.status(500).json({ error: 'Gagal memperbarui menu.' }); }
+});
+
+router.put('/:id/active', async (req: AuthRequest, res: Response) => {
+  try {
+    const businessId = req.businessId!;
+    const { isActive } = req.body;
+    if (typeof isActive !== 'boolean')
+      return res.status(400).json({ error: 'Field isActive harus bernilai boolean.' });
+
+    const existing = await prisma.menu.findFirst({ where: { id: req.params.id, businessId } });
+    if (!existing) return res.status(404).json({ error: 'Menu tidak ditemukan.' });
+
+    const updated = await prisma.menu.update({ where: { id: req.params.id }, data: { isActive } });
+    return res.json({ success: true, menu: { ...updated, hpp: Number(updated.hpp), sellingPrice: Number(updated.sellingPrice) } });
+  } catch (e: any) {
+    console.error('PUT /menus/:id/active error:', e);
+    return res.status(500).json({ error: 'Gagal mengubah status aktif menu.' });
+  }
 });
 
 router.delete('/:id', async (req: AuthRequest, res: Response) => {

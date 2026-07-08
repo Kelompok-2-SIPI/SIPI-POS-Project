@@ -75,6 +75,7 @@ model Menu {
   sellingPrice Decimal  @map("selling_price") @db.Decimal(12, 2)
   hpp          Decimal  @default(0) @map("hpp") @db.Decimal(12, 2)
   isAvailable  Boolean  @default(true) @map("is_available")
+  isActive     Boolean  @default(true) @map("is_active")
   imageUrl     String?  @map("image_url")
   createdAt    DateTime @default(now()) @map("created_at")
 
