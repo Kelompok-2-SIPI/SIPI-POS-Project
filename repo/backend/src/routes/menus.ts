@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db';
 import { getMenusWithAvailability, recalculateMenuHpp } from '../lib/inventory-helpers';
 import { authenticate, AuthRequest } from '../middleware/auth';
@@ -122,7 +123,17 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
     if (!existing) return res.status(404).json({ error: 'Menu tidak ditemukan.' });
     await prisma.menu.delete({ where: { id: req.params.id } });
     return res.json({ success: true });
-  } catch (e: any) { return res.status(500).json({ error: 'Gagal menghapus menu.' }); }
+  } catch (e: any) {
+    // Menu sudah pernah dipakai di transaksi historis (transaction_items tidak cascade
+    // saat menu dihapus, supaya riwayat transaksi & HPP historis tidak rusak).
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2003') {
+      return res.status(409).json({
+        error: 'Menu ini tidak bisa dihapus karena sudah memiliki riwayat transaksi. Nonaktifkan menu ini alih-alih menghapusnya.',
+      });
+    }
+    console.error('DELETE /menus/:id error:', e);
+    return res.status(500).json({ error: 'Gagal menghapus menu.' });
+  }
 });
 
 router.get('/:id/recipe', async (req: AuthRequest, res: Response) => {
