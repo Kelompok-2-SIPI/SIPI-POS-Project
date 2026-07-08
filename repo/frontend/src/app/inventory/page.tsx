@@ -542,6 +542,9 @@ export default function InventoryPage() {
       });
       if (res.ok) {
         fetchMenus();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Gagal menghapus menu.');
       }
     } catch (err) {
       alert('Gagal menghapus menu.');
