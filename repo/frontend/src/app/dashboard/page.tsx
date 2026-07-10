@@ -747,6 +747,9 @@ function PriceAlertItem({ alert, targetHpp }: { alert: PriceAlert; targetHpp: nu
 export default function DashboardPage() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [topMenus, setTopMenus] = useState<TopMenu[]>([]);
+  // Foto lama (path lokal disk pra-Cloudinary) bisa 404 di production karena disk
+  // ephemeral — daripada tampilkan ikon broken-image mentah, jatuhkan ke ikon default.
+  const [brokenMenuImages, setBrokenMenuImages] = useState<Set<string>>(new Set());
   const [monthlySales, setMonthlySales] = useState<MonthlySales[]>([]);
   const [visitByDay, setVisitByDay] = useState<VisitDayResponse | null>(null);
   const [visitByHour, setVisitByHour] = useState<VisitHourResponse | null>(null);
@@ -1076,8 +1079,12 @@ export default function DashboardPage() {
                 <div key={menu.id} className="top-menu-row">
                   <div className="top-menu-left">
                     <div className="top-menu-photo">
-                      {menu.imageUrl ? (
-                        <img src={resolveAssetUrl(menu.imageUrl) || ''} alt={menu.name} />
+                      {menu.imageUrl && !brokenMenuImages.has(menu.id) ? (
+                        <img
+                          src={resolveAssetUrl(menu.imageUrl) || ''}
+                          alt={menu.name}
+                          onError={() => setBrokenMenuImages((prev) => new Set(prev).add(menu.id))}
+                        />
                       ) : (
                         <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
                           <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>

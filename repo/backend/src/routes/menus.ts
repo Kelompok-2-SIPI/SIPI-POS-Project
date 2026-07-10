@@ -1,24 +1,25 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
-import path from 'path';
-import crypto from 'crypto';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db';
 import { getMenusWithAvailability, recalculateMenuHpp } from '../lib/inventory-helpers';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import cloudinary from '../lib/cloudinary';
 
 const router = Router();
 router.use(authenticate);
 
-// ── Upload gambar menu (disk storage, nama file unik, validasi tipe & ukuran) ──
-const UPLOAD_DIR = path.join(__dirname, '../../uploads/menus');
+// ── Upload gambar menu (Cloudinary — disk lokal di platform deploy seperti Railway
+// bersifat ephemeral, file hilang setiap redeploy) ──
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${crypto.randomUUID()}${ext}`);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'sipi-pos/menus',
+    allowed_formats: ['jpeg', 'jpg', 'png', 'webp'],
+    transformation: [{ width: 800, height: 800, crop: 'limit' }],
   },
 });
 
@@ -62,7 +63,8 @@ router.post('/', upload.single('image'), async (req: AuthRequest, res: Response)
     if (!name || !category || sellingPrice === undefined)
       return res.status(400).json({ error: 'Nama, kategori, dan harga jual wajib diisi.' });
 
-    const imageUrl = req.file ? `/uploads/menus/${req.file.filename}` : undefined;
+    // req.file.path berisi secure_url penuh dari Cloudinary (bukan path lokal lagi).
+    const imageUrl = req.file ? req.file.path : undefined;
 
     const menu = await prisma.menu.create({
       data: {
@@ -108,7 +110,7 @@ router.put('/:id', upload.single('image'), async (req: AuthRequest, res: Respons
     };
     // Kalau tidak ada file baru diupload, imageUrl lama TIDAK disentuh/dihapus.
     if (req.file) {
-      data.imageUrl = `/uploads/menus/${req.file.filename}`;
+      data.imageUrl = req.file.path;
     }
 
     const updated = await prisma.menu.update({ where: { id: req.params.id }, data });

@@ -6,6 +6,9 @@ const ASSET_BASE_URL = API_URL.replace(/\/api\/v1\/?$/, '');
 
 export function resolveAssetUrl(path?: string | null): string | null {
   if (!path) return null;
+  // URL absolut (mis. dari Cloudinary) dipakai apa adanya — hanya path lokal lama
+  // (mis. /uploads/menus/...) yang perlu digabung dengan ASSET_BASE_URL.
+  if (/^https?:\/\//i.test(path)) return path;
   return `${ASSET_BASE_URL}${path}`;
 }
 

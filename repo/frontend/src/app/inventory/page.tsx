@@ -54,6 +54,9 @@ export default function InventoryPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [menus, setMenus] = useState<MenuItem[]>([]);
   const [recommendations, setRecommendations] = useState<RestockItem[]>([]);
+  // Foto lama (path lokal disk pra-Cloudinary) bisa 404 di production karena disk
+  // ephemeral — daripada tampilkan ikon broken-image mentah, jatuhkan ke ikon default.
+  const [brokenMenuImages, setBrokenMenuImages] = useState<Set<string>>(new Set());
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -827,8 +830,12 @@ export default function InventoryPage() {
                 <div className="menu-card-header">
                   <div className="menu-meta-group">
                     <div className="menu-thumb">
-                      {menu.imageUrl ? (
-                        <img src={resolveAssetUrl(menu.imageUrl) || ''} alt={menu.name} />
+                      {menu.imageUrl && !brokenMenuImages.has(menu.id) ? (
+                        <img
+                          src={resolveAssetUrl(menu.imageUrl) || ''}
+                          alt={menu.name}
+                          onError={() => setBrokenMenuImages((prev) => new Set(prev).add(menu.id))}
+                        />
                       ) : (
                         <svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
                           <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
@@ -1210,7 +1217,11 @@ export default function InventoryPage() {
                   <div className="menu-image-upload">
                     <div className="menu-image-preview">
                       {menuImagePreview ? (
-                        <img src={menuImagePreview} alt="Preview menu" />
+                        <img
+                          src={menuImagePreview}
+                          alt="Preview menu"
+                          onError={() => setMenuImagePreview(null)}
+                        />
                       ) : (
                         <svg width="28" height="28" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
                           <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>

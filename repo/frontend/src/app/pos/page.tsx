@@ -128,6 +128,9 @@ function CartPanelContent({
 export default function PosPage() {
   const [menus, setMenus] = useState<MenuItem[]>([]);
   const [filteredMenus, setFilteredMenus] = useState<MenuItem[]>([]);
+  // Foto lama (path lokal disk pra-Cloudinary) bisa 404 di production karena disk
+  // ephemeral — daripada tampilkan ikon broken-image mentah, jatuhkan ke ikon default.
+  const [brokenMenuImages, setBrokenMenuImages] = useState<Set<string>>(new Set());
   const [categories, setCategories] = useState<string[]>(['Semua']);
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
@@ -390,8 +393,12 @@ export default function PosPage() {
                 className={`menu-card ${!menu.isAvailable ? 'disabled' : ''}`}
               >
                 <div className="menu-photo">
-                  {menu.imageUrl ? (
-                    <img src={resolveAssetUrl(menu.imageUrl) || ''} alt={menu.name} />
+                  {menu.imageUrl && !brokenMenuImages.has(menu.id) ? (
+                    <img
+                      src={resolveAssetUrl(menu.imageUrl) || ''}
+                      alt={menu.name}
+                      onError={() => setBrokenMenuImages((prev) => new Set(prev).add(menu.id))}
+                    />
                   ) : (
                     <svg width="40" height="40" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
                       <path d="M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T400-446v366h-120Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z"/>
