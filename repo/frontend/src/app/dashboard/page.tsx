@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useId } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiFetch, resolveAssetUrl } from '@/lib/api';
 import AiChatWidget from '@/components/AiChatWidget';
 import LaporanRangeSection from '@/components/LaporanRangeSection';
@@ -783,6 +784,7 @@ function PriceAlertItem({ alert, targetHpp }: { alert: PriceAlert; targetHpp: nu
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [topMenus, setTopMenus] = useState<TopMenu[]>([]);
   // Foto lama (path lokal disk pra-Cloudinary) bisa 404 di production karena disk
@@ -905,6 +907,52 @@ export default function DashboardPage() {
     setCriticalThreshold(Number(tempCritical));
     setTargetHpp(Number(tempTarget));
     setShowSettings(false);
+  };
+
+  // Siapkan pre-fill form "+ Menu Baru" dari rekomendasi bundling, lalu pindah ke
+  // Inventaris supaya Owner tinggal review & simpan lewat form editing yang sama
+  // persis dipakai untuk bikin menu manual — BUKAN auto-create langsung ke DB di sini.
+  const handleOpenBundleInMenuForm = async () => {
+    const rec = bundleRecommendation?.recommendation;
+    if (!rec) return;
+    const [menuA, menuB] = rec.menus;
+
+    try {
+      const [recipeARes, recipeBRes] = await Promise.all([
+        apiFetch(`/menus/${menuA.id}/recipe`),
+        apiFetch(`/menus/${menuB.id}/recipe`),
+      ]);
+      const recipeA = recipeARes.ok ? await recipeARes.json() : [];
+      const recipeB = recipeBRes.ok ? await recipeBRes.json() : [];
+
+      // Union kedua resep — kalau bahan baku sama muncul di keduanya, jumlahkan qty-nya.
+      const merged = new Map<string, { ingredientId: string; ingredientName: string; unit: string; qtyUsed: number }>();
+      for (const line of [...recipeA, ...recipeB]) {
+        const existing = merged.get(line.ingredientId);
+        if (existing) {
+          existing.qtyUsed += Number(line.qtyUsed);
+        } else {
+          merged.set(line.ingredientId, {
+            ingredientId: line.ingredientId,
+            ingredientName: line.ingredientName,
+            unit: line.unit,
+            qtyUsed: Number(line.qtyUsed),
+          });
+        }
+      }
+
+      // sessionStorage dipakai murni buat transfer data lintas halaman (Dashboard -> Inventaris)
+      // — dibaca sekali oleh InventoryPage lalu langsung dihapus, bukan persisted state.
+      sessionStorage.setItem('sipi_bundle_prefill', JSON.stringify({
+        name: `Paket ${menuA.name} + ${menuB.name}`,
+        category: 'Paket',
+        sellingPrice: rec.suggestedBundlePrice,
+        recipeLines: Array.from(merged.values()),
+      }));
+      router.push('/inventory');
+    } catch (err) {
+      alert('Gagal menyiapkan form menu dari rekomendasi bundling.');
+    }
   };
 
   // Dynamically calculate critical margins based on user settings
@@ -1213,8 +1261,11 @@ export default function DashboardPage() {
                       <span className="text-success font-bold">Rp {Math.round(rec.estimatedMargin).toLocaleString('id-ID')} ({rec.estimatedMarginPercent}%)</span>
                     </div>
                   </div>
+                  <button onClick={handleOpenBundleInMenuForm} className="btn btn-primary bundle-setup-btn">
+                    Atur Resep
+                  </button>
                   <p className="bundle-hint">
-                    * Rekomendasi berbasis pola historis transaksi — bukan AI/machine learning. Kalau mau dibuat, tetap lewat form &quot;+ Menu Baru&quot; secara manual.
+                    * Rekomendasi berbasis pola historis transaksi — bukan AI/machine learning. Tombol di atas cuma menyiapkan form &quot;+ Menu Baru&quot; supaya tinggal direview — menu baru belum tersimpan sampai kamu klik simpan di form itu.
                   </p>
                 </>
               );
@@ -1386,6 +1437,11 @@ export default function DashboardPage() {
         }
         .bundle-price-breakdown .rec-row {
           margin-top: 4px;
+        }
+        .bundle-setup-btn {
+          margin-top: 2px;
+          padding: 10px;
+          font-size: 14px;
         }
         .bundle-hint {
           margin: 0;

@@ -128,6 +128,32 @@ export default function InventoryPage() {
     fetchMenus();
     fetchRecommendations();
 
+    // Pre-fill form "+ Menu Baru" kalau datang dari tombol "Atur Resep" di card
+    // Rekomendasi Bundling (Dashboard) — dibaca sekali lalu langsung dihapus, BUKAN
+    // auto-create ke DB. Menu baru cuma benar-benar tersimpan kalau Owner klik simpan
+    // di form ini sendiri, sama seperti alur bikin menu manual biasa.
+    const bundlePrefillRaw = sessionStorage.getItem('sipi_bundle_prefill');
+    if (bundlePrefillRaw) {
+      sessionStorage.removeItem('sipi_bundle_prefill');
+      try {
+        const prefill = JSON.parse(bundlePrefillRaw);
+        setActiveTab('menus');
+        setModalType('create-menu');
+        setActiveMenu(null);
+        setError('');
+        setSuccess('');
+        setMenuName(prefill.name || '');
+        setMenuCategory(prefill.category || 'Paket');
+        setMenuSellingPrice(prefill.sellingPrice !== undefined ? String(prefill.sellingPrice) : '');
+        setMenuImageFile(null);
+        setMenuImagePreview(null);
+        setRecipeLines(Array.isArray(prefill.recipeLines) ? prefill.recipeLines : []);
+        setQtyToAdd('1');
+      } catch (err) {
+        console.error('Gagal memuat pre-fill menu dari rekomendasi bundling', err);
+      }
+    }
+
     // Listen to sync completed event to reload data dynamically
     const handleSyncComplete = () => {
       fetchIngredients();
