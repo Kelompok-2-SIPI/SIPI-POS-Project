@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/db';
 import { JWT_SECRET } from '../lib/env';
+import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -77,6 +78,25 @@ router.post('/register', async (req: Request, res: Response) => {
 
 router.post('/logout', (_req: Request, res: Response) => {
   res.json({ success: true });
+});
+
+// Info user + nama bisnis tenant yang sedang login — dipakai halaman Akun untuk
+// menampilkan nama usaha (GET /login lama cuma mengembalikan businessId, bukan nama).
+router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await prisma.user.findFirst({
+      where: { id: req.user!.id, businessId: req.businessId! },
+      include: { business: { select: { id: true, name: true } } },
+    });
+    if (!user) return res.status(404).json({ error: 'User tidak ditemukan.' });
+
+    return res.json({
+      user: { id: user.id, name: user.name, role: user.role },
+      business: { id: user.business.id, name: user.business.name },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Gagal mengambil info akun.' });
+  }
 });
 
 export default router;

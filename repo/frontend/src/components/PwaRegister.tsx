@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+// Import untuk efek samping: modul ini mendaftarkan listener `beforeinstallprompt`
+// di scope module begitu file ini pertama kali di-load (lihat pwaInstall.ts) — PwaRegister
+// selalu dimount di root layout jadi listener aktif di semua halaman sejak awal.
+import '@/lib/pwaInstall';
 
 interface SyncConflictIngredient {
   ingredientId: string;
@@ -24,7 +28,12 @@ export default function PwaRegister() {
   useEffect(() => {
     // 1. Register Service Worker
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      window.addEventListener('load', () => {
+      // Efek ini jalan setelah hydration React — `load` event bisa saja sudah lewat
+      // duluan sebelum listener sempat terpasang, jadi registrasi tidak akan pernah
+      // terpicu (ini juga blocker kenapa `beforeinstallprompt` tidak pernah fire:
+      // Chrome baru menganggap app installable kalau ada SW aktif). Cek readyState
+      // dulu, baru fallback ke event listener kalau halaman belum selesai load.
+      const registerSw = () => {
         navigator.serviceWorker.register('/sw.js').then(
           (registration) => {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
@@ -33,7 +42,12 @@ export default function PwaRegister() {
             console.log('ServiceWorker registration failed: ', err);
           }
         );
-      });
+      };
+      if (document.readyState === 'complete') {
+        registerSw();
+      } else {
+        window.addEventListener('load', registerSw);
+      }
     }
 
     // 2. Network Status Monitoring

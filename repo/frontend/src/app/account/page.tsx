@@ -3,21 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import { canPromptInstall, isInstalled, promptInstall, subscribePwaInstall } from '@/lib/pwaInstall';
 
 interface StoredUser {
   name: string;
   role: string;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  kasir: 'Kasir',
-  admin_gudang: 'Admin Gudang',
-  owner: 'Owner',
-};
-
 export default function AccountPage() {
   const router = useRouter();
   const [user, setUser] = useState<StoredUser | null>(null);
+  const [businessName, setBusinessName] = useState<string | null>(null);
+
+  const [pwaInstalled, setPwaInstalled] = useState(false);
+  const [pwaPromptReady, setPwaPromptReady] = useState(false);
+  const [pwaInstalling, setPwaInstalling] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('sipi_user');
@@ -28,7 +28,40 @@ export default function AccountPage() {
         setUser(null);
       }
     }
+
+    (async () => {
+      try {
+        const res = await apiFetch('/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          setBusinessName(data.business?.name || null);
+        }
+      } catch {
+        setBusinessName(null);
+      }
+    })();
   }, []);
+
+  useEffect(() => {
+    const syncPwaState = () => {
+      setPwaInstalled(isInstalled());
+      setPwaPromptReady(canPromptInstall());
+    };
+    syncPwaState();
+    return subscribePwaInstall(syncPwaState);
+  }, []);
+
+  const handleInstallClick = async () => {
+    setPwaInstalling(true);
+    try {
+      const outcome = await promptInstall();
+      if (outcome === 'unavailable') {
+        alert('Prompt instalasi belum tersedia dari browser. Coba buka menu browser dan pilih "Add to Home Screen" atau "Install App" secara manual.');
+      }
+    } finally {
+      setPwaInstalling(false);
+    }
+  };
 
   const handleLogout = async () => {
     if (confirm('Apakah Anda yakin ingin keluar?')) {
@@ -61,8 +94,39 @@ export default function AccountPage() {
           <span className="account-info-value">{user?.name || '-'}</span>
         </div>
         <div className="account-info-row">
-          <span className="account-info-label">Peran</span>
-          <span className="account-info-value">{user ? (ROLE_LABELS[user.role] || user.role) : '-'}</span>
+          <span className="account-info-label">Nama Usaha</span>
+          <span className="account-info-value">{businessName || '-'}</span>
+        </div>
+
+        <div className="account-pwa-box">
+          {pwaInstalled ? (
+            <p className="account-pwa-installed">
+              <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" style={{ flexShrink: 0 }}>
+                <path d="M382-233 154-461l57-57 171 171 367-367 57 57z"/>
+              </svg>
+              Aplikasi sudah terinstall di perangkat ini.
+            </p>
+          ) : (
+            <>
+              <p className="account-pwa-pitch">
+                Jaringan sering tidak stabil? Download-lah PWA yang bisa menggunakan kasir secara Offline
+              </p>
+              {pwaPromptReady ? (
+                <button
+                  onClick={handleInstallClick}
+                  disabled={pwaInstalling}
+                  className="btn btn-primary account-pwa-btn"
+                >
+                  {pwaInstalling ? 'Memproses...' : 'Download Aplikasi (PWA)'}
+                </button>
+              ) : (
+                <p className="account-pwa-manual">
+                  Browser ini belum menawarkan instalasi otomatis. Buka menu browser (⋮ atau Share), lalu pilih
+                  <strong> &quot;Add to Home Screen&quot;</strong> atau <strong>&quot;Install App&quot;</strong> secara manual.
+                </p>
+              )}
+            </>
+          )}
         </div>
 
         <button onClick={handleLogout} className="btn-logout account-logout-btn" title="Keluar">
@@ -128,6 +192,43 @@ export default function AccountPage() {
         }
         .account-info-value {
           font-weight: 600;
+        }
+        .account-pwa-box {
+          width: 100%;
+          margin-top: 20px;
+          padding: 16px;
+          border-radius: var(--radius-md, 12px);
+          background-color: var(--color-surface-soft, var(--card-bg));
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .account-pwa-pitch {
+          font-size: 13px;
+          line-height: 1.5;
+          color: var(--text-secondary);
+          margin: 0;
+        }
+        .account-pwa-btn {
+          width: 100%;
+          justify-content: center;
+          padding: 12px;
+          font-size: 14px;
+        }
+        .account-pwa-manual {
+          font-size: 13px;
+          line-height: 1.5;
+          color: var(--text-secondary);
+          margin: 0;
+        }
+        .account-pwa-installed {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--success-color, #2ecc71);
+          margin: 0;
         }
         .account-logout-btn {
           margin-top: 24px;
