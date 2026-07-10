@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { prisma } from '../lib/db';
 import { TypeMovement, TransactionStatus, Ingredient, Menu } from '@prisma/client';
 import { recalculateAllHppsForIngredient, recalculateMenuHpp } from '../lib/inventory-helpers';
-import { getMonthlySales, getVisitPatternByDay, getVisitPatternByHour } from '../lib/dashboard-insights';
+import { getMonthlySales, getMonthlyProfitTrend, getVisitPatternByDay, getVisitPatternByHour, predictTopMenuTomorrow, getMenuBundleRecommendation, DAY_NAMES } from '../lib/dashboard-insights';
 import { generateResponse } from '../lib/gemini';
 import { AuthRequest } from '../middleware/auth';
 
@@ -147,6 +147,10 @@ export async function handleChat(req: AuthRequest, res: Response) {
     const now = new Date();
     const gmt7 = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60 * 1000);
     const dateStr = gmt7.toISOString().split('T')[0];
+    // Gemini tidak selalu bisa menghitung sendiri hari-dalam-minggu dengan benar dari
+    // sebuah tanggal (rawan salah/halusinasi) — sebutkan eksplisit di prompt supaya
+    // jawaban soal "besok"/"hari ini" konsisten dengan data prediksi di bawah.
+    const todayDayName = DAY_NAMES[(gmt7.getUTCDay() + 6) % 7];
 
     const start = new Date(`${dateStr}T00:00:00+07:00`);
     const end = new Date(`${dateStr}T23:59:59.999+07:00`);
@@ -201,12 +205,20 @@ export async function handleChat(req: AuthRequest, res: Response) {
       .join('\n');
     const criticalMarginText = criticalMarginList || 'Tidak ada';
 
-    // 7b. Reuse service yang sama dipakai dashboard (MonthlySalesChart, Pola Pengunjung Mingguan, Jam Tersibuk)
+    // 7b. Reuse service yang sama dipakai dashboard (MonthlySalesChart, Pola Pengunjung Mingguan, Jam Tersibuk,
+    // Estimasi Laba Kotor bulanan, Prediksi Menu Besok, Rekomendasi Bundling) — supaya chatbot bisa menjawab
+    // pertanyaan seputar SEMUA data yang sudah dihitung di Dashboard, bukan cuma data hari ini. Data historis
+    // margin kritis (critical-margins-range) SENGAJA tidak disertakan: endpoint itu butuh rentang tanggal
+    // pilihan Owner sendiri (tidak punya window default yang masuk akal buat konteks tetap), dan kondisi
+    // margin kritis SAAT INI sudah tercakup di bagian "MENU MARGIN KRITIS" di bawah.
     const fmtRp = new Intl.NumberFormat('id-ID');
-    const [monthlySales, visitByDay, visitByHour] = await Promise.all([
+    const [monthlySales, monthlyProfit, visitByDay, visitByHour, tomorrowPrediction, bundleRecommendation] = await Promise.all([
       getMonthlySales(businessId, 6),
+      getMonthlyProfitTrend(businessId, 6),
       getVisitPatternByDay(businessId, 4),
       getVisitPatternByHour(businessId, 4),
+      predictTopMenuTomorrow(businessId, 4),
+      getMenuBundleRecommendation(businessId, 8),
     ]);
 
     const monthlySalesText = monthlySales
@@ -217,6 +229,14 @@ export async function handleChat(req: AuthRequest, res: Response) {
       ? `Bulan paling tinggi pendapatannya: ${busiestMonth.label} (Rp ${fmtRp.format(busiestMonth.totalRevenue)}).`
       : 'Belum ada data.';
 
+    const monthlyProfitText = monthlyProfit
+      .map(m => `- ${m.label}: Rp ${fmtRp.format(m.grossProfit)} (pendapatan Rp ${fmtRp.format(m.totalRevenue)} - HPP Rp ${fmtRp.format(m.totalHpp)})`)
+      .join('\n');
+    const mostProfitableMonth = monthlyProfit.reduce((max, m) => (m.grossProfit > max.grossProfit ? m : max), monthlyProfit[0]);
+    const monthlyProfitSummary = monthlyProfit.length > 0
+      ? `Bulan paling tinggi labanya: ${mostProfitableMonth.label} (Rp ${fmtRp.format(mostProfitableMonth.grossProfit)}).`
+      : 'Belum ada data.';
+
     const visitByDayText = visitByDay.data
       .map(d => `- ${d.day}: rata-rata ${d.avgTransactions} transaksi/hari`)
       .join('\n');
@@ -225,6 +245,15 @@ export async function handleChat(req: AuthRequest, res: Response) {
     const visitByHourText = visitByHourActive
       .map(h => `- Jam ${String(h.hour).padStart(2, '0')}:00: ${h.totalTransactions} transaksi`)
       .join('\n');
+
+    const tomorrowPredictionText = tomorrowPrediction.topMenu
+      ? `${tomorrowPrediction.topMenu.name} (rata-rata ${tomorrowPrediction.topMenu.avgQtySold} porsi terjual tiap hari ${tomorrowPrediction.targetDayName} dalam ${tomorrowPrediction.weeksAnalyzed} minggu terakhir)`
+      : 'Belum cukup data historis untuk hari ini.';
+
+    const bundleRec = bundleRecommendation.recommendation;
+    const bundleRecommendationText = bundleRec
+      ? `${bundleRec.menus[0].name} + ${bundleRec.menus[1].name} — muncul bersama di ${bundleRec.coOccurrenceCount} dari ${bundleRecommendation.transactionsAnalyzed} transaksi (${bundleRec.coOccurrencePercent}%) dalam ${bundleRecommendation.weeksAnalyzed} minggu terakhir. Estimasi harga bundle Rp ${fmtRp.format(bundleRec.suggestedBundlePrice)} (diskon ${bundleRec.discountPercent}% dari Rp ${fmtRp.format(bundleRec.individualPriceSum)}), estimasi margin Rp ${fmtRp.format(Math.round(bundleRec.estimatedMargin))} (${bundleRec.estimatedMarginPercent}%).`
+      : 'Belum cukup data transaksi untuk membuat rekomendasi bundling.';
 
     // 8. Susun system prompt
     const menuNamesList = menus.map((m) => m.name).join(', ');
@@ -241,7 +270,7 @@ Kamu punya TIGA kemampuan:
    bahan baku di bawah (jangan cocok-cocokkan sendiri, biar backend yang validasi).
    Nama menu yang tersedia: ${menuNamesList}
 
-=== DATA BISNIS HARI INI (${dateStr}) ===
+=== DATA BISNIS HARI INI (${dateStr}, hari ${todayDayName}) ===
 Pendapatan: Rp ${pendapatan} | Transaksi: ${jumlah} | Estimasi Laba: Rp ${laba}
 
 === STOK BAHAN BAKU ===
@@ -257,6 +286,10 @@ ${criticalMarginText}
 ${monthlySalesText}
 ${monthlySalesSummary}
 
+=== TREN ESTIMASI LABA KOTOR 6 BULAN TERAKHIR (pendapatan - HPP transaksi selesai) ===
+${monthlyProfitText}
+${monthlyProfitSummary}
+
 === POLA PENGUNJUNG MINGGUAN (rata-rata 4 minggu terakhir, proxy jumlah transaksi selesai) ===
 ${visitByDayText}
 Hari paling ramai: ${visitByDay.busiestDay.day} (rata-rata ${visitByDay.busiestDay.avgTransactions} transaksi/hari).
@@ -264,6 +297,12 @@ Hari paling ramai: ${visitByDay.busiestDay.day} (rata-rata ${visitByDay.busiestD
 === JAM TERSIBUK (total 4 minggu terakhir, jam operasional saja, proxy jumlah transaksi selesai) ===
 ${visitByHourText}
 Jam paling sibuk: ${String(visitByHour.busiestHour.hour).padStart(2, '0')}:00 WIB (${visitByHour.busiestHour.totalTransactions} transaksi).
+
+=== PREDIKSI MENU TERLARIS BESOK (berdasarkan pola historis hari-dalam-minggu, BUKAN AI/machine learning) ===
+${tomorrowPredictionText}
+
+=== REKOMENDASI BUNDLING MENU (co-occurrence 8 minggu terakhir, insight saja — belum jadi menu Paket) ===
+${bundleRecommendationText}
 
 FORMAT OUTPUT — selalu kembalikan JSON valid:
 {

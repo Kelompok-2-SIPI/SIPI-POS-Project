@@ -36,12 +36,55 @@ export async function getMonthlySales(businessId: string, months = 6) {
   return results;
 }
 
+/**
+ * Tren estimasi laba kotor bulanan (N bulan terakhir, default 6) — window bulan-per-bulan
+ * SAMA seperti getMonthlySales, formula SAMA seperti "Estimasi Laba Kotor" di
+ * GET /dashboard/summary (laba = pendapatan - total HPP transaksi selesai). Dipakai
+ * konteks AI chatbot supaya bisa menjawab soal laba/profit historis, bukan cuma
+ * pendapatan — sebelumnya system prompt cuma punya data revenue bulanan.
+ */
+export async function getMonthlyProfitTrend(businessId: string, months = 6) {
+  const clamped = Math.min(Math.max(months, 1), 24);
+  const now = new Date();
+  const gmt7 = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60 * 1000);
+
+  const results = [];
+  for (let i = clamped - 1; i >= 0; i--) {
+    const firstDay = new Date(Date.UTC(gmt7.getUTCFullYear(), gmt7.getUTCMonth() - i, 1));
+    const lastDay = new Date(Date.UTC(gmt7.getUTCFullYear(), gmt7.getUTCMonth() - i + 1, 0));
+    const startStr = `${firstDay.getUTCFullYear()}-${String(firstDay.getUTCMonth() + 1).padStart(2, '0')}-01`;
+    const endStr = `${lastDay.getUTCFullYear()}-${String(lastDay.getUTCMonth() + 1).padStart(2, '0')}-${String(lastDay.getUTCDate()).padStart(2, '0')}`;
+    const start = new Date(`${startStr}T00:00:00+07:00`);
+    const end = new Date(`${endStr}T23:59:59.999+07:00`);
+
+    const agg = await prisma.transaction.aggregate({
+      where: { businessId, status: TransactionStatus.completed, completedAt: { gte: start, lte: end } },
+      _sum: { totalPrice: true, totalHpp: true },
+      _count: true,
+    });
+
+    const totalRevenue = Number(agg._sum.totalPrice || 0);
+    const totalHpp = Number(agg._sum.totalHpp || 0);
+
+    results.push({
+      month: `${firstDay.getUTCFullYear()}-${String(firstDay.getUTCMonth() + 1).padStart(2, '0')}`,
+      label: firstDay.toLocaleDateString('id-ID', { month: 'short', year: 'numeric', timeZone: 'UTC' }),
+      totalRevenue,
+      totalHpp,
+      grossProfit: totalRevenue - totalHpp,
+      transactionsCount: agg._count,
+    });
+  }
+
+  return results;
+}
+
 // Geser instant UTC transaksi ke "jam dinding" Asia/Jakarta (UTC+7), dibaca lewat getUTC*
-function toJakartaWallClock(date: Date): Date {
+export function toJakartaWallClock(date: Date): Date {
   return new Date(date.getTime() + 7 * 60 * 60 * 1000);
 }
 
-const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+export const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
 /**
  * Pola kunjungan per hari (Senin-Minggu), rata-rata dari N minggu terakhir (default 4)
