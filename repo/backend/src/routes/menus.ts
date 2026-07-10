@@ -14,13 +14,23 @@ router.use(authenticate);
 // bersifat ephemeral, file hilang setiap redeploy) ──
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+// multer-storage-cloudinary derives its `params` type via a KnownKeys<T> filter over
+// Cloudinary's UploadApiOptions — but that interface ends with a catch-all
+// `[futureKey: string]: any` index signature, which collapses `keyof UploadApiOptions`
+// to just `string`, which KnownKeys then maps to `never`. Net effect: the resulting
+// `params` type is `{}`, so EVERY valid Cloudinary option (folder, allowed_formats,
+// transformation, ...) fails the excess-property check even though all are accepted
+// at runtime by the SDK. Cast through the constructor's own params type to bypass
+// this library type bug without resorting to a blanket `any`.
+type CloudinaryStorageParams = ConstructorParameters<typeof CloudinaryStorage>[0]['params'];
+
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'sipi-pos/menus',
     allowed_formats: ['jpeg', 'jpg', 'png', 'webp'],
     transformation: [{ width: 800, height: 800, crop: 'limit' }],
-  },
+  } as CloudinaryStorageParams,
 });
 
 const upload = multer({
