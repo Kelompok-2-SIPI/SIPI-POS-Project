@@ -444,7 +444,8 @@ button, .btn {
 
 .price-alerts-section h2,
 .critical-margins-section h2,
-.top-menus-section h2 { font-size: 18px; margin-bottom: 12px; }
+.top-menus-section h2,
+.bundle-section h2 { font-size: 18px; margin-bottom: 12px; }
 
 .section-desc { font-size: 13px; color: var(--text-secondary); margin-top: -8px; margin-bottom: 12px; }
 
@@ -742,7 +743,8 @@ button, .btn {
   body > div > div > .stats-grid:not(.print-container .stats-grid),
   body > div > div > .top-menus-section:not(.print-container .top-menus-section),
   body > div > div > .price-alerts-section:not(.print-container .price-alerts-section),
-  body > div > div > .critical-margins-section:not(.print-container .critical-margins-section) {
+  body > div > div > .critical-margins-section:not(.print-container .critical-margins-section),
+  body > div > div > .bundle-section:not(.print-container .bundle-section) {
     display: none !important;
   }
 

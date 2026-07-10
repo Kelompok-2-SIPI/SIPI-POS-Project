@@ -74,6 +74,37 @@ interface VisitHourResponse {
   busiestHour: { hour: number; totalTransactions: number };
 }
 
+interface TomorrowPrediction {
+  weeksAnalyzed: number;
+  targetDate: string;
+  targetDayName: string;
+  occurrencesFound: number;
+  topMenu: { id: string; name: string; avgQtySold: number } | null;
+}
+
+interface BundleMenuInfo {
+  id: string;
+  name: string;
+  sellingPrice: number;
+  hpp: number;
+}
+
+interface BundleRecommendation {
+  weeksAnalyzed: number;
+  transactionsAnalyzed: number;
+  recommendation: {
+    menus: BundleMenuInfo[];
+    coOccurrenceCount: number;
+    coOccurrencePercent: number;
+    individualPriceSum: number;
+    discountPercent: number;
+    suggestedBundlePrice: number;
+    combinedHpp: number;
+    estimatedMargin: number;
+    estimatedMarginPercent: number;
+  } | null;
+}
+
 function SimpleLineChart({ data, baselinePrice }: { data: PriceHistory[], baselinePrice: number }) {
   const [hovered, setHovered] = useState<{x: number, y: number, price: number, time: number} | null>(null);
   const uid = useId();
@@ -579,6 +610,13 @@ function buildHourlyPatternInsight(visitByHour: VisitHourResponse): string {
   return `💡 Jam ${hour}:00 paling sibuk (${visitByHour.busiestHour.totalTransactions} transaksi) — pastikan bahan sudah disiapkan dan karyawan standby sebelum jam ini.`;
 }
 
+function buildTomorrowPredictionInsight(prediction: TomorrowPrediction | null): string | null {
+  if (!prediction || !prediction.topMenu) return null;
+  const { targetDayName, topMenu, weeksAnalyzed } = prediction;
+  // Jujur soal sifatnya sebagai perkiraan pola historis, bukan AI/machine learning.
+  return `🔮 Prediksi Besok (${targetDayName}): ${topMenu.name} — berdasarkan rata-rata ${topMenu.avgQtySold} porsi terjual tiap hari ${targetDayName} dalam ${weeksAnalyzed} minggu terakhir.`;
+}
+
 function buildPriceAlertInsight(alerts: PriceAlert[]): string | null {
   if (alerts.length === 0) return null;
   const worst = alerts.reduce((max, a) => (a.increasePercent > max.increasePercent ? a : max), alerts[0]);
@@ -754,6 +792,8 @@ export default function DashboardPage() {
   const [visitByDay, setVisitByDay] = useState<VisitDayResponse | null>(null);
   const [visitByHour, setVisitByHour] = useState<VisitHourResponse | null>(null);
   const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>([]);
+  const [tomorrowPrediction, setTomorrowPrediction] = useState<TomorrowPrediction | null>(null);
+  const [bundleRecommendation, setBundleRecommendation] = useState<BundleRecommendation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -836,6 +876,20 @@ export default function DashboardPage() {
       if (alertsRes.ok) {
         const alertsData = await alertsRes.json();
         setPriceAlerts(alertsData);
+      }
+
+      // Fetch prediksi menu terlaris besok (pola hari-dalam-minggu, 4 minggu terakhir)
+      const predictionRes = await apiFetch('/dashboard/predict-top-menu-tomorrow');
+      if (predictionRes.ok) {
+        const predictionData = await predictionRes.json();
+        setTomorrowPrediction(predictionData);
+      }
+
+      // Fetch rekomendasi bundling menu (co-occurrence 8 minggu terakhir)
+      const bundleRes = await apiFetch('/dashboard/menu-bundle-recommendation');
+      if (bundleRes.ok) {
+        const bundleData = await bundleRes.json();
+        setBundleRecommendation(bundleData);
       }
     } catch (err) {
       setError('Gagal memuat data laporan bisnis.');
@@ -1066,6 +1120,10 @@ export default function DashboardPage() {
       {/* Top Menus Today (FR-11) */}
       <div className="top-menus-section">
         <h2>🔥 Menu Terlaris Hari Ini</h2>
+        {(() => {
+          const insight = buildTomorrowPredictionInsight(tomorrowPrediction);
+          return insight ? <InsightNote tone="info">{insight}</InsightNote> : null;
+        })()}
         <div className="top-menus-list card">
           {topMenus.length === 0 ? (
             <div className="empty-state">
@@ -1106,6 +1164,61 @@ export default function DashboardPage() {
                 </div>
               );
             })
+          )}
+        </div>
+      </div>
+
+      {/* Rekomendasi Ekspansi Menu (Bundling) — insight murni, tidak membuat menu
+          Paket baru secara otomatis. Pembuatan menu tetap lewat form "+ Menu Baru". */}
+      <div className="bundle-section">
+        <h2>📦 Rekomendasi Ekspansi Menu (Bundling)</h2>
+        <p className="section-desc">
+          Pasangan menu yang paling sering dibeli bersamaan — peluang bikin paket baru untuk naikkan average order value.
+        </p>
+        <div className="card bundle-card">
+          {!bundleRecommendation?.recommendation ? (
+            <div className="empty-state">
+              <p>Belum cukup data transaksi untuk membuat rekomendasi bundling.</p>
+            </div>
+          ) : (
+            (() => {
+              const rec = bundleRecommendation.recommendation;
+              const [menuA, menuB] = rec.menus;
+              return (
+                <>
+                  <div className="bundle-pair">
+                    <span className="bundle-pair-menu">{menuA.name}</span>
+                    <span className="bundle-pair-plus">+</span>
+                    <span className="bundle-pair-menu">{menuB.name}</span>
+                  </div>
+                  <p className="bundle-basis">
+                    Muncul bersama di <strong>{rec.coOccurrenceCount}</strong> dari {bundleRecommendation.transactionsAnalyzed} transaksi
+                    (<strong>{rec.coOccurrencePercent}%</strong>) dalam {bundleRecommendation.weeksAnalyzed} minggu terakhir — kombinasi paling sering dibeli bersamaan.
+                  </p>
+                  <div className="bundle-price-breakdown">
+                    <div className="row">
+                      <span>Harga Individual (jumlah):</span>
+                      <span>Rp {rec.individualPriceSum.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="row">
+                      <span>Estimasi Harga Bundle <span className="badge badge-success">Diskon {rec.discountPercent}%</span>:</span>
+                      <span className="text-primary font-bold">Rp {rec.suggestedBundlePrice.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="row">
+                      <span>HPP Gabungan:</span>
+                      <span>Rp {Math.round(rec.combinedHpp).toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="row rec-row">
+                      <span>Estimasi Margin:</span>
+                      <span className="text-success font-bold">Rp {Math.round(rec.estimatedMargin).toLocaleString('id-ID')} ({rec.estimatedMarginPercent}%)</span>
+                    </div>
+                  </div>
+                  <p className="bundle-hint">
+                    * Rekomendasi berbasis pola historis transaksi — bukan AI/machine learning. Kalau mau dibuat, tetap lewat form &quot;+ Menu Baru&quot; secara manual.
+                  </p>
+                </>
+              );
+            })()
           )}
         </div>
       </div>
@@ -1229,6 +1342,55 @@ export default function DashboardPage() {
           height: 100%;
           border-radius: var(--radius-pill);
           background-color: var(--color-primary);
+        }
+        .bundle-card {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .bundle-pair {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        .bundle-pair-menu {
+          font-size: 16px;
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+        .bundle-pair-plus {
+          font-size: 14px;
+          font-weight: 700;
+          color: var(--text-tertiary);
+        }
+        .bundle-basis {
+          margin: 0;
+          font-size: 13px;
+          color: var(--text-secondary);
+          line-height: 1.5;
+        }
+        .bundle-price-breakdown {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          font-size: 13px;
+          border-top: 1px dashed var(--border-color);
+          padding-top: 10px;
+        }
+        .bundle-price-breakdown .row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+        }
+        .bundle-price-breakdown .rec-row {
+          margin-top: 4px;
+        }
+        .bundle-hint {
+          margin: 0;
+          font-size: 12px;
+          color: var(--text-tertiary);
         }
       `}</style>
     </div>

@@ -115,3 +115,168 @@ export async function getVisitPatternByHour(businessId: string, weeks = 4) {
 
   return { weeksAnalyzed: weeks, startDate: start.toISOString(), endDate: end.toISOString(), data, busiestHour: { hour: busiestHour.hour, totalTransactions: busiestHour.totalTransactions } };
 }
+
+/**
+ * Prediksi menu terlaris besok — BUKAN AI/machine learning, murni rata-rata historis
+ * per hari-dalam-minggu yang sama (kalau besok Senin, lihat rata-rata qty terjual tiap
+ * menu di Senin-Senin sebelumnya dari N minggu terakhir). Breakdown per-menu dari
+ * pendekatan yang sama dengan getVisitPatternByDay (yang cuma total transaksi).
+ */
+export async function predictTopMenuTomorrow(businessId: string, weeks = 4) {
+  const now = new Date();
+  const nowJakarta = toJakartaWallClock(now);
+  // "Besok 00:00 Jakarta" dipakai ganda: batas akhir (exclusive) window lookback,
+  // sekaligus titik acuan buat tahu besok jatuh di hari-dalam-minggu apa.
+  const tomorrowJakartaMidnight = Date.UTC(nowJakarta.getUTCFullYear(), nowJakarta.getUTCMonth(), nowJakarta.getUTCDate() + 1);
+  const startJakartaMidnight = tomorrowJakartaMidnight - weeks * 7 * 24 * 60 * 60 * 1000;
+  const start = new Date(startJakartaMidnight - 7 * 60 * 60 * 1000);
+  const end = new Date(tomorrowJakartaMidnight - 7 * 60 * 60 * 1000);
+
+  const tomorrowDate = new Date(tomorrowJakartaMidnight);
+  const targetDayIdx = (tomorrowDate.getUTCDay() + 6) % 7; // 0 = Senin ... 6 = Minggu
+  const targetDayName = DAY_NAMES[targetDayIdx];
+  const targetDate = `${tomorrowDate.getUTCFullYear()}-${String(tomorrowDate.getUTCMonth() + 1).padStart(2, '0')}-${String(tomorrowDate.getUTCDate()).padStart(2, '0')}`;
+
+  const txs = await prisma.transaction.findMany({
+    where: { businessId, status: TransactionStatus.completed, completedAt: { gte: start, lt: end } },
+    select: { completedAt: true, items: { select: { menuId: true, menuName: true, qty: true } } },
+  });
+
+  const matchingDates = new Set<string>(); // tanggal unik (Jakarta) yang jatuh di hari-dalam-minggu sama dgn besok
+  const qtyByMenu: Record<string, { menuName: string; qty: number }> = {};
+
+  for (const tx of txs) {
+    if (!tx.completedAt) continue;
+    const jakarta = toJakartaWallClock(tx.completedAt);
+    const idx = (jakarta.getUTCDay() + 6) % 7;
+    if (idx !== targetDayIdx) continue;
+
+    matchingDates.add(`${jakarta.getUTCFullYear()}-${jakarta.getUTCMonth()}-${jakarta.getUTCDate()}`);
+    for (const item of tx.items) {
+      if (!qtyByMenu[item.menuId]) qtyByMenu[item.menuId] = { menuName: item.menuName, qty: 0 };
+      qtyByMenu[item.menuId].qty += item.qty;
+    }
+  }
+
+  const occurrencesFound = matchingDates.size;
+  let topMenu: { id: string; name: string; avgQtySold: number } | null = null;
+  for (const [menuId, d] of Object.entries(qtyByMenu)) {
+    const avgQtySold = occurrencesFound > 0 ? Math.round((d.qty / occurrencesFound) * 100) / 100 : 0;
+    if (!topMenu || avgQtySold > topMenu.avgQtySold) {
+      topMenu = { id: menuId, name: d.menuName, avgQtySold };
+    }
+  }
+
+  return { weeksAnalyzed: weeks, targetDate, targetDayName, occurrencesFound, topMenu };
+}
+
+/**
+ * Rekomendasi bundling menu berdasarkan analisis co-occurrence — pasangan menu
+ * (di luar kategori "Paket", karena tujuannya justru menyarankan Paket BARU) yang
+ * paling sering muncul BERSAMA dalam transaksi yang sama. Dipilih dibanding pendekatan
+ * "top-N menu terlaris lalu dibundling begitu saja" karena co-occurrence merefleksikan
+ * pola beli aktual pelanggan ("yang beli X juga sering beli Y"), bukan cuma menu populer
+ * yang belum tentu sering dibeli bersamaan — insight yang lebih actionable dengan
+ * kompleksitas implementasi yang setara (agregasi in-memory, pola yang sama dengan
+ * fungsi lain di file ini).
+ *
+ * Window 8 minggu (lebih panjang dari insight harian/mingguan lain yang pakai 4 minggu)
+ * karena keputusan bikin menu Paket baru itu strategis/jangka menengah, bukan taktis
+ * harian — butuh sinyal pasangan co-occurrence yang lebih stabil secara statistik.
+ */
+export async function getMenuBundleRecommendation(businessId: string, weeks = 8) {
+  const now = new Date();
+  const nowJakarta = toJakartaWallClock(now);
+  const endJakartaMidnight = Date.UTC(nowJakarta.getUTCFullYear(), nowJakarta.getUTCMonth(), nowJakarta.getUTCDate() + 1);
+  const startJakartaMidnight = endJakartaMidnight - weeks * 7 * 24 * 60 * 60 * 1000;
+  const start = new Date(startJakartaMidnight - 7 * 60 * 60 * 1000);
+  const end = new Date(endJakartaMidnight - 7 * 60 * 60 * 1000);
+
+  const txs = await prisma.transaction.findMany({
+    where: { businessId, status: TransactionStatus.completed, completedAt: { gte: start, lt: end } },
+    select: {
+      items: {
+        select: {
+          menuId: true,
+          menu: { select: { name: true, category: true, sellingPrice: true, hpp: true } },
+        },
+      },
+    },
+  });
+
+  const pairCounts = new Map<string, number>();
+  const menuInfo = new Map<string, { name: string; sellingPrice: number; hpp: number }>();
+  let transactionsAnalyzed = 0;
+
+  for (const tx of txs) {
+    // Kandidat bundling cuma menu NON-Paket — bundling dua Paket yang sudah ada,
+    // atau Paket dengan item lain, bukan "ekspansi menu baru" yang dimaksud di sini.
+    const distinctMenuIds = new Map<string, { name: string; sellingPrice: number; hpp: number }>();
+    for (const item of tx.items) {
+      if (!item.menu || item.menu.category === 'Paket') continue;
+      if (!distinctMenuIds.has(item.menuId)) {
+        distinctMenuIds.set(item.menuId, {
+          name: item.menu.name,
+          sellingPrice: Number(item.menu.sellingPrice),
+          hpp: Number(item.menu.hpp),
+        });
+      }
+    }
+    for (const [id, info] of distinctMenuIds) menuInfo.set(id, info);
+
+    const ids = Array.from(distinctMenuIds.keys());
+    if (ids.length < 2) continue;
+    transactionsAnalyzed++;
+
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const key = [ids[i], ids[j]].sort().join('|');
+        pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
+      }
+    }
+  }
+
+  let bestPairKey: string | null = null;
+  let bestCount = 0;
+  for (const [key, count] of pairCounts) {
+    if (count > bestCount) { bestPairKey = key; bestCount = count; }
+  }
+
+  if (!bestPairKey || bestCount === 0) {
+    return { weeksAnalyzed: weeks, transactionsAnalyzed, recommendation: null };
+  }
+
+  const [idA, idB] = bestPairKey.split('|');
+  const menuA = menuInfo.get(idA)!;
+  const menuB = menuInfo.get(idB)!;
+
+  const individualPriceSum = menuA.sellingPrice + menuB.sellingPrice;
+  const combinedHpp = menuA.hpp + menuB.hpp;
+  const discountPercent = 10;
+  // Dibulatkan ke bawah ke kelipatan 500 terdekat supaya harga jual "enak dilihat"
+  // (pola pembulatan harga yang sama seperti rekomendasi harga margin kritis, tapi
+  // ke bawah karena ini diskon, bukan kenaikan harga).
+  const rawBundlePrice = individualPriceSum * (1 - discountPercent / 100);
+  const suggestedBundlePrice = Math.max(Math.floor(rawBundlePrice / 500) * 500, combinedHpp);
+  const estimatedMargin = suggestedBundlePrice - combinedHpp;
+  const estimatedMarginPercent = suggestedBundlePrice > 0 ? Math.round((estimatedMargin / suggestedBundlePrice) * 1000) / 10 : 0;
+
+  return {
+    weeksAnalyzed: weeks,
+    transactionsAnalyzed,
+    recommendation: {
+      menus: [
+        { id: idA, name: menuA.name, sellingPrice: menuA.sellingPrice, hpp: menuA.hpp },
+        { id: idB, name: menuB.name, sellingPrice: menuB.sellingPrice, hpp: menuB.hpp },
+      ],
+      coOccurrenceCount: bestCount,
+      coOccurrencePercent: transactionsAnalyzed > 0 ? Math.round((bestCount / transactionsAnalyzed) * 1000) / 10 : 0,
+      individualPriceSum,
+      discountPercent,
+      suggestedBundlePrice,
+      combinedHpp,
+      estimatedMargin,
+      estimatedMarginPercent,
+    },
+  };
+}

@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/db';
 import { TransactionStatus } from '@prisma/client';
-import { getMonthlySales, getVisitPatternByDay, getVisitPatternByHour } from '../lib/dashboard-insights';
+import { getMonthlySales, getVisitPatternByDay, getVisitPatternByHour, predictTopMenuTomorrow, getMenuBundleRecommendation } from '../lib/dashboard-insights';
 import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -85,6 +85,30 @@ router.get('/top-menus', async (req: AuthRequest, res: Response) => {
     }
     return res.json(Object.entries(agg).map(([id, d]) => ({ id, name: d.menuName, quantitySold: d.qty, totalSales: d.totalSales, imageUrl: d.imageUrl })).sort((a, b) => b.quantitySold - a.quantitySold).slice(0, limit));
   } catch (e: any) { return res.status(500).json({ error: 'Gagal mengambil menu terlaris.' }); }
+});
+
+// Prediksi menu terlaris besok — rata-rata historis per hari-dalam-minggu yang sama
+// (4 minggu terakhir), bukan AI/ML. Dipakai di samping card "Menu Terlaris Hari Ini".
+router.get('/predict-top-menu-tomorrow', async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await predictTopMenuTomorrow(req.businessId!, 4);
+    return res.json(result);
+  } catch (e: any) {
+    console.error('[predict-top-menu-tomorrow]', e);
+    return res.status(500).json({ error: 'Gagal membuat prediksi menu terlaris besok.' });
+  }
+});
+
+// Rekomendasi bundling menu (co-occurrence 8 minggu terakhir) — insight murni, tidak
+// membuat menu Paket baru secara otomatis.
+router.get('/menu-bundle-recommendation', async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await getMenuBundleRecommendation(req.businessId!, 8);
+    return res.json(result);
+  } catch (e: any) {
+    console.error('[menu-bundle-recommendation]', e);
+    return res.status(500).json({ error: 'Gagal membuat rekomendasi bundling menu.' });
+  }
 });
 
 router.get('/critical-margins', async (req: AuthRequest, res: Response) => {
