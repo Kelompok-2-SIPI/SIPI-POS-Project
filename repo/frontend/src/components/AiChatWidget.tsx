@@ -64,8 +64,7 @@ export default function AiChatWidget() {
     aiGuideTitle = "Analisa Bisnis via AI";
     promptSuggestions = [
       "Berapa total pendapatan laba kotor hari ini?",
-      "Apakah ada menu yang hpp nya merugi?",
-      "Menu apa yang paling laris hari ini?"
+      "Apakah ada menu yang hpp nya merugi?"
     ];
   } else {
     aiGuideTitle = "Tanya AI";
