@@ -93,6 +93,7 @@ interface BundleMenuInfo {
 interface BundleRecommendation {
   weeksAnalyzed: number;
   transactionsAnalyzed: number;
+  allOpportunitiesBundled: boolean;
   recommendation: {
     menus: BundleMenuInfo[];
     coOccurrenceCount: number;
@@ -1226,7 +1227,11 @@ export default function DashboardPage() {
         <div className="card bundle-card">
           {!bundleRecommendation?.recommendation ? (
             <div className="empty-state">
-              <p>Belum cukup data transaksi untuk membuat rekomendasi bundling.</p>
+              <p>
+                {bundleRecommendation?.allOpportunitiesBundled
+                  ? '🎉 Semua peluang bundling utama sudah kamu manfaatkan!'
+                  : 'Belum cukup data transaksi untuk membuat rekomendasi bundling.'}
+              </p>
             </div>
           ) : (
             (() => {

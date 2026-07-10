@@ -253,7 +253,9 @@ export async function handleChat(req: AuthRequest, res: Response) {
     const bundleRec = bundleRecommendation.recommendation;
     const bundleRecommendationText = bundleRec
       ? `${bundleRec.menus[0].name} + ${bundleRec.menus[1].name} — muncul bersama di ${bundleRec.coOccurrenceCount} dari ${bundleRecommendation.transactionsAnalyzed} transaksi (${bundleRec.coOccurrencePercent}%) dalam ${bundleRecommendation.weeksAnalyzed} minggu terakhir. Estimasi harga bundle Rp ${fmtRp.format(bundleRec.suggestedBundlePrice)} (diskon ${bundleRec.discountPercent}% dari Rp ${fmtRp.format(bundleRec.individualPriceSum)}), estimasi margin Rp ${fmtRp.format(Math.round(bundleRec.estimatedMargin))} (${bundleRec.estimatedMarginPercent}%).`
-      : 'Belum cukup data transaksi untuk membuat rekomendasi bundling.';
+      : bundleRecommendation.allOpportunitiesBundled
+        ? 'Semua pasangan menu dengan pola co-occurrence signifikan sudah pernah dibuatkan menu Paket-nya.'
+        : 'Belum cukup data transaksi untuk membuat rekomendasi bundling.';
 
     // 8. Susun system prompt
     const menuNamesList = menus.map((m) => m.name).join(', ');

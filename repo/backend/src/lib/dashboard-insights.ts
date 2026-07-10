@@ -279,14 +279,70 @@ export async function getMenuBundleRecommendation(businessId: string, weeks = 8)
     }
   }
 
+  if (pairCounts.size === 0) {
+    return { weeksAnalyzed: weeks, transactionsAnalyzed, recommendation: null, allOpportunitiesBundled: false };
+  }
+
+  // Cek pasangan mana yang SUDAH pernah dibundling jadi menu Paket, supaya tidak terus
+  // menyarankan pasangan yang sama berulang-ulang setelah Owner benar-benar membuatnya
+  // (via tombol "Atur Resep"). Deteksi berbasis RESEP, bukan nama menu — nama menu bisa
+  // diubah Owner saat review sebelum simpan (form-nya memang sengaja tetap bisa diedit),
+  // sedangkan tombol "Atur Resep" selalu menyusun resep Paket baru sebagai UNION resep
+  // kedua menu asal. Jadi pasangan dianggap "sudah dibundling" kalau ada menu Paket yang
+  // resepnya superset dari union resep kedua menu kandidat.
+  const candidateMenuIds = new Set<string>();
+  for (const key of pairCounts.keys()) {
+    const [a, b] = key.split('|');
+    candidateMenuIds.add(a);
+    candidateMenuIds.add(b);
+  }
+
+  const [paketMenus, candidateRecipes] = await Promise.all([
+    prisma.menu.findMany({
+      where: { businessId, category: 'Paket' },
+      select: { recipes: { select: { ingredientId: true } } },
+    }),
+    prisma.recipeItem.findMany({
+      where: { businessId, menuId: { in: Array.from(candidateMenuIds) } },
+      select: { menuId: true, ingredientId: true },
+    }),
+  ]);
+
+  const paketIngredientSets = paketMenus.map((m) => new Set(m.recipes.map((r) => r.ingredientId)));
+
+  const recipeSetByMenu = new Map<string, Set<string>>();
+  for (const r of candidateRecipes) {
+    if (!recipeSetByMenu.has(r.menuId)) recipeSetByMenu.set(r.menuId, new Set());
+    recipeSetByMenu.get(r.menuId)!.add(r.ingredientId);
+  }
+
+  function isAlreadyBundled(menuIdA: string, menuIdB: string): boolean {
+    const union = new Set([...(recipeSetByMenu.get(menuIdA) || []), ...(recipeSetByMenu.get(menuIdB) || [])]);
+    if (union.size === 0) return false; // menu tanpa resep tidak bisa dicek — anggap belum dibundling
+    return paketIngredientSets.some((paketSet) => {
+      for (const ingredientId of union) if (!paketSet.has(ingredientId)) return false;
+      return true;
+    });
+  }
+
+  // Urutkan SEMUA pasangan berdasarkan co-occurrence menurun, lalu ambil yang pertama
+  // yang belum pernah dibundling — bukan cuma pasangan #1 seperti sebelumnya.
+  const sortedPairs = Array.from(pairCounts.entries()).sort((a, b) => b[1] - a[1]);
   let bestPairKey: string | null = null;
   let bestCount = 0;
-  for (const [key, count] of pairCounts) {
-    if (count > bestCount) { bestPairKey = key; bestCount = count; }
+  for (const [key, count] of sortedPairs) {
+    const [a, b] = key.split('|');
+    if (!isAlreadyBundled(a, b)) {
+      bestPairKey = key;
+      bestCount = count;
+      break;
+    }
   }
 
   if (!bestPairKey || bestCount === 0) {
-    return { weeksAnalyzed: weeks, transactionsAnalyzed, recommendation: null };
+    // Semua pasangan dengan co-occurrence signifikan sudah pernah dibundling — bukan
+    // "kurang data", tapi justru sinyal positif (semua peluang utama sudah dimanfaatkan).
+    return { weeksAnalyzed: weeks, transactionsAnalyzed, recommendation: null, allOpportunitiesBundled: true };
   }
 
   const [idA, idB] = bestPairKey.split('|');
@@ -307,6 +363,7 @@ export async function getMenuBundleRecommendation(businessId: string, weeks = 8)
   return {
     weeksAnalyzed: weeks,
     transactionsAnalyzed,
+    allOpportunitiesBundled: false,
     recommendation: {
       menus: [
         { id: idA, name: menuA.name, sellingPrice: menuA.sellingPrice, hpp: menuA.hpp },
