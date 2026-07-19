@@ -1,6 +1,6 @@
 # Sprint Board — SIPI POS
 
-**Terakhir diperbarui:** 19 Juli 2026
+**Terakhir diperbarui:** 10 Juli 2026
 **Versi PRD:** 4.8
 
 ---

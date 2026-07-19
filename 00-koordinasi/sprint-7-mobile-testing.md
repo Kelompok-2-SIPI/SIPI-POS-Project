@@ -4,7 +4,7 @@
 
 **Status Sprint:** 🟢 Done
 **Tanggal Mulai:** 28 Juni 2026
-**Tanggal Selesai:** 19 Juli 2026
+**Tanggal Selesai:** 10 Juli 2026
 **Catatan urutan:** Sprint ini semula bernomor Sprint 6 (task ID lama: S6-xx). Ditukar jadi Sprint 7 pada 5 Juli 2026 dan diposisikan di akhir alur sprint, karena mobile testing & polish PWA sebaiknya menguji fitur yang sudah stabil — termasuk fitur dari Sprint 5 (Chatbot AI) dan Sprint 6 (Laporan Rentang Tanggal & Export PDF, semula Sprint 7).
 
 ---
@@ -94,4 +94,4 @@ File: `03-output-review/bug-report-sprint7.md`
 | 5 Jul 2026 | Dummy data 6 bulan selesai digenerate (waktu itu S6-00) | Favian |
 | 5 Jul 2026 | Sprint 5 (chatbot AI) implementasi inti dikonfirmasi selesai. Task polish & uji manual dipindah ke sini (waktu itu S6-13–S6-16) | Favian |
 | 5 Jul 2026 | Ditukar penomoran jadi Sprint 7 (task ID S6-xx → S7-xx) karena Sprint Laporan (semula Sprint 7) sudah selesai duluan dan dijadikan Sprint 6. Ditambah task S7-05 (uji Laporan di mobile). File lama `sprint-6-mobile-testing.md` dihapus, digantikan file ini | Claude Cowork |
-| 19 Jul 2026 | Seluruh task S7-01–S7-17 dikonfirmasi selesai. Status sprint diubah ke Done. Checklist testing mobile ditandai lulus. | Favian |
+| 10 Jul 2026 | Seluruh task S7-01–S7-17 dikonfirmasi selesai. Status sprint diubah ke Done. Checklist testing mobile ditandai lulus. | Favian |

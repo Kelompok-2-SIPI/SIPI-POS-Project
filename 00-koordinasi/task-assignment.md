@@ -1,6 +1,6 @@
 # Task Assignment — SIPI POS
 
-**Terakhir diperbarui:** 19 Juli 2026 (rev. 6 — Sprint 7 selesai; Sprint 8 ditambahkan)
+**Terakhir diperbarui:** 10 Juli 2026 (rev. 6 — Sprint 7 selesai; Sprint 8 ditambahkan)
 
 ---
 

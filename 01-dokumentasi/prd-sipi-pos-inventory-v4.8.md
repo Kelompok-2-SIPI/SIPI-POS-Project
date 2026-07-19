@@ -1,6 +1,6 @@
 # /tasks/prd-sipi-pos-inventory.md
 **Versi:** 4.8 — Advanced Insights & Arsitektur (WAJIB vs REKOMENDASI)
-**Tanggal Revisi:** 19 Juli 2026
+**Tanggal Revisi:** 10 Juli 2026
 
 ---
 
@@ -705,7 +705,7 @@ Berdasarkan OQ-9, tambahkan kolom berikut ke tabel `menus`:
 - **Peningkatan UX Form Atur Harga:** Menambahkan antarmuka *Kalkulator Kemasan Grosir* menggunakan pola desain *segmented toggle* ("Per satuan" vs "Per Kemasan Beli"). Fitur ini mempermudah pengguna untuk otomatis menghitung harga per gram/ml dari pembelanjaan kemasan besar tanpa bantuan kalkulator eksternal.
 - **Memperbaiki Isu Sinkronisasi File Docker (HMR):** Menambahkan `CHOKIDAR_USEPOLLING=true` dan `WATCHPACK_POLLING=true` pada file `docker-compose.yml` (service frontend) agar mekanisme Hot Module Replacement (HMR) milik Next.js tetap aktif mendeteksi perubahan file lokal, khususnya di arsitektur Docker Desktop for Windows / WSL2.
 
-### v4.8 (19 Juli 2026) — Advanced Insights, Perluasan AI & Infrastruktur
+### v4.8 (10 Juli 2026) — Advanced Insights, Perluasan AI & Infrastruktur
 - **Menambahkan FR-23** — Prediksi Menu Terlaris Besok berbasis analisis pola hari yang sama dalam window 4 minggu ke belakang. Ditampilkan di halaman Dashboard.
 - **Menambahkan FR-24** — Rekomendasi Ekspansi Menu (Bundling) berbasis analisis *co-occurrence* dalam window 8 minggu. Harga rekomendasi bundling tidak boleh di bawah HPP gabungan untuk mencegah "kebocoran margin". Dilengkapi tombol "Atur Resep" yang mem-prefill form Menu Baru via `sessionStorage`.
 - **Menambahkan FR-25** — Konteks AI Chatbot diperluas dengan tren laba 6 bulan, prediksi menu besok, dan rekomendasi bundling, sehingga AI dapat menjawab pertanyaan strategis bisnis yang lebih dalam.
