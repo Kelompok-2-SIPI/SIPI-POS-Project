@@ -442,8 +442,11 @@ Base URL: `http://backend:4000/api/v1` (internal Docker network) — diakses Fro
 | FR-06 | Admin Gudang menambahkan restock 5kg gula | `stock_qty` gula bertambah 5000g, `stock_movements` mencatat entri baru dengan type `restock` |
 | FR-07 | `stock_qty` tepung = 200g, `min_stock_qty` tepung = 500g | Label merah "Stok Menipis" muncul di baris tepung pada halaman inventaris |
 | FR-08 | Admin mencatat harga tepung = Rp18.000/kg hari ini | Entri baru muncul di `ingredient_price_history`, `latest_price` tepung diperbarui |
+| FR-08a | Owner menekan tombol "Riwayat" pada baris bahan baku gula | Muncul modal linimasa berisi riwayat harga pasar gula secara berurutan dari waktu ke waktu |
+| FR-08b | Admin membuat menu baru "Nasi Goreng" dan membuka sub-tab "Menu & Resep" | Admin dapat menambahkan komposisi resep (misal: Nasi 200g, Telur 1pcs) dan menyimpannya |
 | FR-09 | Harga gula naik dari Rp15.000 menjadi Rp20.000/kg | HPP semua menu yang menggunakan gula dihitung ulang dan diperbarui otomatis |
 | FR-10 | HPP "Pisang Goreng" = Rp8.500, harga jual = Rp10.000 (HPP = 85%) | Label "Margin Kritis" muncul pada kartu menu Pisang Goreng di dashboard |
+| FR-10a | HPP "Pisang Goreng" adalah Rp8.500 | Sistem merekomendasikan harga jual baru sebesar Rp17.000 (dihitung dari target HPP 50% dan dibulatkan ke kelipatan Rp1.000 terdekat) |
 | FR-11 | Owner membuka dashboard pada tanggal hari ini | Tampil: total pendapatan, jumlah transaksi, estimasi laba, dan 5 menu terlaris — semua data akurat dan termuat < 5 detik |
 | FR-12 | Owner mengetik "Kenapa laba hari ini turun?" di kolom chat AI | LLM membalas dalam < 5 detik dengan jawaban berbasis data aktual (bukan jawaban generik), dalam Bahasa Indonesia; chatbot dapat diakses dari halaman Dashboard maupun Inventaris |
 | FR-13 | Owner mengetik "Bahan baku apa yang harganya paling naik bulan ini?" | LLM menyebut nama bahan baku yang benar sesuai data `ingredient_price_history`, bukan hasil karangan |
@@ -457,6 +460,11 @@ Base URL: `http://backend:4000/api/v1` (internal Docker network) — diakses Fro
 | FR-20 | Rentang 1–30 Juni dipilih; ada kenaikan harga gula tgl 10 Juni dan menu "Es Kopi Susu" sempat margin kritis tgl 15–20 Juni (sudah tidak kritis di harga jual saat ini) | Laporan menampilkan kenaikan harga gula (dari `ingredient_price_history`) dan tetap menampilkan "Es Kopi Susu" sebagai margin kritis periode itu (direkonstruksi dari `menu_hpp_history`), walau saat ini sudah tidak kritis |
 | FR-21 | Harga bahan baku berubah sehingga HPP menu "Cappuccino" direkalkulasi (FR-09) pada 15 Juni | Entri baru muncul di `menu_hpp_history` untuk menu Cappuccino dengan `hpp` dan `selling_price` sesuai kondisi tanggal 15 Juni |
 | FR-22 | Owner menekan tombol "Export PDF" setelah laporan rentang 1–30 Juni tampil | File PDF terunduh berisi ringkasan pendapatan/transaksi/laba, top 5 menu, kenaikan harga, dan margin kritis periode tersebut |
+| FR-23 | Owner melihat halaman Dashboard hari ini | Tampil bagian "Prediksi Menu Terlaris Besok" berisi menu yang diprediksi laku berdasarkan tren 4 minggu ke belakang di hari yang sama |
+| FR-24 | Owner melihat rekomendasi "Ekspansi Menu" | Tampil saran bundling menu (misal: "Es Kopi + Roti"), harga rekomendasi di atas HPP gabungan, dan tombol "Atur Resep" mem-prefill form menu baru |
+| FR-25 | Owner mengetik "Berapa prediksi penjualan Es Kopi besok?" ke AI chatbot | LLM menjawab berdasarkan data prediksi hari berikutnya (konteks FR-23), bukan tebakan acak |
+| FR-26 | Owner membuka Halaman Akun | Tampil nama usaha sesuai database, dan terdapat tombol "Install Aplikasi (PWA)" yang berfungsi memicu prompt instalasi browser |
+| FR-27 | Admin mengubah foto menu "Nasi Goreng" di Inventaris | Foto di-upload ke Cloudinary, URL Cloudinary tersimpan di database, dan gambar tampil di POS maupun Daftar Menu |
 
 ---
 
