@@ -1,6 +1,6 @@
 # /tasks/prd-sipi-pos-inventory.md
-**Versi:** 4.7 — Kebebasan Desain untuk Raihan (WAJIB vs REKOMENDASI)
-**Tanggal Revisi:** 4 Juli 2026
+**Versi:** 4.8 — Advanced Insights & Arsitektur (WAJIB vs REKOMENDASI)
+**Tanggal Revisi:** 19 Juli 2026
 
 ---
 
@@ -91,6 +91,8 @@ Dalam konteks UMKM F&B skala kecil, **satu orang (Pemilik) umumnya merangkap sem
 | FR-20 **(Baru v4.6)** | Untuk rentang tanggal terpilih (FR-19), sistem harus menampilkan: total pendapatan, jumlah transaksi, estimasi laba, top 5 menu terlaris, daftar kenaikan harga bahan baku (dihitung dari `ingredient_price_history` — akurat untuk rentang manapun), dan daftar margin kritis (dihitung dari `menu_hpp_history` — lihat FR-21, akurat untuk rentang manapun karena berbasis snapshot historis, bukan nilai HPP/harga jual terkini). | Wajib |
 | FR-21 **(Baru v4.6)** | Sistem harus mencatat snapshot `hpp` dan `selling_price` setiap menu ke tabel baru `menu_hpp_history` setiap kali: (a) HPP menu dihitung ulang otomatis (FR-09), atau (b) harga jual menu diubah manual oleh Owner/Admin (OQ-4). Snapshot ini menjadi sumber data satu-satunya yang membuat margin kritis historis (FR-20) bisa direkonstruksi akurat — tanpa ini, sistem hanya bisa menampilkan margin kritis kondisi terkini. | Wajib |
 | FR-22 **(Baru v4.6)** | Sistem harus memungkinkan Owner mengekspor hasil laporan rentang tanggal (FR-20) sebagai file PDF, diunduh langsung dari halaman Dashboard. | Wajib |
+| FR-23 **(Baru v4.8)** | Sistem harus menampilkan "Prediksi Menu Terlaris Besok" di Dashboard yang didapat berdasarkan analisis pola hari yang sama selama 4 minggu ke belakang. | Wajib |
+| FR-24 **(Baru v4.8)** | Sistem harus memberikan rekomendasi "Ekspansi Menu (Bundling)" berdasarkan analisis *co-occurrence* 8 minggu, di mana harga yang direkomendasikan tidak boleh di bawah HPP gabungan, serta menyertakan tombol "Atur Resep" untuk mem-prefill form menu baru. | Wajib |
 
 ### Modul Inventaris / Admin Gudang — Restock Cerdas
 
@@ -106,6 +108,14 @@ Dalam konteks UMKM F&B skala kecil, **satu orang (Pemilik) umumnya merangkap sem
 | FR-13 | LLM harus dapat menjawab pertanyaan seperti: "Menu apa yang paling laris minggu ini?", "Bahan baku mana yang harganya naik paling tinggi bulan ini?", dan "Berapa estimasi laba bersih hari ini?" | Wajib |
 | FR-17 | Sistem harus memungkinkan Owner melaporkan hasil belanja bahan baku dalam bahasa natural melalui chatbot (contoh: *"tadi beli gula 2kg Rp18.000 dan tepung 1kg Rp12.500"*), kemudian LLM mem-parsing input tersebut dan sistem secara otomatis melakukan restock stok bahan baku serta mencatat harga beli harian — tanpa Owner perlu mengisi form secara manual. | Wajib |
 | FR-18 | Sebelum mengeksekusi aksi restock/pencatatan harga dari input natural language, sistem harus menampilkan **konfirmasi parsing** kepada Owner (misal: *"Saya akan menambah stok gula 2kg dan mencatat harga Rp18.000/kg. Lanjutkan?"*) agar Owner dapat memverifikasi sebelum data diubah. | Wajib |
+| FR-25 **(Baru v4.8)** | AI Chatbot harus diberikan konteks mengenai tren laba 6 bulan, prediksi menu besok, dan rekomendasi bundling, sehingga AI dapat menjawab pertanyaan mendalam seputar performa bisnis dan arah strategi ke depan. | Wajib |
+
+### Modul Akun & Infrastruktur PWA
+
+| ID | Kebutuhan | Prioritas |
+|----|-----------|-----------|
+| FR-26 **(Baru v4.8)** | Sistem harus memiliki Halaman Akun yang menampilkan nama usaha secara dinamis dan memiliki tombol khusus untuk proses instalasi PWA. | Wajib |
+| FR-27 **(Baru v4.8)** | Sistem harus mengunggah foto menu langsung ke layanan *cloud storage* (Cloudinary) alih-alih disk lokal, untuk mendukung *deployment* pada *ephemeral storage* seperti Railway, serta menyediakan gambar *fallback* default bila gambar utama gagal dimuat. | Wajib |
 
 ---
 
@@ -694,3 +704,12 @@ Berdasarkan OQ-9, tambahkan kolom berikut ke tabel `menus`:
 ### v4.4 (20 Juni 2026) — Peningkatan UX Kalkulator Harga Grosir & HMR Polling
 - **Peningkatan UX Form Atur Harga:** Menambahkan antarmuka *Kalkulator Kemasan Grosir* menggunakan pola desain *segmented toggle* ("Per satuan" vs "Per Kemasan Beli"). Fitur ini mempermudah pengguna untuk otomatis menghitung harga per gram/ml dari pembelanjaan kemasan besar tanpa bantuan kalkulator eksternal.
 - **Memperbaiki Isu Sinkronisasi File Docker (HMR):** Menambahkan `CHOKIDAR_USEPOLLING=true` dan `WATCHPACK_POLLING=true` pada file `docker-compose.yml` (service frontend) agar mekanisme Hot Module Replacement (HMR) milik Next.js tetap aktif mendeteksi perubahan file lokal, khususnya di arsitektur Docker Desktop for Windows / WSL2.
+
+### v4.8 (19 Juli 2026) — Advanced Insights, Perluasan AI & Infrastruktur
+- **Menambahkan FR-23** — Prediksi Menu Terlaris Besok berbasis analisis pola hari yang sama dalam window 4 minggu ke belakang. Ditampilkan di halaman Dashboard.
+- **Menambahkan FR-24** — Rekomendasi Ekspansi Menu (Bundling) berbasis analisis *co-occurrence* dalam window 8 minggu. Harga rekomendasi bundling tidak boleh di bawah HPP gabungan untuk mencegah "kebocoran margin". Dilengkapi tombol "Atur Resep" yang mem-prefill form Menu Baru via `sessionStorage`.
+- **Menambahkan FR-25** — Konteks AI Chatbot diperluas dengan tren laba 6 bulan, prediksi menu besok, dan rekomendasi bundling, sehingga AI dapat menjawab pertanyaan strategis bisnis yang lebih dalam.
+- **Menambahkan FR-26** — Halaman Akun menampilkan nama usaha secara dinamis (bukan role *hardcoded*) dan menyediakan tombol instalasi PWA langsung dari antarmuka. Bug Service Worker yang tidak ter-register akibat *timing* `window.load` vs React hydration juga diperbaiki.
+- **Menambahkan FR-27** — Upload foto menu dimigrasikan dari disk lokal ke Cloudinary untuk mengatasi hilangnya file pada *ephemeral storage* Railway saat redeploy. Ditambahkan fallback ikon default jika gambar gagal dimuat.
+- **Perbaikan prompt AI:** Nama hari kini disertakan secara eksplisit di *system prompt* untuk mencegah halusinasi nama hari oleh LLM. Template pertanyaan "Menu apa yang paling laris hari ini" dihapus dari *suggested prompts*.
+- **Versi file PRD** diubah namanya dari `prd-sipi-pos-inventory-v4.7.md` menjadi `prd-sipi-pos-inventory-v4.8.md`.

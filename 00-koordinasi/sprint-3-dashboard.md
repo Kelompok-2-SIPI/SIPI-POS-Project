@@ -43,14 +43,10 @@
 | FR | Skenario | Hasil |
 |----|----------|-------|
 | FR-11 | Owner buka dashboard | Summary cards tampil: pendapatan, transaksi, laba, 5 menu terlaris ✅ |
-| FR-14 | Teks ringkasan otomatis di atas dashboard | ❓ Perlu dicek apakah pakai template string atau LLM |
+| FR-14 | Teks ringkasan otomatis di atas dashboard | Dikonfirmasi menggunakan **template string** murni (bukan LLM). Contoh: *"Hari ini {n} transaksi, pendapatan Rp {x}, estimasi laba Rp {y}. Menu terlaris: {menu}."* — dikonfirmasi di Sprint 4 (S4-03) ✅ |
 | FR-15 | Stok gula sisa 0,75 hari | Gula muncul urutan teratas di rekomendasi restock ✅ |
 | FR-16 | Tepung naik 41% dalam 7 hari | Notifikasi peringatan muncul + daftar menu terdampak ✅ |
 
 ---
 
-## Item Terbuka
-
-| # | Item | PIC | Catatan |
-|---|------|-----|---------|
-| 1 | Verifikasi FR-14 — cek apakah teks ringkasan di dashboard menggunakan template string murni atau ada panggilan LLM | Favian | Buka `/dashboard` di browser, lihat apakah ada network request ke LLM API |
+_(Tidak ada item terbuka — FR-14 dikonfirmasi pakai template string di Sprint 4 (S4-03))_

@@ -1,6 +1,6 @@
 # Task Assignment — SIPI POS
 
-**Terakhir diperbarui:** 5 Juli 2026 (rev. 5 — Sprint 5 implementasi inti selesai; Sprint 6 ↔ 7 ditukar penomoran)
+**Terakhir diperbarui:** 19 Juli 2026 (rev. 6 — Sprint 7 selesai; Sprint 8 ditambahkan)
 
 ---
 
@@ -95,7 +95,7 @@
 
 ---
 
-### Sprint 5 — AI Chatbot Bidirectional (🟢 Done — implementasi inti)
+### Sprint 5 — AI Chatbot Bidirectional (✅ Selesai)
 
 | Task | Deskripsi | PIC | Status |
 |------|-----------|-----|--------|
@@ -109,16 +109,16 @@
 | S5-08 | Core: Komponen bottom sheet chatbot UI (bubble chat Owner vs AI) | Favian | ✅ Done |
 | S5-09 | Core: Tampilkan konfirmasi parsing + tombol "Ya, Lanjutkan" / "Batal" | Favian | ✅ Done |
 | S5-10 | Core: Tampilkan ringkasan hasil setelah eksekusi konfirmasi | Favian | ✅ Done |
-| S5-16 | Polish: styling bubble/bottom sheet, animasi, aksesibilitas, cek `ENABLE_AI_CHAT` untuk sembunyikan tombol | Raihan | ➡️ Dipindah ke Sprint 7 (S7-14) |
-| S5-11 | Uji manual Sprint 5 terhadap Acceptance Criteria FR-12/13/17/18 | Rinda, Ibnu | ➡️ Dipindah ke Sprint 7 (S7-15) |
+| S5-16 | Polish: styling bubble/bottom sheet, animasi, aksesibilitas, cek `ENABLE_AI_CHAT` | Raihan | ✅ Done (diselesaikan di S7-14) |
+| S5-11 | Uji manual Sprint 5 terhadap Acceptance Criteria FR-12/13/17/18 | Rinda, Ibnu | ✅ Done (diselesaikan di S7-15) |
 | S5-12 | FR-16a Core: mini-card + expand/collapse + fetch price-history di kartu alert Dashboard | Favian | ✅ Done |
 | S5-13 | FR-16a Core: grafik garis SVG sederhana 7 hari + edge case data kurang/error | Favian | ✅ Done |
-| S5-14 | FR-16a Polish: styling, kontras/font §6, aksesibilitas warna, animasi | Raihan | ➡️ Dipindah ke Sprint 7 (S7-16) |
-| S5-15 | Uji manual FR-16a | Rinda, Ibnu | ➡️ Dipindah ke Sprint 7 (S7-17) |
+| S5-14 | FR-16a Polish: styling, kontras/font §6, aksesibilitas warna, animasi | Raihan | ✅ Done (diselesaikan di S7-16) |
+| S5-15 | Uji manual FR-16a | Rinda, Ibnu | ✅ Done (diselesaikan di S7-17) |
 
 ---
 
-### Sprint 6 — Laporan Rentang Tanggal & Export PDF (🟢 Done)
+### Sprint 6 — Laporan Rentang Tanggal & Export PDF (✅ Selesai)
 
 _Sprint ini semula bernomor Sprint 7 (task ID lama S7-xx) — ditukar jadi Sprint 6 pada 5 Juli 2026 karena sudah selesai duluan. Detail: `sprint-6-laporan-export.md`._
 
@@ -139,39 +139,56 @@ _Sprint ini semula bernomor Sprint 7 (task ID lama S7-xx) — ditukar jadi Sprin
 
 ---
 
-### Sprint 7 — Mobile Testing & PWA Polish (🔵 Berjalan)
+### Sprint 7 — Mobile Testing & PWA Polish (✅ Selesai)
 
-_Sprint ini semula bernomor Sprint 6 (task ID lama S6-xx) — ditukar jadi Sprint 7 dan dipindah ke akhir alur, karena mobile testing & polish PWA sebaiknya menguji fitur yang sudah stabil (Sprint 5 chatbot AI & Sprint 6 Laporan). Detail: `sprint-7-mobile-testing.md`._
+_Sprint ini semula bernomor Sprint 6 (task ID lama S6-xx) — ditukar jadi Sprint 7 dan dipindah ke akhir alur. Detail: `sprint-7-mobile-testing.md`._
 
 | Task | Deskripsi | PIC | Status |
 |------|-----------|-----|--------|
 | S7-00 | Generate dummy data simulasi 6 bulan (transaksi, stok, riwayat harga) | Favian | ✅ Done |
-| S7-01 | Setup environment testing mobile (akses via IP lokal di HP) | Favian | ⬜ To Do |
-| S7-02 | Uji modul POS/Kasir di mobile — FR-01–FR-05 | Rinda, Ibnu | ⬜ To Do |
-| S7-03 | Uji modul Inventaris di mobile — FR-06–FR-10a | Rinda, Ibnu | ⬜ To Do |
-| S7-04 | Uji modul Dashboard di mobile — FR-11, FR-14–FR-16 | Rinda, Ibnu | ⬜ To Do |
-| S7-05 | Uji bagian Laporan di mobile — FR-19–FR-22 | Rinda, Ibnu | ⬜ To Do |
-| S7-06 | Verifikasi PWA installable (manifest.json + Service Worker) | Favian | ⬜ To Do |
-| S7-07 | Uji offline mode POS — transaksi saat offline, sync saat pulih | Rinda, Ibnu | ⬜ To Do |
-| S7-08 | Cek tap target semua tombol utama ≥ 44×44px | Raihan | ⬜ To Do |
-| S7-09 | Cek kontras warna & ukuran font (min 14px body, 16px angka harga) | Raihan | ⬜ To Do |
-| S7-10 | Cek empty state semua halaman (POS, Inventaris, Dashboard, Laporan) | Raihan | ⬜ To Do |
-| S7-11 | Buat bug report di `03-output-review/bug-report-sprint7.md` | Rinda, Ibnu | ⬜ To Do |
-| S7-12 | Fix bug prioritas tinggi hasil testing | Raihan / Janu | ⬜ To Do |
-| S7-13 | Retest setelah fix — sign-off final | Rinda, Ibnu | ⬜ To Do |
-| S7-14 | Polish chatbot AI (eks-S5-16) | Raihan | ⬜ To Do |
-| S7-15 | Uji manual chatbot AI Sprint 5 (eks-S5-11) | Rinda, Ibnu | ⬜ To Do |
-| S7-16 | Polish FR-16a (eks-S5-14) | Raihan | ⬜ To Do |
-| S7-17 | Uji manual FR-16a (eks-S5-15) | Rinda, Ibnu | ⬜ To Do |
+| S7-01 | Setup environment testing mobile (akses via IP lokal di HP) | Favian | ✅ Done |
+| S7-02 | Uji modul POS/Kasir di mobile — FR-01–FR-05 | Rinda, Ibnu | ✅ Done |
+| S7-03 | Uji modul Inventaris di mobile — FR-06–FR-10a | Rinda, Ibnu | ✅ Done |
+| S7-04 | Uji modul Dashboard di mobile — FR-11, FR-14–FR-16 | Rinda, Ibnu | ✅ Done |
+| S7-05 | Uji bagian Laporan di mobile — FR-19–FR-22 | Rinda, Ibnu | ✅ Done |
+| S7-06 | Verifikasi PWA installable (manifest.json + Service Worker) | Favian | ✅ Done |
+| S7-07 | Uji offline mode POS — transaksi saat offline, sync saat pulih | Rinda, Ibnu | ✅ Done |
+| S7-08 | Cek tap target semua tombol utama ≥ 44×44px | Raihan | ✅ Done |
+| S7-09 | Cek kontras warna & ukuran font (min 14px body, 16px angka harga) | Raihan | ✅ Done |
+| S7-10 | Cek empty state semua halaman (POS, Inventaris, Dashboard, Laporan) | Raihan | ✅ Done |
+| S7-11 | Buat bug report di `03-output-review/bug-report-sprint7.md` | Rinda, Ibnu | ✅ Done |
+| S7-12 | Fix bug prioritas tinggi hasil testing | Raihan / Janu | ✅ Done |
+| S7-13 | Retest setelah fix — sign-off final | Rinda, Ibnu | ✅ Done |
+| S7-14 | Polish chatbot AI: styling, animasi, aksesibilitas, feature-flag (eks-S5-16) | Raihan | ✅ Done |
+| S7-15 | Uji manual chatbot AI Sprint 5 (eks-S5-11) | Rinda, Ibnu | ✅ Done |
+| S7-16 | Polish FR-16a: styling grafik tren harga, kontras/font §6, animasi (eks-S5-14) | Raihan | ✅ Done |
+| S7-17 | Uji manual FR-16a (eks-S5-15) | Rinda, Ibnu | ✅ Done |
+
+---
+
+### Sprint 8 — Advanced Insights & Infrastructure Polish (✅ Selesai)
+
+_Pemolesan fitur analitik prediktif, perluasan AI, dan stabilisasi infrastruktur deployment. Detail: `sprint-8-advanced-insights-polish.md`._
+
+| Task | Deskripsi | PIC | Status |
+|------|-----------|-----|--------|
+| S8-01 | Prediksi Menu Terlaris Besok (window 4 minggu) di Dashboard (FR-23) | Janu, Favian | ✅ Done |
+| S8-02 | Rekomendasi Ekspansi Menu/Bundling via co-occurrence 8 minggu (FR-24) | Janu, Favian | ✅ Done |
+| S8-03 | Tombol "Atur Resep" di card Bundling — pre-fill form Menu Baru (FR-24a) | Raihan | ✅ Done |
+| S8-04 | Perluas konteks AI: tren laba 6 bulan, prediksi, rekomendasi (FR-25) | Janu | ✅ Done |
+| S8-05 | Perbaiki prompt AI (nama hari eksplisit, hapus template lama) | Janu | ✅ Done |
+| S8-06 | Halaman Akun: tampilkan nama usaha dinamis + tombol Install PWA (FR-26) | Favian | ✅ Done |
+| S8-07 | Fix bug Service Worker tidak ter-register (timing window.load vs hydration) | Favian | ✅ Done |
+| S8-08 | Migrasi upload foto menu dari disk lokal ke Cloudinary (FR-27) | Janu | ✅ Done |
 
 ---
 
 ## Ringkasan Kontribusi Tim
 
-| Nama | Sprint 1–4 | Sprint 5–6 | Total | Jenis Kontribusi |
-|------|:----------:|:----------:|:-----:|------------------|
-| Favian | 11 task | 2 task | 13 task | Infra, Docker, arsitektur, koordinasi |
-| Janu | 14 task | 6 task | 20 task | Backend API, business logic, LLM integration |
-| Raihan | 16 task | 7 task | 23 task | Frontend, UI, desain, PWA polish |
-| Rinda | 4 task | 6 task | 10 task | QA & pengujian manual tiap sprint |
-| Ibnu | 4 task | 6 task | 10 task | QA & pengujian manual tiap sprint |
+| Nama | Sprint 1–4 | Sprint 5–6 | Sprint 7–8 | Total | Jenis Kontribusi |
+|------|:----------:|:----------:|:----------:|:-----:|------------------|
+| Favian | 11 task | 6 task | 5 task | 22 task | Infra, Docker, arsitektur, AI frontend, PWA, Cloudinary |
+| Janu | 14 task | 7 task | 6 task | 27 task | Backend API, business logic, LLM integration, Insights |
+| Raihan | 16 task | 6 task | 8 task | 30 task | Frontend, UI, desain, mobile polish, bundling UX |
+| Rinda | 4 task | 7 task | 8 task | 19 task | QA & pengujian manual tiap sprint |
+| Ibnu | 4 task | 7 task | 8 task | 19 task | QA & pengujian manual tiap sprint |
